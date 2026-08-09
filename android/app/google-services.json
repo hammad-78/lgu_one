@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "100691841842",
+    "project_id": "lgu-one-62f7c",
+    "storage_bucket": "lgu-one-62f7c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:100691841842:android:bb35255973d834a5117d2b",
+        "android_client_info": {
+          "package_name": "com.example.lgu_one"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1qoWjraQ5YhfC11RpHQ9yTc1bnvkcoXA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
