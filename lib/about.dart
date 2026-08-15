@@ -10,14 +10,11 @@ class About extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("About LGU Connect"),
-      ),
+      appBar: AppBar(title: const Text("About LGU Connect")),
 
       body: SingleChildScrollView(
         child: Column(
           children: [
-
             // 🌿 HEADER
             Container(
               width: double.infinity,
@@ -26,7 +23,7 @@ class About extends StatelessWidget {
                 gradient: LinearGradient(
                   colors: [
                     primary,
-                    isDark ? primary.withOpacity(0.8) : secondary,
+                    isDark ? primary.withValues(alpha: 0.8) : secondary,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -66,9 +63,7 @@ class About extends StatelessWidget {
               icon: Icons.info_outline,
               title: "About the App",
               text:
-              "LGU Connect is a modern student platform designed for university students "
-                  "to access academic tools, career opportunities, campus news, societies, "
-                  "and essential student services — all in one place.",
+                  "LGU Connect is the official campus companion app for Lahore Garrison University, helping students stay connected through lost & found, societies, job opportunities, and collaboration — all in one place.",
             ),
 
             // 🎯 PURPOSE
@@ -77,8 +72,8 @@ class About extends StatelessWidget {
               icon: Icons.flag,
               title: "Purpose",
               text:
-              "Our goal is to simplify student life by providing digital access to learning, "
-                  "career growth, and campus engagement through a unified mobile experience.",
+                  """
+LGU Connect brings students, societies, and campus resources together in one place — making everyday campus life simpler and more connected.""",
             ),
 
             // 👨‍💻 DEVELOPERS
@@ -87,8 +82,8 @@ class About extends StatelessWidget {
               icon: Icons.code,
               title: "Developed By",
               text:
-              "LGU Student Development Team\nDesigned & Built by passionate university students "
-                  "to improve campus digital experience.",
+                  "Hammad Ali Khan - Student LGU"
+                  ,
             ),
 
             // 📊 VERSION INFO
@@ -96,7 +91,7 @@ class About extends StatelessWidget {
               context,
               icon: Icons.system_update,
               title: "App Version",
-              text: "Version 1.0.0 (Beta Release)\nLast Updated: April 2026",
+              text: "Version 1.0.0",
             ),
 
             const SizedBox(height: 20),
@@ -107,11 +102,11 @@ class About extends StatelessWidget {
   }
 
   Widget _card(
-      BuildContext context, {
-        required IconData icon,
-        required String title,
-        required String text,
-      }) {
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String text,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Card(
@@ -134,10 +129,7 @@ class About extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              Text(
-                text,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
+              Text(text, style: Theme.of(context).textTheme.bodyMedium),
             ],
           ),
         ),

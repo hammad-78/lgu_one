@@ -2,6 +2,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:lgu_one/about.dart';
+import 'package:lgu_one/admin/admin_signin.dart';
 import 'package:lgu_one/auth/on_verified.dart';
 import 'package:lgu_one/collaboration/collaboration_screen.dart';
 import 'package:lgu_one/dashboard_grid.dart';
@@ -116,6 +117,92 @@ class _HomeScreenState extends State<HomeScreen> {
           DashboardGrid(),
 
           SizedBox(height: 10),
+
+          // Upcoming Events
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Builder(
+              builder: (context) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+
+                return InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF0B3D2E) // same dark green card
+                          : Colors.white,
+
+                      borderRadius: BorderRadius.circular(16),
+
+                      border: Border.all(
+                        color: isDark
+                            ? const Color(0xFFD4AF37).withValues(alpha: 0.3) // gold tint
+                            : const Color(0xFF4CAF50).withValues(alpha: 0.25), // green tint
+                        width: 1,
+                      ),
+
+                      boxShadow: [
+                        if (!isDark)
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                      ],
+                    ),
+
+                    child: Row(
+                      children: [
+                        // icon badge — echoes the gold/green accent instead of plain iconTheme color
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isDark
+                                ? const Color(0xFFD4AF37).withValues(alpha: 0.12)
+                                : const Color(0xFF4CAF50).withValues(alpha: 0.12),
+                          ),
+                          child: Icon(
+                            Icons.event,
+                            size: 22,
+                            color: isDark
+                                ? const Color(0xFFD4AF37)
+                                : const Color(0xFF4CAF50),
+                          ),
+                        ),
+
+                        const SizedBox(width: 14),
+
+                        Expanded(
+                          child: Text(
+                            "Upcoming Events",
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ),
+
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 14,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.5)
+                              : Colors.black45,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
           // Join Societies
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -256,7 +343,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 : const Color(0xFF4CAF50).withValues(alpha: 0.12),
                           ),
                           child: Icon(
-                            Icons.groups,
+                            Icons.diversity_3,
                             size: 22,
                             color: isDark
                                 ? const Color(0xFFD4AF37)
@@ -268,7 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         Expanded(
                           child: Text(
-                            "Collaboration",
+                            "Student Collaboration",
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: isDark ? Colors.white : Colors.black87,
@@ -312,6 +399,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
                     ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Swipe hint
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 4, 20, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(Icons.swipe, size: 14, color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.5)),
+                const SizedBox(width: 4),
+                Text(
+                  "Swipe",
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -518,14 +623,17 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
 
-          // 🚪 LOGOUT
+
+        //  🚪 LOGOUT
           ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
+            leading: const Icon(Icons.login, color: Colors.green),
             title: const Text(
-              "Logout",
-              style: TextStyle(color: Colors.red),
+              "Admin Login",
+              style: TextStyle(color: Colors.black),
             ),
-            onTap: () {},
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => AdminSignin(),));
+            },
           ),
 
           const SizedBox(height: 12),
