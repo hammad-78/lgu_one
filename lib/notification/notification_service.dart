@@ -6,38 +6,51 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:lgu_one/collaboration/collaboration_screen.dart';
+import 'package:lgu_one/collaboration/join_collaboration.dart';
+import 'package:lgu_one/Lost_Found/listing_screen.dart';
 
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse notificationResponse) {}
 
 class NotificationService {
   FirebaseMessaging messaging = FirebaseMessaging.instance;
+  bool _isRequestingPermission = false;
 
   static final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
   FlutterLocalNotificationsPlugin();
 
   Future<bool> requestNotificationPermission() async {
-    NotificationSettings settings = await messaging.requestPermission(
-      alert: true,
-      announcement: true,
-      badge: true,
-      carPlay: true,
-      criticalAlert: true,
-      provisional: true,
-      sound: true,
-    );
+    if (_isRequestingPermission) return false;
+    _isRequestingPermission = true;
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print("User Granted Permission");
-      return true;
-    } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
-      print("User granted provisional permission");
-      return true;
-    } else {
-      print("Permission Denied");
-      AppSettings.openAppSettings();
+    try {
+      NotificationSettings settings = await messaging.requestPermission(
+        alert: true,
+        announcement: true,
+        badge: true,
+        carPlay: true,
+        criticalAlert: true,
+        provisional: true,
+        sound: true,
+      );
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        print("User Granted Permission");
+        return true;
+      } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
+        print("User granted provisional permission");
+        return true;
+      } else {
+        print("Permission Denied");
+        // Only open settings if we're not in the middle of a build or if strictly necessary
+        // AppSettings.openAppSettings(); 
+        return false;
+      }
+    } catch (e) {
+      print("Error requesting permission: $e");
       return false;
+    } finally {
+      _isRequestingPermission = false;
     }
   }
 
@@ -71,7 +84,6 @@ class NotificationService {
 
       showNotification(message);
     });
-    // onMessageOpenedApp removed — handled in setupInteractMessage
   }
 
   static Future<void> showNotification(RemoteMessage message) async {
@@ -135,16 +147,27 @@ class NotificationService {
     if (payload == 'collaboration') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => CollaborationScreen()),
+        MaterialPageRoute(builder: (context) => const JoinCollaborationScreen()),
+      );
+    } else if (payload == 'lost_found') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ListingsScreen()),
       );
     }
   }
 
   void handleMessage(BuildContext context, RemoteMessage message) {
-    if (message.data['type'] == 'collaboration') {
+    final type = message.data['type'];
+    if (type == 'collaboration') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => CollaborationScreen()),
+        MaterialPageRoute(builder: (context) => const JoinCollaborationScreen()),
+      );
+    } else if (type == 'lost_found') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ListingsScreen()),
       );
     }
   }

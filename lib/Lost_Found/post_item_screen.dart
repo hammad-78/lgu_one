@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:lgu_one/notification/notification_service.dart';
 
 import 'lost_found_item.dart';
 import 'lost_found_service.dart';
@@ -19,6 +20,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
   final _formKey = GlobalKey<FormState>();
   final _service = LostFoundService();
   final _picker = ImagePicker();
+  final _notificationService = NotificationService();
 
   String _type = 'lost';
   String _category = lostFoundCategories.first;
@@ -185,6 +187,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
     setState(() => _isSubmitting = true);
     try {
+      final token = await _notificationService.getDeviceToken();
       final secretKey = await _service.postItem(
         type: _type,
         category: _category,
@@ -194,6 +197,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
         date: _date,
         whatsappNumber: _whatsappController.text.trim(),
         images: _images,
+        authorToken: token,
       );
       if (!mounted) return;
       await _showSecretKeyDialog(secretKey);

@@ -54,6 +54,7 @@ class LostFoundService {
     required DateTime date,
     required String whatsappNumber,
     required List<File> images,
+    String? authorToken,
   }) async {
     final docRef = _firestore.collection(_collection).doc();
     final imageUrls =
@@ -73,6 +74,7 @@ class LostFoundService {
       'secretKeyHash': SecretKeyUtil.hash(secretKey),
       'status': 'active',
       'createdAt': FieldValue.serverTimestamp(),
+      'authorToken': authorToken,
     });
 
     return secretKey;

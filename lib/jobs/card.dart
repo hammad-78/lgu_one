@@ -7,10 +7,29 @@ class JobCard extends StatelessWidget {
 
   const JobCard({super.key, required this.job});
 
-  Future<void> openLink() async {
-    final Uri url = Uri.parse(job.link);
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      throw 'Could not launch ${job.link}';
+  Future<void> openLink(BuildContext context) async {
+    if (job.link.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No apply link provided")),
+      );
+      return;
+    }
+    try {
+      final String formattedLink = job.link.startsWith('http') ? job.link : 'https://${job.link}';
+      final Uri url = Uri.parse(formattedLink);
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Could not open link: ${job.link}")),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Invalid link format: ${job.link}")),
+        );
+      }
     }
   }
 
@@ -19,7 +38,7 @@ class JobCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return GestureDetector(
-      onTap: openLink,
+      onTap: () => openLink(context),
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Stack(
@@ -29,10 +48,31 @@ class JobCard extends StatelessWidget {
             Positioned.fill(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.network(
-                  job.image,
-                  fit: BoxFit.cover,
-                ),
+                child: job.image.isNotEmpty
+                    ? Image.network(
+                        job.image,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: Colors.grey.shade800,
+                          child: const Center(
+                            child: Icon(
+                              Icons.broken_image_outlined,
+                              size: 44,
+                              color: Colors.white54,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        color: Colors.grey.shade800,
+                        child: const Center(
+                          child: Icon(
+                            Icons.work_outline,
+                            size: 44,
+                            color: Colors.white54,
+                          ),
+                        ),
+                      ),
               ),
             ),
 
@@ -76,6 +116,8 @@ class JobCard extends StatelessWidget {
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
 
                     const SizedBox(height: 6),
@@ -86,6 +128,8 @@ class JobCard extends StatelessWidget {
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.white70,
                       ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
 
                     const SizedBox(height: 12),
@@ -94,7 +138,7 @@ class JobCard extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: openLink,
+                        onPressed: () => openLink(context),
                         child: const Text("Apply Now"),
                       ),
                     ),
