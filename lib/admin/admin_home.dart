@@ -1,7 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:lgu_one/admin/admin_lost_found.dart';
 import 'package:lgu_one/home_screen.dart';
+
+// TODO: update these imports to point to your actual screen files
+// import 'package:lgu_one/lost_found_list_screen.dart';
+// import 'package:lgu_one/collaboration_list_screen.dart';
+// import 'package:lgu_one/events_list_screen.dart';
+// import 'package:lgu_one/add_job_screen.dart';
+// import 'package:lgu_one/add_news_screen.dart';
 
 class AdminHome extends StatefulWidget {
   const AdminHome({super.key});
@@ -48,6 +56,56 @@ class _AdminHomeState extends State<AdminHome> {
     }
   }
 
+  // Reusable action button for the admin dashboard grid.
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.10),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: Colors.green.withValues(alpha: 0.12),
+              child: Icon(icon, color: Colors.green, size: 22),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigate(Widget screen) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -72,15 +130,17 @@ class _AdminHomeState extends State<AdminHome> {
               },
               child: const Icon(Icons.logout),
             ),
-            SizedBox(width: 10,)
+            const SizedBox(width: 10),
           ],
         ),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : ListView(
+          padding: const EdgeInsets.all(12),
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
@@ -117,7 +177,8 @@ class _AdminHomeState extends State<AdminHome> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
                         color: Colors.green,
                         borderRadius: BorderRadius.circular(20),
@@ -134,6 +195,70 @@ class _AdminHomeState extends State<AdminHome> {
                   ),
                 ),
               ),
+            ),
+
+            const SizedBox(height: 20),
+
+            const Padding(
+              padding: EdgeInsets.only(left: 4, bottom: 10),
+              child: Text(
+                "Manage",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.3,
+              children: [
+                _buildActionButton(
+                  icon: Icons.search,
+                  label: "Lost & Found Listings",
+                  onTap: () {
+                    // TODO: replace with your actual screen
+                    _navigate(const AdminLostFound());
+                  },
+                ),
+                _buildActionButton(
+                  icon: Icons.groups_outlined,
+                  label: "Collaboration Listings",
+                  onTap: () {
+                    // TODO: replace with your actual screen
+                    // _navigate(const CollaborationListScreen());
+                  },
+                ),
+                _buildActionButton(
+                  icon: Icons.event_outlined,
+                  label: "Upcoming Events",
+                  onTap: () {
+                    // TODO: replace with your actual screen
+                    // _navigate(const EventsListScreen());
+                  },
+                ),
+                _buildActionButton(
+                  icon: Icons.work_outline,
+                  label: "Add Job",
+                  onTap: () {
+                    // TODO: replace with your actual screen
+                    // _navigate(const AddJobScreen());
+                  },
+                ),
+                _buildActionButton(
+                  icon: Icons.article_outlined,
+                  label: "Add News",
+                  onTap: () {
+                    // TODO: replace with your actual screen
+                    // _navigate(const AddNewsScreen());
+                  },
+                ),
+              ],
             ),
           ],
         ),
