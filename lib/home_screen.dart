@@ -1,19 +1,16 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:lgu_one/about.dart';
 import 'package:lgu_one/admin/admin_signin.dart';
 import 'package:lgu_one/auth/on_verified.dart';
 import 'package:lgu_one/collaboration/collaboration_screen.dart';
 import 'package:lgu_one/dashboard_grid.dart';
 import 'package:lgu_one/gpa/gpa_calculator_screen.dart';
+import 'package:lgu_one/jobs/jobs_swiper.dart';
 import 'package:lgu_one/news_section/news_carousel.dart';
 import 'package:lgu_one/notification/notification_service.dart';
 import 'package:lgu_one/recommendation_page.dart';
 import 'package:lgu_one/societies/society_screen.dart';
-
-import 'jobs/card.dart';
-import 'jobs/data.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -423,18 +420,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           // Swiper
-          Transform.translate(
-            offset: const Offset(0, -12),
-            child: SizedBox(
-              height: 500,
-              child: CardSwiper(
-                cardsCount: jobsList.length,
-                cardBuilder: (context, index, h, v) {
-                  return JobCard(job: jobsList[index]);
-                },
-              ),
-            ),
-          ),
+          const JobsSwiper(),
         ],
       ),
     );

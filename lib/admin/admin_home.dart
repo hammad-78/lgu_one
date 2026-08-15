@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:lgu_one/admin/admin_jobs_screen.dart';
 import 'package:lgu_one/admin/admin_lost_found.dart';
+import 'package:lgu_one/admin/admin_news_screen.dart';
 import 'package:lgu_one/home_screen.dart';
 
 // TODO: update these imports to point to your actual screen files
@@ -9,9 +11,9 @@ import 'package:lgu_one/home_screen.dart';
 // import 'package:lgu_one/collaboration_list_screen.dart';
 // import 'package:lgu_one/events_list_screen.dart';
 // import 'package:lgu_one/add_job_screen.dart';
-// import 'package:lgu_one/add_news_screen.dart';
 
 class AdminHome extends StatefulWidget {
+
   const AdminHome({super.key});
 
   @override
@@ -246,16 +248,14 @@ class _AdminHomeState extends State<AdminHome> {
                   icon: Icons.work_outline,
                   label: "Add Job",
                   onTap: () {
-                    // TODO: replace with your actual screen
-                    // _navigate(const AddJobScreen());
+                    _navigate(const AdminJobsScreen());
                   },
                 ),
                 _buildActionButton(
                   icon: Icons.article_outlined,
                   label: "Add News",
                   onTap: () {
-                    // TODO: replace with your actual screen
-                    // _navigate(const AddNewsScreen());
+                    _navigate(const AdminNewsScreen());
                   },
                 ),
               ],

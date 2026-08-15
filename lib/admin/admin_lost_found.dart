@@ -67,11 +67,24 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                 }
 
                 final docs = snapshot.data?.docs ?? [];
+
                 final filtered = _statusFilter == 'All'
                     ? docs
                     : docs.where((d) {
                   final data = d.data() as Map<String, dynamic>;
-                  return (data['status'] ?? '') == _statusFilter;
+                  // 'type' holds Lost/Found; 'status' holds active/resolved.
+                  // Comparison is case-insensitive in case values are
+                  // stored as 'lost'/'found' rather than 'Lost'/'Found'.
+                  if (_statusFilter == 'Resolved') {
+                    return (data['status'] ?? '')
+                        .toString()
+                        .toLowerCase() ==
+                        'resolved';
+                  }
+                  return (data['type'] ?? '')
+                      .toString()
+                      .toLowerCase() ==
+                      _statusFilter.toLowerCase();
                 }).toList();
 
                 if (filtered.isEmpty) {
@@ -103,22 +116,21 @@ class _AdminLostFoundState extends State<AdminLostFound> {
   Widget _buildListingCard(String docId, Map<String, dynamic> data) {
     final String title = data['title'] ?? 'Untitled';
     final String description = data['description'] ?? '';
-    final String status = data['status'] ?? 'Lost';
+    final String type = data['type'] ?? 'Lost';
+    final String status = data['status'] ?? 'active';
+    final bool isResolved = status == 'resolved';
     final String category = data['category'] ?? '';
     final String location = data['location'] ?? '';
     final String imageUrl = data['imageUrl'] ?? '';
     final String postedBy = data['postedBy'] ?? 'Unknown';
 
     Color statusColor;
-    switch (status) {
-      case 'Found':
-        statusColor = Colors.blue;
-        break;
-      case 'Resolved':
-        statusColor = Colors.grey;
-        break;
-      default:
-        statusColor = Colors.red;
+    if (isResolved) {
+      statusColor = Colors.grey;
+    } else if (type == 'Found') {
+      statusColor = Colors.blue;
+    } else {
+      statusColor = Colors.red;
     }
 
     return Container(
@@ -188,7 +200,7 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          status,
+                          isResolved ? 'Resolved' : type,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,
@@ -276,7 +288,8 @@ class _AdminLostFoundState extends State<AdminLostFound> {
     TextEditingController(text: data['category'] ?? '');
     final locationController =
     TextEditingController(text: data['location'] ?? '');
-    String status = data['status'] ?? 'Lost';
+    String type = data['type'] ?? 'Lost';
+    String status = data['status'] ?? 'active';
 
     showDialog(
       context: context,
@@ -312,19 +325,32 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                     const SizedBox(height: 12),
                     Builder(builder: (context) {
                       // Always include whatever value is currently stored,
-                      // even if it doesn't match one of the known options,
-                      // so the dropdown never throws on unexpected data.
-                      final knownOptions = ['Lost', 'Found', 'Resolved'];
-                      final dropdownOptions = {
-                        ...knownOptions,
-                        status,
-                      }.toList();
-
+                      // even if it doesn't match the known options, so the
+                      // dropdown never throws on unexpected data.
+                      final typeOptions = {'Lost', 'Found', type}.toList();
                       return DropdownButtonFormField<String>(
-                        value: status,
+                        initialValue: type,
+                        decoration: const InputDecoration(labelText: "Type"),
+                        items: typeOptions
+                            .map((option) => DropdownMenuItem(
+                          value: option,
+                          child: Text(option),
+                        ))
+                            .toList(),
+                        onChanged: (value) {
+                          setDialogState(() => type = value ?? type);
+                        },
+                      );
+                    }),
+                    const SizedBox(height: 12),
+                    Builder(builder: (context) {
+                      final statusOptions =
+                      {'active', 'resolved', status}.toList();
+                      return DropdownButtonFormField<String>(
+                        initialValue: status,
                         decoration:
                         const InputDecoration(labelText: "Status"),
-                        items: dropdownOptions
+                        items: statusOptions
                             .map((option) => DropdownMenuItem(
                           value: option,
                           child: Text(option),
@@ -353,6 +379,7 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                       'description': descController.text.trim(),
                       'category': categoryController.text.trim(),
                       'location': locationController.text.trim(),
+                      'type': type,
                       'status': status,
                     });
                     if (context.mounted) Navigator.pop(context);

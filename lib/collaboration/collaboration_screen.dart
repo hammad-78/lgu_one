@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lgu_one/notification/notification_service.dart';
 import 'join_collaboration.dart';
 
 class CollaborationScreen extends StatefulWidget {
@@ -10,6 +11,7 @@ class CollaborationScreen extends StatefulWidget {
 }
 
 class _CollaborationScreenState extends State<CollaborationScreen> {
+  final _notificationService = NotificationService();
 
   InputDecoration _fieldDecoration(BuildContext context, {required String label}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -163,7 +165,6 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
-          // ✅ read inside StatefulBuilder — always current, never stale
           final isDark = Theme.of(context).brightness == Brightness.dark;
           final highlight = isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50);
           final dialogBg = isDark ? const Color(0xFF0B3D2E) : Colors.white;
@@ -409,6 +410,8 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                   }
 
                   try {
+                    final authorToken = await _notificationService.getDeviceToken();
+
                     await FirebaseFirestore.instance
                         .collection('collaborations')
                         .doc(title)
@@ -427,6 +430,7 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                         ) ?? 0,
                         'createdAt': FieldValue.serverTimestamp(),
                         'secretKey': secretKey,
+                        'authorToken': authorToken,
                       },
                     });
 
