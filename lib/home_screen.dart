@@ -1,9 +1,10 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/about.dart';
 import 'package:lgu_one/admin/admin_signin.dart';
 import 'package:lgu_one/auth/on_verified.dart';
 import 'package:lgu_one/collaboration/collaboration_screen.dart';
+import 'package:lgu_one/events/upcoming_events_screen.dart';
 import 'package:lgu_one/dashboard_grid.dart';
 import 'package:lgu_one/gpa/gpa_calculator_screen.dart';
 import 'package:lgu_one/jobs/jobs_swiper.dart';
@@ -121,80 +122,146 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Builder(
               builder: (context) {
                 final isDark = Theme.of(context).brightness == Brightness.dark;
+                final now = DateTime.now();
+                final startOfToday = DateTime(now.year, now.month, now.day);
 
-                return InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () {
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('events')
+                      .where('eventDate',
+                          isGreaterThanOrEqualTo:
+                              Timestamp.fromDate(startOfToday))
+                      .orderBy('eventDate', descending: false)
+                      .limit(1)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    String eventSubtitle = "No upcoming events right now";
+                    if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                      final data = snapshot.data!.docs.first.data()
+                          as Map<String, dynamic>;
+                      final title = data['title'] ?? 'Upcoming Event';
+                      if (data['eventDate'] is Timestamp) {
+                        final eventDate =
+                            (data['eventDate'] as Timestamp).toDate();
+                        final diff = DateTime(
+                                eventDate.year, eventDate.month, eventDate.day)
+                            .difference(startOfToday)
+                            .inDays;
+                        String countdown;
+                        if (diff == 0) {
+                          countdown = "Today";
+                        } else if (diff == 1) {
+                          countdown = "Tomorrow";
+                        } else {
+                          countdown = "in $diff days";
+                        }
+                        eventSubtitle = "$title — $countdown";
+                      } else {
+                        eventSubtitle = title;
+                      }
+                    }
 
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF0B3D2E) // same dark green card
-                          : Colors.white,
-
+                    return InkWell(
                       borderRadius: BorderRadius.circular(16),
-
-                      border: Border.all(
-                        color: isDark
-                            ? const Color(0xFFD4AF37).withValues(alpha: 0.3) // gold tint
-                            : const Color(0xFF4CAF50).withValues(alpha: 0.25), // green tint
-                        width: 1,
-                      ),
-
-                      boxShadow: [
-                        if (!isDark)
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const UpcomingEventsScreen(),
                           ),
-                      ],
-                    ),
-
-                    child: Row(
-                      children: [
-                        // icon badge — echoes the gold/green accent instead of plain iconTheme color
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isDark
-                                ? const Color(0xFFD4AF37).withValues(alpha: 0.12)
-                                : const Color(0xFF4CAF50).withValues(alpha: 0.12),
-                          ),
-                          child: Icon(
-                            Icons.event,
-                            size: 22,
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF0B3D2E) // same dark green card
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
                             color: isDark
                                 ? const Color(0xFFD4AF37)
-                                : const Color(0xFF4CAF50),
+                                    .withValues(alpha: 0.3) // gold tint
+                                : const Color(0xFF4CAF50)
+                                    .withValues(alpha: 0.25), // green tint
+                            width: 1,
                           ),
+                          boxShadow: [
+                            if (!isDark)
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                          ],
                         ),
-
-                        const SizedBox(width: 14),
-
-                        Expanded(
-                          child: Text(
-                            "Upcoming Events",
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isDark
+                                    ? const Color(0xFFD4AF37)
+                                        .withValues(alpha: 0.12)
+                                    : const Color(0xFF4CAF50)
+                                        .withValues(alpha: 0.12),
+                              ),
+                              child: Icon(
+                                Icons.event,
+                                size: 22,
+                                color: isDark
+                                    ? const Color(0xFFD4AF37)
+                                    : const Color(0xFF4CAF50),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    "Upcoming Events",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark
+                                              ? Colors.white
+                                              : Colors.black87,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    eventSubtitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDark
+                                          ? const Color(0xFFD4AF37)
+                                          : const Color(0xFF4CAF50),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              size: 14,
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.5)
+                                  : Colors.black45,
+                            ),
+                          ],
                         ),
-
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 14,
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.5)
-                              : Colors.black45,
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 );
               },
             ),

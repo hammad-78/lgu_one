@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:lgu_one/admin/admin_collaboration.dart';
+import 'package:lgu_one/admin/admin_events_screen.dart';
 import 'package:lgu_one/admin/admin_jobs_screen.dart';
 import 'package:lgu_one/admin/admin_lost_found.dart';
 import 'package:lgu_one/admin/admin_news_screen.dart';
@@ -232,16 +234,14 @@ class _AdminHomeState extends State<AdminHome> {
                   icon: Icons.groups_outlined,
                   label: "Collaboration Listings",
                   onTap: () {
-                    // TODO: replace with your actual screen
-                    // _navigate(const CollaborationListScreen());
+                    _navigate(const AdminCollaboration());
                   },
                 ),
                 _buildActionButton(
                   icon: Icons.event_outlined,
                   label: "Upcoming Events",
                   onTap: () {
-                    // TODO: replace with your actual screen
-                    // _navigate(const EventsListScreen());
+                    _navigate(const AdminEventsScreen());
                   },
                 ),
                 _buildActionButton(
