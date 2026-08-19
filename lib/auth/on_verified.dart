@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LguVerifiedTap extends StatelessWidget {
   final Widget child;
@@ -14,11 +15,25 @@ class LguVerifiedTap extends StatelessWidget {
     r'^[a-z]{2}\d{2}-[a-z]+-\d+@[a-z]+\.lgu\.edu\.pk$',
   );
 
+  static const String _rememberMeKey = 'lgu_remember_me';
+
   // ✅ Static method — call this directly from any onTap without wrapping
   static Future<void> verify(
       BuildContext context, {
         required VoidCallback onVerified,
       }) async {
+    // 1. Check if user is already verified via "Remember Me"
+    final prefs = await SharedPreferences.getInstance();
+    final isRemembered = prefs.getBool(_rememberMeKey) ?? false;
+
+    if (isRemembered) {
+      onVerified();
+      return;
+    }
+
+    // 2. If not remembered, show verification dialog
+    if (!context.mounted) return;
+    
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final highlight = isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50);
     final dialogBg = isDark ? const Color(0xFF0B3D2E) : Colors.white;
@@ -28,6 +43,7 @@ class LguVerifiedTap extends StatelessWidget {
 
     final emailController = TextEditingController();
     String? errorText;
+    bool rememberMe = false;
 
     await showDialog(
       context: context,
@@ -61,65 +77,85 @@ class LguVerifiedTap extends StatelessWidget {
                 ),
               ],
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'This section is only for LGU students. Please enter your university email to continue.',
-                  style: TextStyle(color: subTextColor, fontSize: 13, height: 1.4),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: emailController,
-                  autofocus: true,
-                  keyboardType: TextInputType.emailAddress,
-                  style: TextStyle(color: textColor),
-                  onChanged: (_) {
-                    if (errorText != null) {
-                      setDialogState(() => errorText = null);
-                    }
-                  },
-                  decoration: InputDecoration(
-                    labelText: 'LGU Email',
-                    hintText: 'ab00-abc-000@cs.lgu.edu.pk',
-                    prefixIcon: Icon(Icons.email_outlined, color: highlight, size: 20),
-                    filled: true,
-                    fillColor: isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.grey.shade50,
-                    labelStyle: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.black87,
-                    ),
-                    hintStyle: TextStyle(
-                      color: isDark ? Colors.white30 : Colors.grey.shade400,
-                      fontSize: 13,
-                    ),
-                    errorText: errorText,
-                    errorStyle: const TextStyle(color: Colors.redAccent),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: highlight, width: 1.5),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.redAccent),
-                    ),
-                    focusedErrorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'This section is only for LGU students. Please enter your university email to continue.',
+                    style: TextStyle(color: subTextColor, fontSize: 13, height: 1.4),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: emailController,
+                    autofocus: true,
+                    keyboardType: TextInputType.emailAddress,
+                    style: TextStyle(color: textColor),
+                    onChanged: (_) {
+                      if (errorText != null) {
+                        setDialogState(() => errorText = null);
+                      }
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'LGU Email',
+                      hintText: 'ab00-abc-000@cs.lgu.edu.pk',
+                      prefixIcon: Icon(Icons.email_outlined, color: highlight, size: 20),
+                      filled: true,
+                      fillColor: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.grey.shade50,
+                      labelStyle: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                      hintStyle: TextStyle(
+                        color: isDark ? Colors.white30 : Colors.grey.shade400,
+                        fontSize: 13,
+                      ),
+                      errorText: errorText,
+                      errorStyle: const TextStyle(color: Colors.redAccent),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: highlight, width: 1.5),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.redAccent),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: rememberMe,
+                        activeColor: highlight,
+                        onChanged: (val) {
+                          setDialogState(() {
+                            rememberMe = val ?? false;
+                          });
+                        },
+                      ),
+                      Text(
+                        'Remember Me',
+                        style: TextStyle(color: textColor, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -156,8 +192,14 @@ class LguVerifiedTap extends StatelessWidget {
           );
         },
       ),
-    ).then((verified) {
-      if (verified == true) onVerified();
+    ).then((verified) async {
+      if (verified == true) {
+        if (rememberMe) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool(_rememberMeKey, true);
+        }
+        onVerified();
+      }
     });
   }
 
