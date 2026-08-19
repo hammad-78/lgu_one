@@ -1,8 +1,6 @@
 import 'dart:io';
 import 'dart:math';
-import 'package:app_settings/app_settings.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -35,19 +33,17 @@ class NotificationService {
       );
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        print("User Granted Permission");
+        debugPrint("User Granted Permission");
         return true;
       } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
-        print("User granted provisional permission");
+        debugPrint("User granted provisional permission");
         return true;
       } else {
-        print("Permission Denied");
-        // Only open settings if we're not in the middle of a build or if strictly necessary
-        // AppSettings.openAppSettings(); 
+        debugPrint("Permission Denied");
         return false;
       }
     } catch (e) {
-      print("Error requesting permission: $e");
+      debugPrint("Error requesting permission: $e");
       return false;
     } finally {
       _isRequestingPermission = false;
@@ -65,29 +61,29 @@ class NotificationService {
     await _flutterLocalNotificationsPlugin.initialize(
       settings: initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        print("Notification tapped: ${response.payload}");
+        debugPrint("Notification tapped: ${response.payload}");
         handleMessageByPayload(context, response.payload);
       },
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
 
-    print("Local notifications initialized");
+    debugPrint("Local notifications initialized");
   }
 
   void firebaseInit(BuildContext context) {
     FirebaseMessaging.onMessage.listen((message) {
-      print("Message title: ${message.notification?.title}");
-      print("Message body: ${message.notification?.body}");
-      print("Message data: ${message.data.toString()}");
-      print("Message data Type: ${message.data['type']}");
-      print("Message data id: ${message.data['id']}");
+      debugPrint("Message title: ${message.notification?.title}");
+      debugPrint("Message body: ${message.notification?.body}");
+      debugPrint("Message data: ${message.data.toString()}");
+      debugPrint("Message data Type: ${message.data['type']}");
+      debugPrint("Message data id: ${message.data['id']}");
 
       showNotification(message);
     });
   }
 
   static Future<void> showNotification(RemoteMessage message) async {
-    print("showNotification called: ${message.notification?.title}");
+    debugPrint("showNotification called: ${message.notification?.title}");
     final int id = Random.secure().nextInt(100000);
     final String channelId = id.toString();
 
@@ -117,10 +113,10 @@ class NotificationService {
   Future<String?> getDeviceToken() async {
     String? token = await messaging.getToken();
     if (token != null) {
-      print("Device Token: $token");
+      debugPrint("Device Token: $token");
       await _saveTokenToFirestore(token);
     } else {
-      print("FCM token is null — permission may not be granted");
+      debugPrint("FCM token is null — permission may not be granted");
     }
     return token;
   }
@@ -138,7 +134,7 @@ class NotificationService {
 
   void isTokenRefreshed() {
     messaging.onTokenRefresh.listen((newToken) {
-      print("Token Refresh: $newToken");
+      debugPrint("Token Refresh: $newToken");
       _saveTokenToFirestore(newToken);
     });
   }
@@ -177,13 +173,17 @@ class NotificationService {
     RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        handleMessage(context, initialMessage);
+        if (context.mounted) {
+          handleMessage(context, initialMessage);
+        }
       });
     }
 
     // background state
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      handleMessage(context, message);
+      if (context.mounted) {
+        handleMessage(context, message);
+      }
     });
   }
 }

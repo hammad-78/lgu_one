@@ -10,8 +10,10 @@ import 'package:lgu_one/gpa/gpa_calculator_screen.dart';
 import 'package:lgu_one/jobs/jobs_swiper.dart';
 import 'package:lgu_one/news_section/news_carousel.dart';
 import 'package:lgu_one/notification/notification_service.dart';
+import 'package:lgu_one/notification/notification_screen.dart';
 import 'package:lgu_one/recommendation_page.dart';
 import 'package:lgu_one/societies/society_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,7 +25,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _jobsKey = GlobalKey();
-
+  Set<String> _seenIds = {};
 
   NotificationService notificationService = NotificationService();
 
@@ -34,12 +36,20 @@ class _HomeScreenState extends State<HomeScreen> {
     notificationService.firebaseInit(context);
     notificationService.setupInteractMessage(context);
     notificationService.isTokenRefreshed();
-    _initNotifications(); // ← replace direct calls with this
+    _initNotifications();
+    _loadSeenIds();
+  }
+
+  Future<void> _loadSeenIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _seenIds = prefs.getStringList('seen_notification_ids')?.toSet() ?? {};
+    });
   }
 
   Future<void> _initNotifications() async {
-    await notificationService.requestNotificationPermission(); // wait for permission
-    await notificationService.getDeviceToken();               // then fetch + save token
+    await notificationService.requestNotificationPermission();
+    await notificationService.getDeviceToken();
   }
 
   @override
@@ -48,10 +58,9 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(20), // 👈 adjust (15–30 looks best)
+            bottom: Radius.circular(20),
           ),
         ),
-
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -66,27 +75,77 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-
         actions: [
-          IconButton(
-            icon: Icon(
-              Icons.notifications_none,
-              color: Theme.of(context).appBarTheme.iconTheme?.color,
-              size: 25,
-            ),
-            onPressed: () {},
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('notifications')
+                .orderBy('timestamp', descending: true)
+                .limit(10)
+                .snapshots(),
+            builder: (context, snapshot) {
+              int unreadCount = 0;
+              if (snapshot.hasData) {
+                unreadCount = snapshot.data!.docs
+                    .where((doc) => !_seenIds.contains(doc.id))
+                    .length;
+              }
+
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.notifications_none,
+                      color: Theme.of(context).appBarTheme.iconTheme?.color,
+                      size: 25,
+                    ),
+                    onPressed: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationScreen(),
+                        ),
+                      );
+                      _loadSeenIds(); // Refresh seen IDs when returning
+                    },
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '$unreadCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
-          SizedBox(width: 15),
+          const SizedBox(width: 15),
         ],
       ),
-
       drawer: _buildDrawer(),
-
       body: ListView(
         controller: _scrollController,
         children: [
-          SizedBox(height: 5),
-          //Text
+          const SizedBox(height: 5),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
             child: Row(
@@ -102,21 +161,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Text(
                     "Latest News & Updates",
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                 ),
               ],
             ),
           ),
-          NewsCarousel(),
-          SizedBox(height: 10),
-          DashboardGrid(),
-
-          SizedBox(height: 10),
-
-          // Upcoming Events
+          const NewsCarousel(),
+          const SizedBox(height: 10),
+          const DashboardGrid(),
+          const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Builder(
@@ -175,15 +231,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           color: isDark
-                              ? const Color(0xFF0B3D2E) // same dark green card
+                              ? const Color(0xFF0B3D2E)
                               : Colors.white,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: isDark
                                 ? const Color(0xFFD4AF37)
-                                    .withValues(alpha: 0.3) // gold tint
+                                    .withValues(alpha: 0.3)
                                 : const Color(0xFF4CAF50)
-                                    .withValues(alpha: 0.25), // green tint
+                                    .withValues(alpha: 0.25),
                             width: 1,
                           ),
                           boxShadow: [
@@ -266,125 +322,32 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-
-          // Join Societies
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Builder(
-            builder: (context) {
-              final isDark = Theme.of(context).brightness == Brightness.dark;
-
-              return InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SocietiesScreen()),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF0B3D2E) // same dark green card
-                        : Colors.white,
-
-                    borderRadius: BorderRadius.circular(16),
-
-                    border: Border.all(
-                      color: isDark
-                          ? const Color(0xFFD4AF37).withValues(alpha: 0.3) // gold tint
-                          : const Color(0xFF4CAF50).withValues(alpha: 0.25), // green tint
-                      width: 1,
-                    ),
-
-                    boxShadow: [
-                      if (!isDark)
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                    ],
-                  ),
-
-                  child: Row(
-                    children: [
-                      // icon badge — echoes the gold/green accent instead of plain iconTheme color
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isDark
-                              ? const Color(0xFFD4AF37).withValues(alpha: 0.12)
-                              : const Color(0xFF4CAF50).withValues(alpha: 0.12),
-                        ),
-                        child: Icon(
-                          Icons.groups,
-                          size: 22,
-                          color: isDark
-                              ? const Color(0xFFD4AF37)
-                              : const Color(0xFF4CAF50),
-                        ),
-                      ),
-
-                      const SizedBox(width: 14),
-
-                      Expanded(
-                        child: Text(
-                          "Join LGU Societies",
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                      ),
-
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 14,
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.5)
-                            : Colors.black45,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-          //Collaboration
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Builder(
               builder: (context) {
                 final isDark = Theme.of(context).brightness == Brightness.dark;
 
-                return LguVerifiedTap(
-
-                  onVerified: () {
+                return InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const CollaborationScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const SocietiesScreen()),
                     );
                   },
                   child: Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF0B3D2E) // same dark green card
-                          : Colors.white,
-
+                      color: isDark ? const Color(0xFF0B3D2E) : Colors.white,
                       borderRadius: BorderRadius.circular(16),
-
                       border: Border.all(
                         color: isDark
-                            ? const Color(0xFFD4AF37).withValues(alpha: 0.3) // gold tint
-                            : const Color(0xFF4CAF50).withValues(alpha: 0.25), // green tint
+                            ? const Color(0xFFD4AF37).withValues(alpha: 0.3)
+                            : const Color(0xFF4CAF50).withValues(alpha: 0.25),
                         width: 1,
                       ),
-
                       boxShadow: [
                         if (!isDark)
                           BoxShadow(
@@ -394,10 +357,85 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                       ],
                     ),
-
                     child: Row(
                       children: [
-                        // icon badge — echoes the gold/green accent instead of plain iconTheme color
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isDark
+                                ? const Color(0xFFD4AF37).withValues(alpha: 0.12)
+                                : const Color(0xFF4CAF50).withValues(alpha: 0.12),
+                          ),
+                          child: Icon(
+                            Icons.groups,
+                            size: 22,
+                            color: isDark
+                                ? const Color(0xFFD4AF37)
+                                : const Color(0xFF4CAF50),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            "Join LGU Societies",
+                            style:
+                                Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 14,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.5)
+                              : Colors.black45,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Builder(
+              builder: (context) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+
+                return LguVerifiedTap(
+                  onVerified: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const CollaborationScreen()),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0B3D2E) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark
+                            ? const Color(0xFFD4AF37).withValues(alpha: 0.3)
+                            : const Color(0xFF4CAF50).withValues(alpha: 0.25),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        if (!isDark)
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
@@ -414,19 +452,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                 : const Color(0xFF4CAF50),
                           ),
                         ),
-
                         const SizedBox(width: 14),
-
                         Expanded(
                           child: Text(
                             "Student Collaboration",
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
+                            style:
+                                Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
                           ),
                         ),
-
                         Icon(
                           Icons.arrow_forward_ios,
                           size: 14,
@@ -441,9 +477,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-
-          SizedBox(height: 10),
-
+          const SizedBox(height: 10),
           Padding(
             key: _jobsKey,
             padding: const EdgeInsets.fromLTRB(20, 10, 0, 0),
@@ -460,33 +494,40 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Text(
                     "Jobs and Internship Opportunities",
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                 ),
               ],
             ),
           ),
-          // Swipe hint
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 4, 20, 0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Icon(Icons.swipe, size: 14, color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.5)),
+                Icon(Icons.swipe,
+                    size: 14,
+                    color: Theme.of(context)
+                        .iconTheme
+                        .color
+                        ?.withValues(alpha: 0.5)),
                 const SizedBox(width: 4),
                 Text(
                   "Swipe",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 12,
-                    color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
-                  ),
+                        fontSize: 12,
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.color
+                            ?.withValues(alpha: 0.5),
+                      ),
                 ),
               ],
             ),
           ),
-          // Swiper
           const JobsSwiper(),
         ],
       ),
@@ -496,26 +537,21 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildDrawer() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final iconColor = theme.iconTheme.color; // already correctly tuned per mode — keep using this
-    final highlight = isDark ? theme.colorScheme.secondary : const Color(0xFF4CAF50);
+    final iconColor = theme.iconTheme.color;
+    final highlight =
+        isDark ? theme.colorScheme.secondary : const Color(0xFF4CAF50);
     final scaffoldBg = theme.scaffoldBackgroundColor;
     final cardBg = isDark ? const Color(0xFF0B3D2E) : Colors.white;
 
     return Drawer(
-      // ✅ FIX: explicit background so it actually matches the app instead of
-      // falling back to Flutter's default Material surface color
       backgroundColor: scaffoldBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
       ),
       child: Column(
         children: [
-          // 🔝 HEADER
           Container(
             decoration: BoxDecoration(
-              // ✅ FIX: card color instead of colorScheme.primary, which is
-              // identical to scaffoldBackgroundColor in dark mode and was
-              // invisible
               color: cardBg,
               border: Border(
                 bottom: BorderSide(
@@ -546,7 +582,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: Text(
                         "LGU-Connect",
-                        style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
+                        style:
+                            theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
                       ),
                     ),
                   ],
@@ -554,17 +591,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-
           const SizedBox(height: 8),
-
-          // 🏠 HOME
           ListTile(
             leading: Icon(Icons.home_outlined, color: iconColor),
             title: const Text("Home"),
             onTap: () => Navigator.pop(context),
           ),
-
-          // 📰 ABOUT US
           ListTile(
             leading: Icon(Icons.article_outlined, color: iconColor),
             title: const Text("About Us"),
@@ -575,8 +607,6 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-
-          // ⭐ RECOMMENDATIONS
           ListTile(
             leading: Icon(Icons.star_outline, color: iconColor),
             title: const Text("Recommendation"),
@@ -587,16 +617,12 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-
-          // 💼 JOBS AND INTERNSHIPS
           ListTile(
             leading: Icon(Icons.work_outline, color: iconColor),
             title: const Text("Career Opportunities"),
             onTap: () async {
               Navigator.pop(context);
-
               await Future.delayed(const Duration(milliseconds: 350));
-
               if (_jobsKey.currentContext != null) {
                 Scrollable.ensureVisible(
                   _jobsKey.currentContext!,
@@ -607,8 +633,6 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
           ),
-
-          // 🧮 GPA
           ListTile(
             leading: Icon(Icons.calculate_outlined, color: iconColor),
             title: const Text("GPA Calculator"),
@@ -619,7 +643,6 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Container(
@@ -635,8 +658,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-
-          // ⚙ SETTINGS
           ListTile(
             leading: Icon(Icons.settings_outlined, color: iconColor),
             title: const Text("Settings"),
@@ -675,9 +696,23 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-
-
-        //  🚪 LOGOUT
+          ListTile(
+            leading: Icon(Icons.delete_sweep_outlined, color: iconColor),
+            title: const Text("Clear Login Cache"),
+            onTap: () async {
+              Navigator.pop(context);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('lgu_remember_me');
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Login cache cleared successfully."),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.login, color: Colors.green),
             title: const Text(
@@ -685,18 +720,19 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(color: Colors.black),
             ),
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => AdminSignin(),));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AdminSignin(),
+                  ));
             },
           ),
-
           const SizedBox(height: 12),
         ],
       ),
     );
   }
 }
-
-// Circular Avatar for Drawer
 
 class AnimatedAvatar extends StatefulWidget {
   const AnimatedAvatar({super.key});
@@ -713,12 +749,10 @@ class _AnimatedAvatarState extends State<AnimatedAvatar>
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-
     _scale = Tween<double>(
       begin: 0.9,
       end: 1.1,
@@ -729,7 +763,7 @@ class _AnimatedAvatarState extends State<AnimatedAvatar>
   Widget build(BuildContext context) {
     return ScaleTransition(
       scale: _scale,
-      child: Icon(Icons.school, size: 55, color: Colors.black),
+      child: const Icon(Icons.school, size: 55, color: Colors.black),
     );
   }
 

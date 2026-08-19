@@ -10,5 +10,8 @@
         "firebase-hosts.log"
       ]
     }
-  ]
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  }
 }
