@@ -35,8 +35,6 @@ class _ListingsScreenState extends State<ListingsScreen> {
     }
   }
 
-  /// Repeatedly prompts for the secret code until it's correct or the user
-  /// cancels. Returns the verified code, or null if cancelled.
   Future<String?> _promptAndVerify(String title, LostFoundItem item) async {
     String? errorText;
     while (true) {
@@ -111,7 +109,7 @@ class _ListingsScreenState extends State<ListingsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = Theme.of(context).colorScheme.secondary;
     final highlight = isDark ? accent : const Color(0xFF4CAF50);
-    final sheetBg = isDark ? const Color(0xFF0B3D2E) : Colors.white;
+    final sheetBg = isDark ? const Color(0xFF021E16) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black87;
     final subTextColor = isDark ? Colors.white70 : Colors.grey.shade700;
 
@@ -153,27 +151,23 @@ class _ListingsScreenState extends State<ListingsScreen> {
                     ),
 
                     if (item.imageUrls.isNotEmpty)
-                      SizedBox(
-                        height: 240,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.all(12),
-                          itemCount: item.imageUrls.length,
-                          separatorBuilder: (_, __) =>
-                          const SizedBox(width: 10),
-                          itemBuilder: (context, i) => ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.network(
-                              item.imageUrls[i],
-                              width: MediaQuery.of(context).size.width * 0.8,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Container(
-                                width: MediaQuery.of(context).size.width * 0.8,
-                                color: isDark ? Colors.white10 : Colors.grey.shade200,
-                                child: Icon(Icons.broken_image_outlined,
-                                    color: isDark ? Colors.white30 : Colors.grey.shade400,
-                                    size: 40),
-                              ),
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.network(
+                            item.imageUrls.first,
+                            width: double.infinity,
+                            height: 240,
+                            fit: BoxFit.cover,
+                            cacheWidth: 1000, // Optimized decoding size
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              width: double.infinity,
+                              height: 240,
+                              color: isDark ? Colors.white10 : Colors.grey.shade200,
+                              child: Icon(Icons.broken_image_outlined,
+                                  color: isDark ? Colors.white30 : Colors.grey.shade400,
+                                  size: 40),
                             ),
                           ),
                         ),
@@ -558,6 +552,9 @@ class _ListingsScreenState extends State<ListingsScreen> {
                   return _buildSkeletonList(context);
                 }
                 var items = snapshot.data!;
+                // Only show active items to regular users
+                items = items.where((i) => i.status == 'active').toList();
+
                 items = items.where((i) {
                   final matchesType = _typeFilter == 'all' || i.type == _typeFilter;
                   final matchesCategory =
@@ -597,6 +594,7 @@ class _ListingsScreenState extends State<ListingsScreen> {
                                   width: 80,
                                   height: 80,
                                   fit: BoxFit.cover,
+                                  cacheWidth: 240, // Optimization: only decode at thumbnail size
                                   errorBuilder: (context, error, stackTrace) => Container(
                                     width: 80,
                                     height: 80,

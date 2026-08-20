@@ -19,8 +19,7 @@ class LostFoundService {
   static const _collection = 'lost_found_items';
 
   /// Streams all items ordered by newest first. Status/type/category/search
-  /// filtering all happens client-side in the listings screen — a query
-  /// with only orderBy (no where) needs no composite index at all.
+  /// filtering all happens client-side in the listings screen.
   Stream<List<LostFoundItem>> getItems() {
     return _firestore
         .collection(_collection)
@@ -33,8 +32,6 @@ class LostFoundService {
     final urls = <String>[];
     final stamp = DateTime.now().millisecondsSinceEpoch;
     for (var i = 0; i < images.length; i++) {
-      // Timestamped names so edits that add photos never collide with
-      // files uploaded at post time or in an earlier edit.
       final ref = _storage.ref('lost_found/$itemId/${stamp}_$i.jpg');
       await ref.putFile(images[i]);
       urls.add(await ref.getDownloadURL());
@@ -42,9 +39,7 @@ class LostFoundService {
     return urls;
   }
 
-  /// Creates a listing and returns the plain-text secret code. This is the
-  /// ONLY moment the plain code exists outside the user's own memory/notes
-  /// — only its SHA-256 hash is ever written to Firestore.
+  /// Creates a listing with 'pending' status.
   Future<String> postItem({
     required String type,
     required String category,
@@ -72,7 +67,7 @@ class LostFoundService {
       'date': Timestamp.fromDate(date),
       'whatsappNumber': whatsappNumber,
       'secretKeyHash': SecretKeyUtil.hash(secretKey),
-      'status': 'active',
+      'status': 'pending', // Initially pending admin approval
       'createdAt': FieldValue.serverTimestamp(),
       'authorToken': authorToken,
     });
@@ -80,9 +75,6 @@ class LostFoundService {
     return secretKey;
   }
 
-  /// Checks a code against the one stored for [itemId] without changing
-  /// anything. Returns true/false rather than throwing, so screens can
-  /// show inline "wrong code" feedback before committing to an action.
   Future<bool> verifySecretKey(String itemId, String enteredKey) async {
     final doc = await _firestore.collection(_collection).doc(itemId).get();
     if (!doc.exists) return false;
@@ -91,9 +83,6 @@ class LostFoundService {
         storedHash == SecretKeyUtil.hash(enteredKey);
   }
 
-  /// Updates a listing. Re-verifies [enteredKey] itself (rather than
-  /// trusting an earlier verifySecretKey call) so this method is safe to
-  /// call on its own.
   Future<void> updateItem({
     required String itemId,
     required String enteredKey,
@@ -125,18 +114,13 @@ class LostFoundService {
       'imageUrls': [...keptImageUrls, ...uploaded],
     });
 
-    // Best-effort cleanup of photos the user removed during this edit.
     for (final url in removedImageUrls) {
       try {
         await _storage.refFromURL(url).delete();
-      } catch (_) {
-        // Already gone or URL malformed — safe to ignore.
-      }
+      } catch (_) {}
     }
   }
 
-  /// Deletes a listing and its photos. Re-verifies [enteredKey] itself,
-  /// same reasoning as [updateItem].
   Future<void> deleteItem(String itemId, String enteredKey) async {
     final ok = await verifySecretKey(itemId, enteredKey);
     if (!ok) throw InvalidSecretKeyException();
@@ -145,10 +129,15 @@ class LostFoundService {
       final folder = _storage.ref('lost_found/$itemId');
       final listed = await folder.listAll();
       await Future.wait(listed.items.map((ref) => ref.delete()));
-    } catch (_) {
-      // Folder may not exist or already be empty — safe to ignore.
-    }
+    } catch (_) {}
 
     await _firestore.collection(_collection).doc(itemId).delete();
+  }
+
+  /// Admin methods to approve or reject listings
+  Future<void> updateItemStatus(String itemId, String status) async {
+    await _firestore.collection(_collection).doc(itemId).update({
+      'status': status,
+    });
   }
 }

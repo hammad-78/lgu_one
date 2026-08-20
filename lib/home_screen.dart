@@ -1,12 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/about.dart';
 import 'package:lgu_one/admin/admin_signin.dart';
-import 'package:lgu_one/auth/on_verified.dart';
+import 'package:lgu_one/auth/signIn.dart';
 import 'package:lgu_one/collaboration/collaboration_screen.dart';
 import 'package:lgu_one/events/upcoming_events_screen.dart';
 import 'package:lgu_one/dashboard_grid.dart';
-import 'package:lgu_one/gpa/gpa_calculator_screen.dart';
 import 'package:lgu_one/jobs/jobs_swiper.dart';
 import 'package:lgu_one/news_section/news_carousel.dart';
 import 'package:lgu_one/notification/notification_service.dart';
@@ -54,6 +54,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         shape: const RoundedRectangleBorder(
@@ -64,14 +67,11 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.school,
-              color: Theme.of(context).appBarTheme.iconTheme?.color,
-            ),
+            const Icon(Icons.school),
             const SizedBox(width: 8),
             Text(
               'LGU Connect',
-              style: Theme.of(context).appBarTheme.titleTextStyle,
+              style: theme.appBarTheme.titleTextStyle,
             ),
           ],
         ),
@@ -94,9 +94,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 alignment: Alignment.center,
                 children: [
                   IconButton(
-                    icon: Icon(
+                    icon: const Icon(
                       Icons.notifications_none,
-                      color: Theme.of(context).appBarTheme.iconTheme?.color,
                       size: 25,
                     ),
                     onPressed: () async {
@@ -106,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           builder: (_) => const NotificationScreen(),
                         ),
                       );
-                      _loadSeenIds(); // Refresh seen IDs when returning
+                      _loadSeenIds();
                     },
                   ),
                   if (unreadCount > 0)
@@ -154,13 +153,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 Icon(
                   Icons.campaign_outlined,
                   size: 25,
-                  color: Theme.of(context).iconTheme.color,
+                  color: theme.colorScheme.primary,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     "Latest News & Updates",
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    style: theme.textTheme.headlineMedium?.copyWith(
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
                         ),
@@ -173,310 +172,28 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 10),
           const DashboardGrid(),
           const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Builder(
-              builder: (context) {
-                final isDark = Theme.of(context).brightness == Brightness.dark;
-                final now = DateTime.now();
-                final startOfToday = DateTime(now.year, now.month, now.day);
-
-                return StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('events')
-                      .where('eventDate',
-                          isGreaterThanOrEqualTo:
-                              Timestamp.fromDate(startOfToday))
-                      .orderBy('eventDate', descending: false)
-                      .limit(1)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    String eventSubtitle = "No upcoming events right now";
-                    if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                      final data = snapshot.data!.docs.first.data()
-                          as Map<String, dynamic>;
-                      final title = data['title'] ?? 'Upcoming Event';
-                      if (data['eventDate'] is Timestamp) {
-                        final eventDate =
-                            (data['eventDate'] as Timestamp).toDate();
-                        final diff = DateTime(
-                                eventDate.year, eventDate.month, eventDate.day)
-                            .difference(startOfToday)
-                            .inDays;
-                        String countdown;
-                        if (diff == 0) {
-                          countdown = "Today";
-                        } else if (diff == 1) {
-                          countdown = "Tomorrow";
-                        } else {
-                          countdown = "in $diff days";
-                        }
-                        eventSubtitle = "$title — $countdown";
-                      } else {
-                        eventSubtitle = title;
-                      }
-                    }
-
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const UpcomingEventsScreen(),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF0B3D2E)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark
-                                ? const Color(0xFFD4AF37)
-                                    .withValues(alpha: 0.3)
-                                : const Color(0xFF4CAF50)
-                                    .withValues(alpha: 0.25),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            if (!isDark)
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.06),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isDark
-                                    ? const Color(0xFFD4AF37)
-                                        .withValues(alpha: 0.12)
-                                    : const Color(0xFF4CAF50)
-                                        .withValues(alpha: 0.12),
-                              ),
-                              child: Icon(
-                                Icons.event,
-                                size: 22,
-                                color: isDark
-                                    ? const Color(0xFFD4AF37)
-                                    : const Color(0xFF4CAF50),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    "Upcoming Events",
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark
-                                              ? Colors.white
-                                              : Colors.black87,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    eventSubtitle,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: isDark
-                                          ? const Color(0xFFD4AF37)
-                                          : const Color(0xFF4CAF50),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              Icons.arrow_forward_ios,
-                              size: 14,
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.5)
-                                  : Colors.black45,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+          
+          // Quick Action Cards
+          _buildQuickActionCard(
+            context,
+            title: "Upcoming Events",
+            icon: Icons.event,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UpcomingEventsScreen())),
+            isEvent: true,
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Builder(
-              builder: (context) {
-                final isDark = Theme.of(context).brightness == Brightness.dark;
-
-                return InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const SocietiesScreen()),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0B3D2E) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isDark
-                            ? const Color(0xFFD4AF37).withValues(alpha: 0.3)
-                            : const Color(0xFF4CAF50).withValues(alpha: 0.25),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        if (!isDark)
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isDark
-                                ? const Color(0xFFD4AF37).withValues(alpha: 0.12)
-                                : const Color(0xFF4CAF50).withValues(alpha: 0.12),
-                          ),
-                          child: Icon(
-                            Icons.groups,
-                            size: 22,
-                            color: isDark
-                                ? const Color(0xFFD4AF37)
-                                : const Color(0xFF4CAF50),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            "Join LGU Societies",
-                            style:
-                                Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.white : Colors.black87,
-                                    ),
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 14,
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.5)
-                              : Colors.black45,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+          _buildQuickActionCard(
+            context,
+            title: "Join LGU Societies",
+            icon: Icons.groups,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SocietiesScreen())),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Builder(
-              builder: (context) {
-                final isDark = Theme.of(context).brightness == Brightness.dark;
-
-                return LguVerifiedTap(
-                  onVerified: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const CollaborationScreen()),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0B3D2E) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isDark
-                            ? const Color(0xFFD4AF37).withValues(alpha: 0.3)
-                            : const Color(0xFF4CAF50).withValues(alpha: 0.25),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        if (!isDark)
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isDark
-                                ? const Color(0xFFD4AF37).withValues(alpha: 0.12)
-                                : const Color(0xFF4CAF50).withValues(alpha: 0.12),
-                          ),
-                          child: Icon(
-                            Icons.diversity_3,
-                            size: 22,
-                            color: isDark
-                                ? const Color(0xFFD4AF37)
-                                : const Color(0xFF4CAF50),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            "Student Collaboration",
-                            style:
-                                Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.white : Colors.black87,
-                                    ),
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 14,
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.5)
-                              : Colors.black45,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+          _buildQuickActionCard(
+            context,
+            title: "Student Collaboration",
+            icon: Icons.diversity_3,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CollaborationScreen())),
           ),
+          
           const SizedBox(height: 10),
           Padding(
             key: _jobsKey,
@@ -487,13 +204,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 Icon(
                   Icons.work_outline,
                   size: 25,
-                  color: Theme.of(context).iconTheme.color,
+                  color: theme.colorScheme.primary,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     "Jobs and Internship Opportunities",
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    style: theme.textTheme.headlineMedium?.copyWith(
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
                         ),
@@ -509,20 +226,13 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Icon(Icons.swipe,
                     size: 14,
-                    color: Theme.of(context)
-                        .iconTheme
-                        .color
-                        ?.withValues(alpha: 0.5)),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                 const SizedBox(width: 4),
                 Text(
                   "Swipe",
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  style: theme.textTheme.bodySmall?.copyWith(
                         fontSize: 12,
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.color
-                            ?.withValues(alpha: 0.5),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                 ),
               ],
@@ -534,17 +244,143 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildQuickActionCard(BuildContext context, {
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool isEvent = false,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: theme.cardTheme.color,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: theme.colorScheme.primary.withValues(alpha: isDark ? 0.3 : 0.25),
+              width: 1,
+            ),
+            boxShadow: [
+              if (!isDark)
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                ),
+                child: Icon(
+                  icon,
+                  size: 22,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: isEvent ? _buildEventSubtitle(context, title) : Text(
+                  title,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 14,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEventSubtitle(BuildContext context, String title) {
+    final theme = Theme.of(context);
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('events')
+          .where('eventDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
+          .orderBy('eventDate', descending: false)
+          .limit(1)
+          .snapshots(),
+      builder: (context, snapshot) {
+        String eventSubtitle = "No upcoming events right now";
+        if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+          final data = snapshot.data!.docs.first.data() as Map<String, dynamic>;
+          final eventTitle = data['title'] ?? 'Upcoming Event';
+          if (data['eventDate'] is Timestamp) {
+            final eventDate = (data['eventDate'] as Timestamp).toDate();
+            final diff = DateTime(eventDate.year, eventDate.month, eventDate.day)
+                .difference(startOfToday)
+                .inDays;
+            String countdown;
+            if (diff == 0) countdown = "Today";
+            else if (diff == 1) countdown = "Tomorrow";
+            else countdown = "in $diff days";
+            eventSubtitle = "$eventTitle — $countdown";
+          } else {
+            eventSubtitle = eventTitle;
+          }
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              eventSubtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildDrawer() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final iconColor = theme.iconTheme.color;
-    final highlight =
-        isDark ? theme.colorScheme.secondary : const Color(0xFF4CAF50);
-    final scaffoldBg = theme.scaffoldBackgroundColor;
-    final cardBg = isDark ? const Color(0xFF0B3D2E) : Colors.white;
+    final highlight = theme.colorScheme.primary;
+
+    final user = FirebaseAuth.instance.currentUser;
 
     return Drawer(
-      backgroundColor: scaffoldBg,
+      backgroundColor: theme.scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
       ),
@@ -552,7 +388,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: cardBg,
+              color: theme.cardTheme.color,
               border: Border(
                 bottom: BorderSide(
                   color: highlight.withValues(alpha: isDark ? 0.3 : 0.25),
@@ -575,15 +411,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: CircleAvatar(
                         radius: 26,
                         backgroundColor: highlight.withValues(alpha: 0.15),
-                        child: const AnimatedAvatar(),
+                        child: Image.asset("assets/images/lgu_connect_icon.png"),
                       ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Text(
                         "LGU-Connect",
-                        style:
-                            theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
+                        style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
                       ),
                     ),
                   ],
@@ -603,128 +438,78 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => About()),
+                MaterialPageRoute(builder: (context) => const About()),
               );
             },
           ),
           ListTile(
             leading: Icon(Icons.star_outline, color: iconColor),
-            title: const Text("Recommendation"),
+            title: const Text("Recommendations"),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => RecommendationsPage()),
-              );
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.work_outline, color: iconColor),
-            title: const Text("Career Opportunities"),
-            onTap: () async {
-              Navigator.pop(context);
-              await Future.delayed(const Duration(milliseconds: 350));
-              if (_jobsKey.currentContext != null) {
-                Scrollable.ensureVisible(
-                  _jobsKey.currentContext!,
-                  duration: const Duration(milliseconds: 800),
-                  curve: Curves.easeInOutCubic,
-                  alignment: 0.05,
-                );
-              }
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.calculate_outlined, color: iconColor),
-            title: const Text("GPA Calculator"),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => GpaCalculatorScreen()),
-              );
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.transparent,
-                    highlight.withValues(alpha: isDark ? 0.6 : 0.7),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          ListTile(
-            leading: Icon(Icons.settings_outlined, color: iconColor),
-            title: const Text("Settings"),
-            onTap: () {
-              showDialog(
-                context: context,
-                barrierDismissible: true,
-                builder: (context) {
-                  return AlertDialog(
-                    backgroundColor: cardBg,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(color: highlight.withValues(alpha: 0.3)),
-                    ),
-                    title: Row(
-                      children: [
-                        Icon(Icons.info_outline, color: highlight),
-                        const SizedBox(width: 8),
-                        const Text("Settings"),
-                      ],
-                    ),
-                    content: const Text(
-                      "No additional settings are required at the moment.",
-                      textAlign: TextAlign.center,
-                    ),
-                    actions: [
-                      Center(
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("OK"),
-                        ),
-                      ),
-                    ],
-                  );
-                },
+                MaterialPageRoute(builder: (context) => const RecommendationsPage()),
               );
             },
           ),
           ListTile(
             leading: Icon(Icons.delete_sweep_outlined, color: iconColor),
-            title: const Text("Clear Login Cache"),
+            title: const Text("Clear Cache History"),
             onTap: () async {
               Navigator.pop(context);
               final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('lgu_remember_me');
+              await prefs.clear();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text("Login cache cleared successfully."),
-                    backgroundColor: Colors.green,
+                    content: Text("Cache history cleared successfully."),
                   ),
                 );
               }
             },
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Divider(color: highlight.withValues(alpha: 0.2)),
+          ),
           ListTile(
-            leading: const Icon(Icons.login, color: Colors.green),
-            title: const Text(
-              "Admin Login",
-              style: TextStyle(color: Colors.black),
-            ),
+            leading: Icon(Icons.admin_panel_settings_outlined, color: iconColor),
+            title: const Text("Admin Signin"),
             onTap: () {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AdminSignin(),
+                    builder: (context) => const AdminSignin(),
                   ));
+            },
+          ),
+          ListTile(
+            leading: Icon(
+              user != null ? Icons.logout : Icons.login,
+              color: user != null ? Colors.red : Colors.green,
+            ),
+            title: Text(
+              user != null ? "Logout" : "Student Signin",
+              style: TextStyle(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            onTap: () async {
+              if (user != null) {
+                await FirebaseAuth.instance.signOut();
+                if (mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SignInScreen()),
+                    (route) => false,
+                  );
+                }
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SignInScreen()),
+                );
+              }
             },
           ),
           const SizedBox(height: 12),
@@ -763,7 +548,7 @@ class _AnimatedAvatarState extends State<AnimatedAvatar>
   Widget build(BuildContext context) {
     return ScaleTransition(
       scale: _scale,
-      child: const Icon(Icons.school, size: 55, color: Colors.black),
+      child: Icon(Icons.school, size: 55, color: Theme.of(context).colorScheme.onSurface),
     );
   }
 

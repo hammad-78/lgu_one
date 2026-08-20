@@ -66,6 +66,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
   }
 
   Future<void> _selectDate() async {
+    final theme = Theme.of(context);
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -73,9 +74,9 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
       lastDate: DateTime(2030),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Colors.green,
+          data: theme.copyWith(
+            colorScheme: theme.colorScheme.copyWith(
+              primary: theme.colorScheme.primary,
             ),
           ),
           child: child!,
@@ -116,7 +117,6 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Please select an image file or enter an image URL"),
-          backgroundColor: Colors.orange,
         ),
       );
       return;
@@ -198,11 +198,12 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green,
         title: const Text("News Management"),
-        centerTitle: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -211,10 +212,6 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
           children: [
             // 🔹 CREATE NEWS CARD FORM
             Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Form(
@@ -223,27 +220,24 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Row(
-                        children: const [
-                          Icon(Icons.add_location_alt_outlined, color: Colors.green),
-                          SizedBox(width: 8),
+                        children: [
+                          Icon(Icons.add_location_alt_outlined, color: theme.colorScheme.primary),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               "Publish New Announcement",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
+                              style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                      const Divider(height: 24),
+                      Divider(height: 24, color: theme.dividerColor.withOpacity(0.5)),
 
                       // Title Field
                       TextFormField(
                         controller: _titleController,
+                        style: TextStyle(color: theme.colorScheme.onSurface),
                         decoration: const InputDecoration(
                           labelText: "News Title *",
                           prefixIcon: Icon(Icons.title),
@@ -262,6 +256,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                       TextFormField(
                         controller: _descriptionController,
                         maxLines: 3,
+                        style: TextStyle(color: theme.colorScheme.onSurface),
                         decoration: const InputDecoration(
                           labelText: "News Description *",
                           prefixIcon: Icon(Icons.description),
@@ -282,7 +277,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                           final isNarrow = constraints.maxWidth < 360;
 
                           final typeDropdown = DropdownButtonFormField<String>(
-                            initialValue: _selectedType,
+                            value: _selectedType,
                             isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: "Category / Type",
@@ -311,6 +306,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                             controller: _dateController,
                             readOnly: true,
                             onTap: _selectDate,
+                            style: TextStyle(color: theme.colorScheme.onSurface),
                             decoration: const InputDecoration(
                               labelText: "Date *",
                               prefixIcon: Icon(Icons.calendar_today),
@@ -348,13 +344,9 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                       const SizedBox(height: 14),
 
                       // Image Input Section
-                      const Text(
+                      Text(
                         "News Banner Image *",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
+                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 8),
 
@@ -363,9 +355,9 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                         constraints: const BoxConstraints(minHeight: 120),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
+                          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
                         ),
                         child: _pickedImageFile != null
                             ? Stack(
@@ -413,10 +405,6 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                                         icon: const Icon(Icons.photo_library,
                                             size: 18),
                                         label: const Text("Gallery"),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.green,
-                                          foregroundColor: Colors.white,
-                                        ),
                                       ),
                                       ElevatedButton.icon(
                                         onPressed: () =>
@@ -424,18 +412,14 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                                         icon: const Icon(Icons.camera_alt,
                                             size: 18),
                                         label: const Text("Camera"),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.green,
-                                          foregroundColor: Colors.white,
-                                        ),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  const Text(
+                                  Text(
                                     "OR enter Image URL below",
                                     style: TextStyle(
-                                        fontSize: 12, color: Colors.grey),
+                                        fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.5)),
                                   ),
                                 ],
                               ),
@@ -445,6 +429,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                       // Image URL Direct Input
                       TextFormField(
                         controller: _imageUrlController,
+                        style: TextStyle(color: theme.colorScheme.onSurface),
                         onChanged: (val) {
                           if (val.isNotEmpty && _pickedImageFile != null) {
                             setState(() => _pickedImageFile = null);
@@ -461,20 +446,13 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                       // Publish Button
                       ElevatedButton(
                         onPressed: _isPublishing ? null : _publishNews,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
                         child: _isPublishing
-                            ? const SizedBox(
+                            ? SizedBox(
                                 height: 22,
                                 width: 22,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.5,
-                                  color: Colors.white,
+                                  color: theme.colorScheme.onPrimary,
                                 ),
                               )
                             : const Text(
@@ -482,7 +460,6 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
                                 ),
                               ),
                       ),
@@ -495,13 +472,9 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
             const SizedBox(height: 24),
 
             // 🔹 MANAGED NEWS LIST HEADER
-            const Text(
+            Text(
               "Published News Items",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+              style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
             ),
             const SizedBox(height: 10),
 
@@ -512,55 +485,14 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  final err = snapshot.error.toString();
-                  final isPermission = err.contains('permission-denied') ||
-                      err.contains('PERMISSION_DENIED');
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.amber.shade400),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.warning_amber_rounded,
-                                color: Colors.amber, size: 22),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                isPermission
-                                    ? "Firestore Permission Denied"
-                                    : "Error loading news",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          isPermission
-                              ? "Cloud Firestore denied access to the 'news' collection. Update your Firestore Security Rules in Firebase Console."
-                              : err,
-                          style: TextStyle(
-                              fontSize: 13, color: Colors.grey.shade800),
-                        ),
-                      ],
-                    ),
-                  );
+                  return Center(child: Text("Error loading news: ${snapshot.error}"));
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                     child: Padding(
                       padding: EdgeInsets.all(20.0),
-                      child: CircularProgressIndicator(color: Colors.green),
+                      child: CircularProgressIndicator(),
                     ),
                   );
                 }
@@ -568,16 +500,13 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                 final docs = snapshot.data?.docs ?? [];
 
                 if (docs.isEmpty) {
-                  return Container(
-                    padding: const EdgeInsets.all(20),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      "No published news yet",
-                      style: TextStyle(color: Colors.grey),
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Text(
+                        "No published news yet",
+                        style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                      ),
                     ),
                   );
                 }
@@ -589,7 +518,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                   itemBuilder: (context, index) {
                     final doc = docs[index];
                     final news = NewsModel.fromDocument(doc);
-                    return _buildNewsItemCard(news);
+                    return _buildNewsItemCard(context, news);
                   },
                 );
               },
@@ -600,18 +529,23 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
     );
   }
 
-  Widget _buildNewsItemCard(NewsModel news) {
+  Widget _buildNewsItemCard(BuildContext context, NewsModel news) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(14),
+        border: isDark ? Border.all(color: theme.colorScheme.primary.withOpacity(0.2)) : null,
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
         ],
       ),
       child: Padding(
@@ -631,14 +565,14 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                       errorBuilder: (_, __, ___) => Container(
                         width: 70,
                         height: 70,
-                        color: Colors.grey.shade200,
+                        color: isDark ? Colors.white10 : Colors.grey.shade200,
                         child: const Icon(Icons.broken_image, color: Colors.grey),
                       ),
                     )
                   : Container(
                       width: 70,
                       height: 70,
-                      color: Colors.grey.shade200,
+                      color: isDark ? Colors.white10 : Colors.grey.shade200,
                       child: const Icon(Icons.image, color: Colors.grey),
                     ),
             ),
@@ -657,13 +591,13 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Colors.green,
+                            color: theme.colorScheme.primary,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             news.type,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: theme.colorScheme.onPrimary,
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                             ),
@@ -675,9 +609,9 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                       Flexible(
                         child: Text(
                           news.date,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
-                            color: Colors.grey,
+                            color: theme.colorScheme.onSurface.withOpacity(0.5),
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -687,9 +621,10 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                   const SizedBox(height: 6),
                   Text(
                     news.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
+                      color: theme.colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -697,7 +632,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     news.description,
-                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.8)),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -714,7 +649,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                         icon: const Icon(Icons.edit, size: 16),
                         label: const Text("Edit"),
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.green,
+                          foregroundColor: theme.colorScheme.primary,
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(50, 30),
                         ),
@@ -724,7 +659,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                         icon: const Icon(Icons.delete, size: 16),
                         label: const Text("Delete"),
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.red,
+                          foregroundColor: Colors.redAccent,
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(50, 30),
                         ),
@@ -770,7 +705,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                       maxLines: 3,
                     ),
                     DropdownButtonFormField<String>(
-                      initialValue: typeValue,
+                      value: typeValue,
                       decoration: const InputDecoration(labelText: "Category / Type"),
                       items: options
                           .map((opt) => DropdownMenuItem(
@@ -801,7 +736,6 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                   child: const Text("Cancel"),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                   onPressed: () async {
                     if (news.id != null) {
                       await _newsRef.doc(news.id).update({
@@ -819,7 +753,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                       }
                     }
                   },
-                  child: const Text("Save", style: TextStyle(color: Colors.white)),
+                  child: const Text("Save"),
                 ),
               ],
             );
@@ -845,7 +779,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
               child: const Text("Cancel"),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
               onPressed: () async {
                 final messenger = ScaffoldMessenger.of(context);
                 Navigator.pop(context);
@@ -854,10 +788,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                   const SnackBar(content: Text("News item deleted")),
                 );
               },
-              child: const Text(
-                "Delete",
-                style: TextStyle(color: Colors.white),
-              ),
+              child: const Text("Delete"),
             ),
           ],
         );

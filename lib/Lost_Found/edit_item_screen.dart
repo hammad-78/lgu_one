@@ -7,9 +7,6 @@ import 'package:intl/intl.dart';
 import 'lost_found_item.dart';
 import 'lost_found_service.dart';
 
-/// Edits an existing listing. [secretKey] must already have been verified
-/// (see ListingsScreen) — this screen passes it straight through to
-/// LostFoundService.updateItem, which re-checks it before writing anyway.
 class EditItemScreen extends StatefulWidget {
   final LostFoundItem item;
   final String secretKey;
@@ -37,9 +34,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
   late final TextEditingController _whatsappController;
   late DateTime _date;
 
-  late List<String> _keptImageUrls; // existing network images user keeps
-  final List<String> _removedImageUrls = []; // existing images user removed
-  final List<File> _newImages = []; // newly added local images
+  String? _existingImageUrl;
+  File? _newImage;
   bool _isSubmitting = false;
 
   @override
@@ -53,7 +49,10 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _locationController = TextEditingController(text: item.location);
     _whatsappController = TextEditingController(text: item.whatsappNumber);
     _date = item.date;
-    _keptImageUrls = List.of(item.imageUrls);
+    // We only take the first image if multiple existed (legacy)
+    if (item.imageUrls.isNotEmpty) {
+      _existingImageUrl = item.imageUrls.first;
+    }
   }
 
   @override
@@ -65,16 +64,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     super.dispose();
   }
 
-  int get _totalImageCount => _keptImageUrls.length + _newImages.length;
-
-  Future<void> _pickImages() async {
-    if (_totalImageCount >= 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You can add up to 3 photos.')),
-      );
-      return;
-    }
-
+  Future<void> _pickImage() async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (context) => SafeArea(
@@ -97,9 +87,16 @@ class _EditItemScreenState extends State<EditItemScreen> {
     if (source == null) return;
 
     try {
-      final picked = await _picker.pickImage(source: source, imageQuality: 70);
+      final picked = await _picker.pickImage(
+          source: source,
+          imageQuality: 50,
+          maxWidth: 800
+      );
       if (picked != null) {
-        setState(() => _newImages.add(File(picked.path)));
+        setState(() {
+          _newImage = File(picked.path);
+          _existingImageUrl = null; // Mark existing for removal if we have a new one
+        });
       }
     } catch (e) {
       if (!mounted) return;
@@ -133,8 +130,22 @@ class _EditItemScreenState extends State<EditItemScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_existingImageUrl == null && _newImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add an image.')),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     try {
+      // Logic: If user has a _newImage, we remove ALL old images.
+      // If user kept _existingImageUrl, we keep only that one.
+      final List<String> removed = [];
+      if (_newImage != null || _existingImageUrl == null) {
+        removed.addAll(widget.item.imageUrls);
+      }
+
       await _service.updateItem(
         itemId: widget.item.id,
         enteredKey: widget.secretKey,
@@ -145,9 +156,9 @@ class _EditItemScreenState extends State<EditItemScreen> {
         location: _locationController.text.trim(),
         date: _date,
         whatsappNumber: _whatsappController.text.trim(),
-        keptImageUrls: _keptImageUrls,
-        removedImageUrls: _removedImageUrls,
-        newImages: _newImages,
+        keptImageUrls: _existingImageUrl != null ? [_existingImageUrl!] : [],
+        removedImageUrls: removed,
+        newImages: _newImage != null ? [_newImage!] : [],
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -244,76 +255,67 @@ class _EditItemScreenState extends State<EditItemScreen> {
               validator: _validateWhatsapp,
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ..._keptImageUrls.map(
-                      (url) => Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(url,
-                            width: 90, height: 90, fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: () => setState(() {
-                            _keptImageUrls.remove(url);
-                            _removedImageUrls.add(url);
-                          }),
-                          child: const CircleAvatar(
-                            radius: 10,
-                            backgroundColor: Colors.black54,
-                            child:
-                            Icon(Icons.close, size: 14, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+
+            GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                width: double.infinity,
+                height: 200,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                ..._newImages.map(
-                      (file) => Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.file(file,
-                            width: 90, height: 90, fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: () => setState(() => _newImages.remove(file)),
-                          child: const CircleAvatar(
-                            radius: 10,
-                            backgroundColor: Colors.black54,
-                            child:
-                            Icon(Icons.close, size: 14, color: Colors.white),
+                child: _newImage != null
+                    ? Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(_newImage!, fit: BoxFit.cover),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_totalImageCount < 3)
-                  GestureDetector(
-                    onTap: _pickImages,
-                    child: Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.add_a_photo_outlined),
-                    ),
-                  ),
-              ],
+                          const Positioned(
+                            bottom: 8,
+                            right: 8,
+                            child: CircleAvatar(
+                              backgroundColor: Colors.black54,
+                              child: Icon(Icons.edit, color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      )
+                    : _existingImageUrl != null
+                        ? Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  _existingImageUrl!,
+                                  fit: BoxFit.cover,
+                                  cacheWidth: 800,
+                                ),
+                              ),
+                              const Positioned(
+                                bottom: 8,
+                                right: 8,
+                                child: CircleAvatar(
+                                  backgroundColor: Colors.black54,
+                                  child: Icon(Icons.edit, color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          )
+                        : const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add_a_photo_outlined, size: 40),
+                              SizedBox(height: 8),
+                              Text('Add photo'),
+                            ],
+                          ),
+              ),
             ),
+
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _isSubmitting ? null : _submit,

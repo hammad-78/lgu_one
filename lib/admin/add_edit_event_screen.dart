@@ -84,6 +84,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
   }
 
   void _showImageSourceDialog() {
+    final theme = Theme.of(context);
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -94,7 +95,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
           child: Wrap(
             children: [
               ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.green),
+                leading: Icon(Icons.photo_library, color: theme.colorScheme.primary),
                 title: const Text("Choose from Gallery"),
                 onTap: () {
                   Navigator.pop(context);
@@ -102,7 +103,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.camera_alt, color: Colors.green),
+                leading: Icon(Icons.camera_alt, color: theme.colorScheme.primary),
                 title: const Text("Take a Photo"),
                 onTap: () {
                   Navigator.pop(context);
@@ -113,7 +114,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                   _imageUrlController.text.isNotEmpty ||
                   _existingImageUrl != null)
                 ListTile(
-                  leading: const Icon(Icons.delete, color: Colors.red),
+                  leading: const Icon(Icons.delete, color: Colors.redAccent),
                   title: const Text("Remove Image"),
                   onTap: () {
                     Navigator.pop(context);
@@ -132,6 +133,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
   }
 
   Future<void> _selectDateTime() async {
+    final theme = Theme.of(context);
     final now = DateTime.now();
     final initialDate = _selectedDateTime ?? now;
 
@@ -142,9 +144,9 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
       lastDate: DateTime(2035),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Colors.green,
+          data: theme.copyWith(
+            colorScheme: theme.colorScheme.copyWith(
+              primary: theme.colorScheme.primary,
             ),
           ),
           child: child!,
@@ -161,9 +163,9 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
       initialTime: TimeOfDay.fromDateTime(_selectedDateTime ?? now),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Colors.green,
+          data: theme.copyWith(
+            colorScheme: theme.colorScheme.copyWith(
+              primary: theme.colorScheme.primary,
             ),
           ),
           child: child!,
@@ -203,7 +205,6 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Please select event date and time"),
-          backgroundColor: Colors.orange,
         ),
       );
       return;
@@ -273,7 +274,9 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
     }
   }
 
-  Widget _buildImagePreview(bool isDark) {
+  Widget _buildImagePreview(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final pastedUrl = _imageUrlController.text.trim();
 
     if (_pickedImageFile != null) {
@@ -309,25 +312,25 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
           _existingImageUrl!,
           fit: BoxFit.cover,
           width: double.infinity,
-          errorBuilder: (_, __, ___) => const Column(
+          errorBuilder: (_, __, ___) => Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 40, color: Colors.grey),
-              Text("Failed to load image"),
+              Icon(Icons.error_outline, size: 40, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+              const Text("Failed to load image"),
             ],
           ),
         ),
       );
     } else {
-      return const Column(
+      return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.add_a_photo, size: 44, color: Colors.green),
-          SizedBox(height: 8),
+          Icon(Icons.add_a_photo, size: 44, color: theme.colorScheme.primary),
+          const SizedBox(height: 8),
           Text(
             "Tap to upload Cover Image or paste URL below",
             style: TextStyle(
-              color: Colors.black54,
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
               fontSize: 13,
             ),
           ),
@@ -338,22 +341,21 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green,
         title: Text(_isEditing ? "Edit Event" : "Add Event"),
-        centerTitle: true,
       ),
       body: _isSaving
-          ? const Center(
+          ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(color: Colors.green),
-                  SizedBox(height: 16),
-                  Text("Saving event..."),
+                  CircularProgressIndicator(color: theme.colorScheme.primary),
+                  const SizedBox(height: 16),
+                  const Text("Saving event..."),
                 ],
               ),
             )
@@ -372,15 +374,15 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                         height: 180,
                         decoration: BoxDecoration(
                           color: isDark
-                              ? Colors.grey.shade900
+                              ? Colors.white.withOpacity(0.05)
                               : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: Colors.grey.shade400,
+                            color: theme.dividerColor.withOpacity(0.5),
                             style: BorderStyle.solid,
                           ),
                         ),
-                        child: _buildImagePreview(isDark),
+                        child: _buildImagePreview(context),
                       ),
                     ),
 
@@ -389,13 +391,14 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                     // Image URL Input Field
                     TextFormField(
                       controller: _imageUrlController,
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                       decoration: InputDecoration(
                         labelText: "Or Paste Image URL (Optional)",
                         hintText: "https://example.com/image.jpg",
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        prefixIcon: const Icon(Icons.link, color: Colors.green),
+                        prefixIcon: Icon(Icons.link, color: theme.colorScheme.primary),
                         suffixIcon: _imageUrlController.text.isNotEmpty
                             ? IconButton(
                                 icon: const Icon(Icons.clear, size: 20),
@@ -419,13 +422,14 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                     // Title
                     TextFormField(
                       controller: _titleController,
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                       decoration: InputDecoration(
                         labelText: "Event Title *",
                         hintText: "e.g. Annual Sports Gala 2026",
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        prefixIcon: const Icon(Icons.title, color: Colors.green),
+                        prefixIcon: Icon(Icons.title, color: theme.colorScheme.primary),
                       ),
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) {
@@ -438,12 +442,9 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                     const SizedBox(height: 16),
 
                     // Category Selector
-                    const Text(
+                    Text(
                       "Category *",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
+                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
                     SegmentedButton<String>(
@@ -466,8 +467,8 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                         });
                       },
                       style: SegmentedButton.styleFrom(
-                        selectedBackgroundColor: Colors.green,
-                        selectedForegroundColor: Colors.white,
+                        selectedBackgroundColor: theme.colorScheme.primary,
+                        selectedForegroundColor: theme.colorScheme.onPrimary,
                       ),
                     ),
 
@@ -481,12 +482,12 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 16),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade400),
+                          border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.calendar_today, color: Colors.green),
+                            Icon(Icons.calendar_today, color: theme.colorScheme.primary),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
@@ -500,14 +501,12 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                                       ? FontWeight.normal
                                       : FontWeight.w600,
                                   color: _selectedDateTime == null
-                                      ? Colors.grey.shade600
-                                      : (isDark
-                                          ? Colors.white
-                                          : Colors.black87),
+                                      ? theme.colorScheme.onSurface.withOpacity(0.6)
+                                      : theme.colorScheme.onSurface,
                                 ),
                               ),
                             ),
-                            const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                            Icon(Icons.arrow_drop_down, color: theme.colorScheme.onSurface.withOpacity(0.5)),
                           ],
                         ),
                       ),
@@ -518,6 +517,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                     // Location
                     TextFormField(
                       controller: _locationController,
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                       decoration: InputDecoration(
                         labelText: "Location / Venue *",
                         hintText: "e.g. Main Auditorium, LGU Campus",
@@ -525,7 +525,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         prefixIcon:
-                            const Icon(Icons.location_on, color: Colors.green),
+                            Icon(Icons.location_on, color: theme.colorScheme.primary),
                       ),
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) {
@@ -541,6 +541,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                     TextFormField(
                       controller: _descriptionController,
                       maxLines: 4,
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                       decoration: InputDecoration(
                         labelText: "Description (Optional)",
                         hintText: "Enter event details, schedule, or notes...",
@@ -548,7 +549,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         prefixIcon:
-                            const Icon(Icons.description, color: Colors.green),
+                            Icon(Icons.description, color: theme.colorScheme.primary),
                       ),
                     ),
 
@@ -559,8 +560,8 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
