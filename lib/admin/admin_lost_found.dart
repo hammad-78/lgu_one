@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../Lost_Found/lost_found_item.dart';
+import '../Lost_Found/lost_found_service.dart';
 
 class AdminLostFound extends StatefulWidget {
   const AdminLostFound({super.key});
@@ -10,19 +12,27 @@ class AdminLostFound extends StatefulWidget {
 
 class _AdminLostFoundState extends State<AdminLostFound> {
   final CollectionReference _lostFoundRef =
-  FirebaseFirestore.instance.collection('lost_found_items');
+      FirebaseFirestore.instance.collection('lost_found_items');
+  final _service = LostFoundService();
 
-  String _statusFilter = 'All';
+  String _statusFilter = 'Pending';
 
-  final List<String> _statusOptions = ['All', 'Lost', 'Found', 'Resolved'];
+  final List<String> _statusOptions = [
+    'Pending',
+    'Active',
+    'Resolved',
+    'Rejected',
+    'All'
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green,
-        title: const Text("Lost & Found Listings"),
-        centerTitle: true,
+        title: const Text("Admin: Lost & Found"),
       ),
       body: Column(
         children: [
@@ -40,9 +50,11 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                   return ChoiceChip(
                     label: Text(option),
                     selected: isSelected,
-                    selectedColor: Colors.green,
+                    selectedColor: theme.colorScheme.primary,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black87,
+                      color: isSelected 
+                          ? theme.colorScheme.onPrimary 
+                          : theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                     onSelected: (_) {
@@ -71,27 +83,16 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                 final filtered = _statusFilter == 'All'
                     ? docs
                     : docs.where((d) {
-                  final data = d.data() as Map<String, dynamic>;
-                  // 'type' holds Lost/Found; 'status' holds active/resolved.
-                  // Comparison is case-insensitive in case values are
-                  // stored as 'lost'/'found' rather than 'Lost'/'Found'.
-                  if (_statusFilter == 'Resolved') {
-                    return (data['status'] ?? '')
-                        .toString()
-                        .toLowerCase() ==
-                        'resolved';
-                  }
-                  return (data['type'] ?? '')
-                      .toString()
-                      .toLowerCase() ==
-                      _statusFilter.toLowerCase();
-                }).toList();
+                        final data = d.data() as Map<String, dynamic>;
+                        final status = (data['status'] ?? 'pending').toString().toLowerCase();
+                        return status == _statusFilter.toLowerCase();
+                      }).toList();
 
                 if (filtered.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Text(
-                      "No listings found",
-                      style: TextStyle(color: Colors.black54),
+                      "No $_statusFilter listings found",
+                      style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
                     ),
                   );
                 }
@@ -102,7 +103,7 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                   itemBuilder: (context, index) {
                     final doc = filtered[index];
                     final data = doc.data() as Map<String, dynamic>;
-                    return _buildListingCard(doc.id, data);
+                    return _buildListingCard(context, doc.id, data);
                   },
                 );
               },
@@ -113,152 +114,175 @@ class _AdminLostFoundState extends State<AdminLostFound> {
     );
   }
 
-  Widget _buildListingCard(String docId, Map<String, dynamic> data) {
+  Widget _buildListingCard(BuildContext context, String docId, Map<String, dynamic> data) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final String title = data['title'] ?? 'Untitled';
     final String description = data['description'] ?? '';
-    final String type = data['type'] ?? 'Lost';
-    final String status = data['status'] ?? 'active';
-    final bool isResolved = status == 'resolved';
+    final String type = data['type'] ?? 'lost';
+    final String status = data['status'] ?? 'pending';
     final String category = data['category'] ?? '';
     final String location = data['location'] ?? '';
-    final String imageUrl = data['imageUrl'] ?? '';
-    final String postedBy = data['postedBy'] ?? 'Unknown';
+    final List<dynamic> imageUrls = data['imageUrls'] ?? [];
+    final String imageUrl = imageUrls.isNotEmpty ? imageUrls.first : '';
 
-    Color statusColor;
-    if (isResolved) {
-      statusColor = Colors.grey;
-    } else if (type == 'Found') {
-      statusColor = Colors.blue;
-    } else {
-      statusColor = Colors.red;
-    }
+    Color typeColor = type.toLowerCase() == 'found' ? Colors.blue : Colors.red;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(14),
+        border: isDark ? Border.all(color: theme.colorScheme.primary.withOpacity(0.2)) : null,
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
         ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: imageUrl.isNotEmpty
-                  ? Image.network(
-                imageUrl,
-                width: 72,
-                height: 72,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 72,
-                  height: 72,
-                  color: Colors.grey.shade200,
-                  child: const Icon(Icons.image_not_supported,
-                      color: Colors.grey),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
+                          width: 72,
+                          height: 72,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 72,
+                            height: 72,
+                            color: isDark ? Colors.white10 : Colors.grey.shade200,
+                            child: const Icon(Icons.image_not_supported,
+                                color: Colors.grey),
+                          ),
+                        )
+                      : Container(
+                          width: 72,
+                          height: 72,
+                          color: isDark ? Colors.white10 : Colors.grey.shade200,
+                          child: const Icon(Icons.image, color: Colors.grey),
+                        ),
                 ),
-              )
-                  : Container(
-                width: 72,
-                height: 72,
-                color: Colors.grey.shade200,
-                child: const Icon(Icons.image, color: Colors.grey),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          maxLines: 1,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: typeColor,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              type.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      if (description.isNotEmpty)
+                        Text(
+                          description,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 13, color: theme.colorScheme.onSurface.withOpacity(0.8)),
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: statusColor,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          isResolved ? 'Resolved' : type,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          if (category.isNotEmpty)
+                            _tag(context, Icons.category_outlined, category),
+                          if (location.isNotEmpty)
+                            _tag(context, Icons.location_on_outlined, location),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  if (description.isNotEmpty)
-                    Text(
-                      description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 13, color: Colors.black87),
+                ),
+              ],
+            ),
+            Divider(height: 20, color: theme.dividerColor.withOpacity(0.5)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _showEditDialog(docId, data),
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: const Text("Edit"),
+                  style: TextButton.styleFrom(foregroundColor: theme.colorScheme.primary),
+                ),
+                const SizedBox(width: 8),
+                if (status == 'pending') ...[
+                  ElevatedButton.icon(
+                    onPressed: () => _service.updateItemStatus(docId, 'active'),
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text("Approve"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
                     ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      if (category.isNotEmpty)
-                        _tag(Icons.category_outlined, category),
-                      if (location.isNotEmpty)
-                        _tag(Icons.location_on_outlined, location),
-                      _tag(Icons.person_outline, postedBy),
-                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      TextButton.icon(
-                        onPressed: () => _showEditDialog(docId, data),
-                        icon: const Icon(Icons.edit, size: 18),
-                        label: const Text("Edit"),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.green,
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(50, 30),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      TextButton.icon(
-                        onPressed: () => _confirmDelete(docId),
-                        icon: const Icon(Icons.delete, size: 18),
-                        label: const Text("Delete"),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(50, 30),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => _service.updateItemStatus(docId, 'rejected'),
+                    icon: const Icon(Icons.close, size: 18),
+                    label: const Text("Reject"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ],
-              ),
+                if (status == 'rejected')
+                  ElevatedButton.icon(
+                    onPressed: () => _service.updateItemStatus(docId, 'active'),
+                    icon: const Icon(Icons.restore, size: 18),
+                    label: const Text("Restore"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => _confirmDelete(docId),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                ),
+              ],
             ),
           ],
         ),
@@ -266,30 +290,30 @@ class _AdminLostFoundState extends State<AdminLostFound> {
     );
   }
 
-  Widget _tag(IconData icon, String label) {
+  Widget _tag(BuildContext context, IconData icon, String label) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: Colors.black54),
+        Icon(icon, size: 13, color: theme.colorScheme.onSurface.withOpacity(0.6)),
         const SizedBox(width: 3),
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: Colors.black54),
+          style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withOpacity(0.6)),
         ),
       ],
     );
   }
 
   void _showEditDialog(String docId, Map<String, dynamic> data) {
+    final theme = Theme.of(context);
     final titleController = TextEditingController(text: data['title'] ?? '');
-    final descController =
-    TextEditingController(text: data['description'] ?? '');
-    final categoryController =
-    TextEditingController(text: data['category'] ?? '');
-    final locationController =
-    TextEditingController(text: data['location'] ?? '');
-    String type = data['type'] ?? 'Lost';
-    String status = data['status'] ?? 'active';
+    final descController = TextEditingController(text: data['description'] ?? '');
+    final categoryController = TextEditingController(text: data['category'] ?? '');
+    final locationController = TextEditingController(text: data['location'] ?? '');
+    final whatsappController = TextEditingController(text: data['whatsappNumber'] ?? '');
+    String type = data['type'] ?? 'lost';
+    String status = data['status'] ?? 'pending';
 
     showDialog(
       context: context,
@@ -297,7 +321,7 @@ class _AdminLostFoundState extends State<AdminLostFound> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text("Edit Listing"),
+              title: const Text("Edit Listing (Admin)"),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -308,59 +332,46 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                     ),
                     TextField(
                       controller: descController,
-                      decoration:
-                      const InputDecoration(labelText: "Description"),
+                      decoration: const InputDecoration(labelText: "Description"),
                       maxLines: 3,
                     ),
-                    TextField(
-                      controller: categoryController,
-                      decoration:
-                      const InputDecoration(labelText: "Category"),
+                    DropdownButtonFormField<String>(
+                      value: lostFoundCategories.contains(categoryController.text) 
+                          ? categoryController.text 
+                          : lostFoundCategories.first,
+                      decoration: const InputDecoration(labelText: "Category"),
+                      items: lostFoundCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                      onChanged: (v) => categoryController.text = v ?? categoryController.text,
                     ),
                     TextField(
                       controller: locationController,
-                      decoration:
-                      const InputDecoration(labelText: "Location"),
+                      decoration: const InputDecoration(labelText: "Location"),
+                    ),
+                    TextField(
+                      controller: whatsappController,
+                      decoration: const InputDecoration(labelText: "WhatsApp Number"),
                     ),
                     const SizedBox(height: 12),
-                    Builder(builder: (context) {
-                      // Always include whatever value is currently stored,
-                      // even if it doesn't match the known options, so the
-                      // dropdown never throws on unexpected data.
-                      final typeOptions = {'Lost', 'Found', type}.toList();
-                      return DropdownButtonFormField<String>(
-                        initialValue: type,
-                        decoration: const InputDecoration(labelText: "Type"),
-                        items: typeOptions
-                            .map((option) => DropdownMenuItem(
-                          value: option,
-                          child: Text(option),
-                        ))
-                            .toList(),
-                        onChanged: (value) {
-                          setDialogState(() => type = value ?? type);
-                        },
-                      );
-                    }),
-                    const SizedBox(height: 12),
-                    Builder(builder: (context) {
-                      final statusOptions =
-                      {'active', 'resolved', status}.toList();
-                      return DropdownButtonFormField<String>(
-                        initialValue: status,
-                        decoration:
-                        const InputDecoration(labelText: "Status"),
-                        items: statusOptions
-                            .map((option) => DropdownMenuItem(
-                          value: option,
-                          child: Text(option),
-                        ))
-                            .toList(),
-                        onChanged: (value) {
-                          setDialogState(() => status = value ?? status);
-                        },
-                      );
-                    }),
+                    DropdownButtonFormField<String>(
+                      value: type.toLowerCase(),
+                      decoration: const InputDecoration(labelText: "Type"),
+                      items: const [
+                        DropdownMenuItem(value: 'lost', child: Text("Lost")),
+                        DropdownMenuItem(value: 'found', child: Text("Found")),
+                      ],
+                      onChanged: (value) => setDialogState(() => type = value ?? type),
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: status.toLowerCase(),
+                      decoration: const InputDecoration(labelText: "Status"),
+                      items: const [
+                        DropdownMenuItem(value: 'pending', child: Text("Pending")),
+                        DropdownMenuItem(value: 'active', child: Text("Active")),
+                        DropdownMenuItem(value: 'resolved', child: Text("Resolved")),
+                        DropdownMenuItem(value: 'rejected', child: Text("Rejected")),
+                      ],
+                      onChanged: (value) => setDialogState(() => status = value ?? status),
+                    ),
                   ],
                 ),
               ),
@@ -370,24 +381,24 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                   child: const Text("Cancel"),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                  ),
                   onPressed: () async {
-                    await _updateListing(docId, {
+                    await _lostFoundRef.doc(docId).update({
                       'title': titleController.text.trim(),
                       'description': descController.text.trim(),
                       'category': categoryController.text.trim(),
                       'location': locationController.text.trim(),
+                      'whatsappNumber': whatsappController.text.trim(),
                       'type': type,
                       'status': status,
                     });
-                    if (context.mounted) Navigator.pop(context);
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Listing updated successfully")),
+                      );
+                    }
                   },
-                  child: const Text(
-                    "Save",
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  child: const Text("Save Changes"),
                 ),
               ],
             );
@@ -397,24 +408,6 @@ class _AdminLostFoundState extends State<AdminLostFound> {
     );
   }
 
-  Future<void> _updateListing(
-      String docId, Map<String, dynamic> updates) async {
-    try {
-      await _lostFoundRef.doc(docId).update(updates);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Listing updated")),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Update failed: $e")),
-        );
-      }
-    }
-  }
-
   void _confirmDelete(String docId) {
     showDialog(
       context: context,
@@ -422,22 +415,19 @@ class _AdminLostFoundState extends State<AdminLostFound> {
         return AlertDialog(
           title: const Text("Delete Listing"),
           content: const Text(
-              "Are you sure you want to delete this listing? This cannot be undone."),
+              "Are you sure you want to delete this listing from the database? This cannot be undone."),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text("Cancel"),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
               onPressed: () async {
                 Navigator.pop(context);
                 await _deleteListing(docId);
               },
-              child: const Text(
-                "Delete",
-                style: TextStyle(color: Colors.white),
-              ),
+              child: const Text("Delete"),
             ),
           ],
         );
@@ -447,13 +437,10 @@ class _AdminLostFoundState extends State<AdminLostFound> {
 
   Future<void> _deleteListing(String docId) async {
     try {
-      // Note: this only deletes the Firestore document.
-      // If you store images in Firebase Storage, delete them there too
-      // using the stored imageUrl/storage path before or after this call.
       await _lostFoundRef.doc(docId).delete();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Listing deleted")),
+          const SnackBar(content: Text("Listing permanently deleted")),
         );
       }
     } catch (e) {

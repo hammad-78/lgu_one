@@ -23,6 +23,7 @@ class LostFoundItem {
   final DateTime date;
   final String whatsappNumber; // E.164 format, e.g. +923001234567
   final String secretKeyHash; // SHA-256 hash only — never the plain code
+  final String status; // 'pending', 'active', 'rejected', 'resolved'
   final DateTime createdAt;
 
   const LostFoundItem({
@@ -36,6 +37,7 @@ class LostFoundItem {
     required this.date,
     required this.whatsappNumber,
     required this.secretKeyHash,
+    required this.status,
     required this.createdAt,
   });
 
@@ -52,6 +54,7 @@ class LostFoundItem {
       date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
       whatsappNumber: data['whatsappNumber'] as String? ?? '',
       secretKeyHash: data['secretKeyHash'] as String? ?? '',
+      status: data['status'] as String? ?? 'pending',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }

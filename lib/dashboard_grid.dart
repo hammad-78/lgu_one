@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lgu_one/Lost_Found/listing_screen.dart';
-import 'package:lgu_one/auth/on_verified.dart';
 import 'package:lgu_one/gpa/gpa_calculator_screen.dart';
 import 'package:lgu_one/pastpapers/subject_screen.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:lgu_one/student_portal_screen.dart';
 
 class DashboardGrid extends StatefulWidget {
   const DashboardGrid({super.key});
@@ -27,41 +26,52 @@ class _DashboardGridState extends State<DashboardGrid> {
               GridItem(
                 title: "LGU Student Portal",
                 icon: Icons.account_balance,
-                onTap: (){
-                  openWebsite("https://student.lgu.edu.pk/");
-                },),
-              SizedBox(width: 14,),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const StudentPortalScreen()),
+                  );
+                },
+              ),
+              const SizedBox(width: 14),
               GridItem(
                 title: "Lost and Found",
                 icon: Icons.location_on_outlined,
-                onTap: () => LguVerifiedTap.verify(
-                  context,
-                  onVerified: () => Navigator.push(
+                onTap: () {
+                  Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const ListingsScreen()),
-                  ),
-                ),
+                  );
+                },
               ),
             ],
           ),
-          SizedBox(height: 30,),
+          const SizedBox(height: 30),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               GridItem(
-                  title: "Past Papers",
-                  icon: Icons.file_copy,
-                onTap: (){
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => SubjectScreen(),));
+                title: "Course Outlines",
+                icon: Icons.file_copy,
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SubjectScreen(),
+                      ));
                 },
-                  ),
-              SizedBox(width: 14,),
+              ),
+              const SizedBox(width: 14),
               GridItem(
-                  title: "GPA/CGPA Calculator",
-                  icon: Icons.calculate_outlined,
-                  onTap: (){
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => GpaCalculatorScreen(),));
-                  },
+                title: "GPA/CGPA Calculator",
+                icon: Icons.calculate_outlined,
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const GpaCalculatorScreen(),
+                      ));
+                },
               )
             ],
           ),
@@ -70,8 +80,6 @@ class _DashboardGridState extends State<DashboardGrid> {
     );
   }
 }
-
-
 
 class GridItem extends StatelessWidget {
   final String title;
@@ -87,67 +95,51 @@ class GridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       height: 160,
       width: 160,
       decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF0B3D2E) // dark green card
-            : Colors.white,
-
+        color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(16),
-
         border: Border.all(
-          color: isDark
-              ? const Color(0xFFD4AF37).withValues(alpha: 0.3) // gold tint
-              : const Color(0xFF4CAF50).withValues(alpha: 0.25), // green tint
+          color: theme.colorScheme.primary.withOpacity(isDark ? 0.3 : 0.25),
           width: 1,
         ),
-
         boxShadow: [
           if (!isDark)
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
+              color: Colors.black.withOpacity(0.06),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
         ],
       ),
-
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: onTap ?? () {},
-
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // ICON CONTAINER (clean + modern)
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isDark
-                        ? const Color(0xFFD4AF37).withValues(alpha: 0.12)
-                        : const Color(0xFF4CAF50).withValues(alpha: 0.12),
+                    color: theme.colorScheme.primary.withOpacity(0.12),
                   ),
                   child: Icon(
                     icon,
                     size: 28,
-                    color: isDark
-                        ? const Color(0xFFD4AF37)
-                        : const Color(0xFF4CAF50),
+                    color: theme.colorScheme.primary,
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
-                // TITLE
                 Text(
                   title,
                   textAlign: TextAlign.center,
@@ -156,7 +148,7 @@ class GridItem extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black87,
+                    color: theme.colorScheme.onSurface,
                     letterSpacing: 0.3,
                   ),
                 ),
@@ -166,13 +158,5 @@ class GridItem extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-Future<void> openWebsite(String link) async {
-  final Uri url = Uri.parse(link);
-
-  if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-    throw 'Could not launch $link';
   }
 }

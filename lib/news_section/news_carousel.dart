@@ -13,7 +13,13 @@ class NewsCarousel extends StatefulWidget {
 }
 
 class _NewsCarouselState extends State<NewsCarousel> {
-  int _currentIndex = 0;
+  final ValueNotifier<int> _currentIndex = ValueNotifier(0);
+
+  @override
+  void dispose() {
+    _currentIndex.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -138,8 +144,8 @@ class _NewsCarouselState extends State<NewsCarousel> {
         });
 
         // Prevent index out of bounds if items count changes
-        if (_currentIndex >= newsList.length) {
-          _currentIndex = 0;
+        if (_currentIndex.value >= newsList.length) {
+          _currentIndex.value = 0;
         }
 
         return Column(
@@ -153,9 +159,7 @@ class _NewsCarouselState extends State<NewsCarousel> {
                 enlargeCenterPage: true,
                 viewportFraction: 0.9,
                 onPageChanged: (index, reason) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
+                  _currentIndex.value = index;
                 },
               ),
               items: newsList.map((news) {
@@ -286,28 +290,33 @@ class _NewsCarouselState extends State<NewsCarousel> {
             const SizedBox(height: 10),
 
             // 🔥 DOT INDICATORS
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: newsList.asMap().entries.map((entry) {
-                int index = entry.key;
+            ValueListenableBuilder<int>(
+              valueListenable: _currentIndex,
+              builder: (context, currentIndex, _) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: newsList.asMap().entries.map((entry) {
+                    int index = entry.key;
 
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  height: 8,
-                  width: _currentIndex == index ? 20 : 8,
-                  decoration: BoxDecoration(
-                    color: _currentIndex == index
-                        ? Colors.green
-                        : Colors.grey.shade400,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      height: 8,
+                      width: currentIndex == index ? 20 : 8,
+                      decoration: BoxDecoration(
+                        color: currentIndex == index
+                            ? Colors.green
+                            : Colors.grey.shade400,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    );
+                  }).toList(),
                 );
-              }).toList(),
+              },
             ),
           ],
         );
       },
     );
   }
-}
+}

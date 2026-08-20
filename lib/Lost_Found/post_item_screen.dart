@@ -29,7 +29,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
   final _locationController = TextEditingController();
   final _whatsappController = TextEditingController();
   DateTime _date = DateTime.now();
-  final List<File> _images = [];
+  File? _image;
   bool _isSubmitting = false;
 
   @override
@@ -41,7 +41,6 @@ class _PostItemScreenState extends State<PostItemScreen> {
     super.dispose();
   }
 
-  // 🎨 Shared themed input decoration so every field looks consistent
   InputDecoration _decoration(
       BuildContext context, {
         required String label,
@@ -85,14 +84,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
     );
   }
 
-  Future<void> _pickImages() async {
-    if (_images.length >= 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You can add up to 3 photos.')),
-      );
-      return;
-    }
-
+  Future<void> _pickImage() async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = Theme.of(context).colorScheme.secondary;
     final highlight = isDark ? accent : const Color(0xFF4CAF50);
@@ -135,9 +127,13 @@ class _PostItemScreenState extends State<PostItemScreen> {
     if (source == null) return;
 
     try {
-      final picked = await _picker.pickImage(source: source, imageQuality: 70);
+      final picked = await _picker.pickImage(
+          source: source,
+          imageQuality: 50, // Reduced quality for faster loading
+          maxWidth: 800     // Resize to reasonable width
+      );
       if (picked != null) {
-        setState(() => _images.add(File(picked.path)));
+        setState(() => _image = File(picked.path));
       }
     } catch (e) {
       if (!mounted) return;
@@ -184,6 +180,13 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    if (_image == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add at least one image.')),
+      );
+      return;
+    }
 
     setState(() => _isSubmitting = true);
     try {
@@ -196,12 +199,20 @@ class _PostItemScreenState extends State<PostItemScreen> {
         location: _locationController.text.trim(),
         date: _date,
         whatsappNumber: _whatsappController.text.trim(),
-        images: _images,
+        images: [_image!],
         authorToken: token,
       );
       if (!mounted) return;
       await _showSecretKeyDialog(secretKey);
       if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Item reported successfully. Waiting for admin approval.'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
@@ -240,8 +251,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
           children: [
             Text(
               "You'll need this code to edit or delete this listing later. "
-                  "We don't store it anywhere we can read it back to you, so "
-                  'write it down or take a screenshot now.',
+                  "Your post will be visible to others once an admin approves it.",
               style: TextStyle(color: subTextColor),
             ),
             const SizedBox(height: 16),
@@ -372,7 +382,6 @@ class _PostItemScreenState extends State<PostItemScreen> {
             ),
             const SizedBox(height: 16),
 
-            // 📅 DATE PICKER ROW
             InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: _pickDate,
@@ -413,57 +422,55 @@ class _PostItemScreenState extends State<PostItemScreen> {
             ),
             const SizedBox(height: 16),
 
-            // 🖼 IMAGE PICKER
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ..._images.map(
-                      (file) => Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.file(
-                          file,
-                          width: 90,
-                          height: 90,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: () => setState(() => _images.remove(file)),
-                          child: const CircleAvatar(
-                            radius: 10,
-                            backgroundColor: Colors.black54,
-                            child: Icon(Icons.close, size: 14, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
+            Center(
+              child: GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: highlight.withValues(alpha: isDark ? 0.1 : 0.08),
+                    border: Border.all(color: borderColor),
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  child: _image == null
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_a_photo_outlined, color: highlight, size: 40),
+                            const SizedBox(height: 8),
+                            Text('Add photo', style: TextStyle(color: highlight)),
+                          ],
+                        )
+                      : Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.file(
+                                _image!,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _image = null),
+                                child: const CircleAvatar(
+                                  radius: 14,
+                                  backgroundColor: Colors.black54,
+                                  child: Icon(Icons.close, size: 18, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
-                if (_images.length < 3)
-                  GestureDetector(
-                    onTap: _pickImages,
-                    child: Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        color: highlight.withValues(alpha: isDark ? 0.1 : 0.08),
-                        border: Border.all(color: borderColor),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(Icons.add_a_photo_outlined, color: highlight),
-                    ),
-                  ),
-              ],
+              ),
             ),
             const SizedBox(height: 24),
 
-            // 🚀 SUBMIT — uses ElevatedButtonTheme from AppTheme automatically
             ElevatedButton(
               onPressed: _isSubmitting ? null : _submit,
               child: _isSubmitting

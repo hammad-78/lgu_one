@@ -17,11 +17,12 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green,
         title: const Text("Collaboration Listings"),
-        centerTitle: true,
       ),
       body: Column(
         children: [
@@ -39,9 +40,11 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                   return ChoiceChip(
                     label: Text(option),
                     selected: isSelected,
-                    selectedColor: Colors.green,
+                    selectedColor: theme.colorScheme.primary,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black87,
+                      color: isSelected 
+                          ? theme.colorScheme.onPrimary 
+                          : theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                     onSelected: (_) {
@@ -79,10 +82,10 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                       }).toList();
 
                 if (filtered.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Text(
                       "No collaborations found",
-                      style: TextStyle(color: Colors.black54),
+                      style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
                     ),
                   );
                 }
@@ -96,7 +99,7 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                     final info = data['info'] is Map<String, dynamic>
                         ? data['info'] as Map<String, dynamic>
                         : data;
-                    return _buildListingCard(doc.id, info);
+                    return _buildListingCard(context, doc.id, info);
                   },
                 );
               },
@@ -107,7 +110,10 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
     );
   }
 
-  Widget _buildListingCard(String docId, Map<String, dynamic> info) {
+  Widget _buildListingCard(BuildContext context, String docId, Map<String, dynamic> info) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     final String title = info['title'] ?? 'Untitled';
     final String description = info['description'] ?? '';
     final String category = info['category'] ?? '';
@@ -124,19 +130,21 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
         : [];
     final String whatsappNumber = info['whatsappNumber'] ?? '';
 
-    final Color statusColor = isOpen ? Colors.green : Colors.red;
+    final Color statusColor = isOpen ? Colors.green : Colors.redAccent;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(14),
+        border: isDark ? Border.all(color: theme.colorScheme.primary.withOpacity(0.2)) : null,
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
         ],
       ),
       child: Padding(
@@ -149,9 +157,10 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                 Expanded(
                   child: Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 16,
+                      color: theme.colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -181,7 +190,7 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                 description,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withOpacity(0.8)),
               ),
             const SizedBox(height: 8),
             Wrap(
@@ -189,11 +198,11 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
               runSpacing: 6,
               children: [
                 if (category.isNotEmpty)
-                  _tag(Icons.category_outlined, "Category: $category"),
-                _tag(Icons.people_outline,
+                  _tag(context, Icons.category_outlined, "Category: $category"),
+                _tag(context, Icons.people_outline,
                     "Members: $existingMembers/$requiredMembers"),
                 if (whatsappNumber.isNotEmpty)
-                  _tag(Icons.phone_outlined, whatsappNumber),
+                  _tag(context, Icons.phone_outlined, whatsappNumber),
               ],
             ),
             if (requiredPosts.isNotEmpty) ...[
@@ -211,7 +220,7 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                       post.toString(),
                       style: const TextStyle(fontSize: 11),
                     ),
-                    backgroundColor: Colors.grey.shade100,
+                    backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade100,
                   );
                 }).toList(),
               ),
@@ -224,7 +233,7 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                   icon: const Icon(Icons.edit, size: 18),
                   label: const Text("Edit"),
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.green,
+                    foregroundColor: theme.colorScheme.primary,
                     padding: EdgeInsets.zero,
                     minimumSize: const Size(50, 30),
                   ),
@@ -235,7 +244,7 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                   icon: const Icon(Icons.delete, size: 18),
                   label: const Text("Delete"),
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
+                    foregroundColor: Colors.redAccent,
                     padding: EdgeInsets.zero,
                     minimumSize: const Size(50, 30),
                   ),
@@ -248,15 +257,16 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
     );
   }
 
-  Widget _tag(IconData icon, String label) {
+  Widget _tag(BuildContext context, IconData icon, String label) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: Colors.black54),
+        Icon(icon, size: 14, color: theme.colorScheme.onSurface.withOpacity(0.6)),
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Colors.black54),
+          style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
         ),
       ],
     );
@@ -337,22 +347,17 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                           const InputDecoration(labelText: "WhatsApp Number"),
                     ),
                     const SizedBox(height: 12),
-                    Builder(builder: (context) {
-                      final statusOptions = {'open', 'closed', status}.toList();
-                      return DropdownButtonFormField<String>(
-                        initialValue: status,
-                        decoration: const InputDecoration(labelText: "Status"),
-                        items: statusOptions
-                            .map((option) => DropdownMenuItem(
-                                  value: option,
-                                  child: Text(option),
-                                ))
-                            .toList(),
-                        onChanged: (value) {
-                          setDialogState(() => status = value ?? status);
-                        },
-                      );
-                    }),
+                    DropdownButtonFormField<String>(
+                      value: status.toLowerCase(),
+                      decoration: const InputDecoration(labelText: "Status"),
+                      items: const [
+                        DropdownMenuItem(value: 'open', child: Text("Open")),
+                        DropdownMenuItem(value: 'closed', child: Text("Closed")),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() => status = value ?? status);
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -362,9 +367,6 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                   child: const Text("Cancel"),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                  ),
                   onPressed: () async {
                     List<String> updatedPosts = postsController.text
                         .split(',')
@@ -386,10 +388,7 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                     });
                     if (context.mounted) Navigator.pop(context);
                   },
-                  child: const Text(
-                    "Save",
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  child: const Text("Save"),
                 ),
               ],
             );
@@ -431,15 +430,12 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
               child: const Text("Cancel"),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
               onPressed: () async {
                 Navigator.pop(context);
                 await _deleteCollaboration(docId);
               },
-              child: const Text(
-                "Delete",
-                style: TextStyle(color: Colors.white),
-              ),
+              child: const Text("Delete"),
             ),
           ],
         );

@@ -23,14 +23,14 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green,
         title: const Text("Manage Events"),
-        centerTitle: true,
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.green,
         onPressed: () {
           Navigator.push(
             context,
@@ -39,10 +39,10 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
             ),
           );
         },
-        icon: const Icon(Icons.add, color: Colors.white),
+        icon: const Icon(Icons.add),
         label: const Text(
           "Add Event",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: Column(
@@ -62,9 +62,11 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                   return ChoiceChip(
                     label: Text(option),
                     selected: isSelected,
-                    selectedColor: Colors.green,
+                    selectedColor: theme.colorScheme.primary,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black87,
+                      color: isSelected 
+                          ? theme.colorScheme.onPrimary 
+                          : theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                     onSelected: (_) {
@@ -105,15 +107,15 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                       }).toList();
 
                 if (filtered.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.event_busy, size: 48, color: Colors.black38),
-                        SizedBox(height: 12),
+                        Icon(Icons.event_busy, size: 48, color: theme.colorScheme.onSurface.withOpacity(0.38)),
+                        const SizedBox(height: 12),
                         Text(
                           "No events found",
-                          style: TextStyle(color: Colors.black54, fontSize: 16),
+                          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.54), fontSize: 16),
                         ),
                       ],
                     ),
@@ -126,7 +128,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                   itemBuilder: (context, index) {
                     final doc = filtered[index];
                     final data = doc.data() as Map<String, dynamic>;
-                    return _buildEventCard(doc.id, data);
+                    return _buildEventCard(context, doc.id, data);
                   },
                 );
               },
@@ -137,7 +139,10 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
     );
   }
 
-  Widget _buildEventCard(String docId, Map<String, dynamic> data) {
+  Widget _buildEventCard(BuildContext context, String docId, Map<String, dynamic> data) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     final String title = data['title'] ?? 'Untitled Event';
     final String description = data['description'] ?? '';
     final String categoryRaw = data['category'] ?? 'University';
@@ -161,17 +166,20 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isPast ? Colors.grey.shade50 : Colors.white,
+        color: isPast ? (isDark ? Colors.white.withOpacity(0.02) : Colors.grey.shade50) : theme.cardTheme.color,
         borderRadius: BorderRadius.circular(14),
-        border: isPast
-            ? Border.all(color: Colors.grey.shade300)
-            : Border.all(color: Colors.green.withValues(alpha: 0.2)),
+        border: Border.all(
+          color: isPast
+              ? (isDark ? Colors.white10 : Colors.grey.shade300)
+              : (isDark ? theme.colorScheme.primary.withOpacity(0.2) : theme.colorScheme.primary.withOpacity(0.2)),
+        ),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isPast ? 0.04 : 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withOpacity(isPast ? 0.04 : 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
         ],
       ),
       child: Padding(
@@ -191,7 +199,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                       errorBuilder: (_, __, ___) => Container(
                         width: 72,
                         height: 72,
-                        color: Colors.grey.shade200,
+                        color: isDark ? Colors.white10 : Colors.grey.shade200,
                         child: const Icon(Icons.image_not_supported,
                             color: Colors.grey),
                       ),
@@ -200,11 +208,11 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                       width: 72,
                       height: 72,
                       color: isPast
-                          ? Colors.grey.shade200
-                          : Colors.green.withValues(alpha: 0.1),
+                          ? (isDark ? Colors.white10 : Colors.grey.shade200)
+                          : theme.colorScheme.primary.withOpacity(0.1),
                       child: Icon(
                         Icons.event,
-                        color: isPast ? Colors.grey : Colors.green,
+                        color: isPast ? Colors.grey : theme.colorScheme.primary,
                         size: 32,
                       ),
                     ),
@@ -224,7 +232,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
-                            color: isPast ? Colors.black54 : Colors.black87,
+                            color: isPast ? theme.colorScheme.onSurface.withOpacity(0.54) : theme.colorScheme.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -237,14 +245,14 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: isPast
-                              ? Colors.grey.shade400
-                              : Colors.green,
+                              ? (isDark ? Colors.white24 : Colors.grey.shade400)
+                              : theme.colorScheme.primary,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           isPast ? 'PAST' : 'UPCOMING',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: isPast ? theme.colorScheme.onSurface : theme.colorScheme.onPrimary,
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
                           ),
@@ -260,8 +268,8 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: categoryRaw == 'Lahore'
-                          ? Colors.orange.withValues(alpha: 0.15)
-                          : Colors.blue.withValues(alpha: 0.15),
+                          ? Colors.orange.withOpacity(0.15)
+                          : Colors.blue.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -270,8 +278,8 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: categoryRaw == 'Lahore'
-                            ? Colors.orange.shade800
-                            : Colors.blue.shade800,
+                            ? (isDark ? Colors.orangeAccent : Colors.orange.shade800)
+                            : (isDark ? Colors.blueAccent : Colors.blue.shade800),
                       ),
                     ),
                   ),
@@ -281,14 +289,14 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                   // Date & Time
                   Row(
                     children: [
-                      const Icon(Icons.access_time,
-                          size: 13, color: Colors.black54),
+                      Icon(Icons.access_time,
+                          size: 13, color: theme.colorScheme.onSurface.withOpacity(0.54)),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           formattedDate,
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.black87),
+                          style: TextStyle(
+                              fontSize: 12, color: theme.colorScheme.onSurface),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -300,14 +308,14 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.location_on_outlined,
-                            size: 13, color: Colors.black54),
+                        Icon(Icons.location_on_outlined,
+                            size: 13, color: theme.colorScheme.onSurface.withOpacity(0.54)),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             location,
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.black54),
+                            style: TextStyle(
+                                fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.54)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -324,7 +332,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
-                        color: isPast ? Colors.black38 : Colors.black54,
+                        color: isPast ? theme.colorScheme.onSurface.withOpacity(0.38) : theme.colorScheme.onSurface.withOpacity(0.54),
                       ),
                     ),
                   ],
@@ -349,7 +357,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                         icon: const Icon(Icons.edit, size: 18),
                         label: const Text("Edit"),
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.green,
+                          foregroundColor: theme.colorScheme.primary,
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(50, 30),
                         ),
@@ -360,7 +368,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                         icon: const Icon(Icons.delete, size: 18),
                         label: const Text("Delete"),
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.red,
+                          foregroundColor: Colors.redAccent,
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(50, 30),
                         ),
@@ -390,15 +398,12 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
               child: const Text("Cancel"),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
               onPressed: () async {
                 Navigator.pop(context);
                 await _deleteEvent(docId);
               },
-              child: const Text(
-                "Delete",
-                style: TextStyle(color: Colors.white),
-              ),
+              child: const Text("Delete"),
             ),
           ],
         );

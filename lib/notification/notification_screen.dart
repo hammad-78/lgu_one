@@ -12,6 +12,7 @@ class NotificationScreen extends StatefulWidget {
 
 class _NotificationScreenState extends State<NotificationScreen> {
   Set<String> _seenIds = {};
+  List<QueryDocumentSnapshot> _currentNotifications = [];
 
   @override
   void initState() {
@@ -36,6 +37,27 @@ class _NotificationScreenState extends State<NotificationScreen> {
     await prefs.setStringList('seen_notification_ids', _seenIds.toList());
   }
 
+  Future<void> _markAllAsRead() async {
+    if (_currentNotifications.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      for (var doc in _currentNotifications) {
+        _seenIds.add(doc.id);
+      }
+    });
+    await prefs.setStringList('seen_notification_ids', _seenIds.toList());
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("All notifications marked as read"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -46,12 +68,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
         centerTitle: true,
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            tooltip: "Mark all as read",
+            icon: const Icon(Icons.done_all),
+            onPressed: _markAllAsRead,
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('notifications')
             .orderBy('timestamp', descending: true)
-            .limit(10)
+            .limit(20)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -91,7 +120,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
             );
           }
 
-          final notifications = snapshot.data!.docs;
+          _currentNotifications = snapshot.data!.docs;
+          final notifications = _currentNotifications;
 
           return ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 8),

@@ -30,14 +30,14 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Notification sent successfully!"), backgroundColor: Colors.green),
+          const SnackBar(content: Text("Notification sent successfully!")),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.redAccent),
         );
       }
     } finally {
@@ -47,14 +47,14 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Send Announcement"),
-        centerTitle: true,
-        backgroundColor: Colors.green,
       ),
       body: _isSending 
-          ? const Center(child: CircularProgressIndicator(color: Colors.green))
+          ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Form(
@@ -62,35 +62,37 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       "Broadcast Message",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       "This will send a push notification to every student and add it to the app's notification history.",
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                      style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 13),
                     ),
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _titleController,
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                       decoration: InputDecoration(
                         labelText: "Notification Title",
                         hintText: "e.g. Campus Holiday Notice",
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: const Icon(Icons.title, color: Colors.green),
+                        prefixIcon: Icon(Icons.title, color: theme.colorScheme.primary),
                       ),
                       validator: (val) => val == null || val.isEmpty ? "Title is required" : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _bodyController,
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                       maxLines: 5,
                       decoration: InputDecoration(
                         labelText: "Message Body",
                         hintText: "Type the details of your announcement here...",
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: const Icon(Icons.message, color: Colors.green),
+                        prefixIcon: Icon(Icons.message, color: theme.colorScheme.primary),
                       ),
                       validator: (val) => val == null || val.isEmpty ? "Message body is required" : null,
                     ),
@@ -99,11 +101,6 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
                         onPressed: _sendNotification,
                         icon: const Icon(Icons.send),
                         label: const Text("Send to All Users", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
