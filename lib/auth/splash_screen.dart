@@ -41,12 +41,6 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark
-        ? const Color(0xFF021E16)
-        : const Color(0xFF4CAF50);
-    final secondaryColor = isDark
-        ? const Color(0xFFD4AF37) // Gold
-        : const Color(0xFF81C784); // Soft Green
 
     return Scaffold(
       body: Container(
@@ -71,7 +65,7 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // University Logo (replace with your actual logo asset)
+                // University Logo
                 Container(
                   width: 120,
                   height: 120,
@@ -86,10 +80,12 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ],
                   ),
-                  child: Icon(
-                    Icons.school,
-                    size: 70,
-                    color: primaryColor,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Image.asset(
+                      'assets/images/lgu_connect_icon.png',
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 30),
