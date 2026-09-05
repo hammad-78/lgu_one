@@ -180,13 +180,6 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    
-    if (_image == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one image.')),
-      );
-      return;
-    }
 
     setState(() => _isSubmitting = true);
     try {
@@ -199,7 +192,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
         location: _locationController.text.trim(),
         date: _date,
         whatsappNumber: _whatsappController.text.trim(),
-        images: [_image!],
+        images: _image == null ? const [] : [_image!],
         authorToken: token,
       );
       if (!mounted) return;
@@ -225,7 +218,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
   Future<void> _showSecretKeyDialog(String key) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = Theme.of(context).colorScheme.secondary;
+    final accent = Theme.of(context).colorScheme.primary;
     final highlight = isDark ? accent : const Color(0xFF4CAF50);
     final dialogBg = isDark ? const Color(0xFF0B3D2E) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black87;
@@ -439,7 +432,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
                           children: [
                             Icon(Icons.add_a_photo_outlined, color: highlight, size: 40),
                             const SizedBox(height: 8),
-                            Text('Add photo', style: TextStyle(color: highlight)),
+                            Text('Add photo (optional)', style: TextStyle(color: highlight)),
                           ],
                         )
                       : Stack(

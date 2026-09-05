@@ -236,8 +236,10 @@ class _AdminLostFoundState extends State<AdminLostFound> {
               ],
             ),
             Divider(height: 20, color: theme.dividerColor.withOpacity(0.5)),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 4,
               children: [
                 TextButton.icon(
                   onPressed: () => _showEditDialog(docId, data),
@@ -245,7 +247,6 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                   label: const Text("Edit"),
                   style: TextButton.styleFrom(foregroundColor: theme.colorScheme.primary),
                 ),
-                const SizedBox(width: 8),
                 if (status == 'pending') ...[
                   ElevatedButton.icon(
                     onPressed: () async {
@@ -263,7 +264,6 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                       foregroundColor: Colors.white,
                     ),
                   ),
-                  const SizedBox(width: 8),
                   ElevatedButton.icon(
                     onPressed: () async {
                       await _service.updateItemStatus(docId, 'rejected');
@@ -298,7 +298,6 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                       foregroundColor: Colors.white,
                     ),
                   ),
-                const SizedBox(width: 8),
                 IconButton(
                   onPressed: () => _confirmDelete(docId),
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
