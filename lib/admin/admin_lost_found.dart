@@ -248,7 +248,14 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                 const SizedBox(width: 8),
                 if (status == 'pending') ...[
                   ElevatedButton.icon(
-                    onPressed: () => _service.updateItemStatus(docId, 'active'),
+                    onPressed: () async {
+                      await _service.updateItemStatus(docId, 'active');
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Listing approved and notification sent")),
+                        );
+                      }
+                    },
                     icon: const Icon(Icons.check, size: 18),
                     label: const Text("Approve"),
                     style: ElevatedButton.styleFrom(
@@ -258,7 +265,14 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
-                    onPressed: () => _service.updateItemStatus(docId, 'rejected'),
+                    onPressed: () async {
+                      await _service.updateItemStatus(docId, 'rejected');
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Listing rejected")),
+                        );
+                      }
+                    },
                     icon: const Icon(Icons.close, size: 18),
                     label: const Text("Reject"),
                     style: ElevatedButton.styleFrom(
@@ -269,7 +283,14 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                 ],
                 if (status == 'rejected')
                   ElevatedButton.icon(
-                    onPressed: () => _service.updateItemStatus(docId, 'active'),
+                    onPressed: () async {
+                      await _service.updateItemStatus(docId, 'active');
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Listing restored and notification sent")),
+                        );
+                      }
+                    },
                     icon: const Icon(Icons.restore, size: 18),
                     label: const Text("Restore"),
                     style: ElevatedButton.styleFrom(

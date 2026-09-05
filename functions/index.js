@@ -1,29 +1,36 @@
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
+const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
 
-admin.initializeApp();
+if (!admin.apps || !admin.apps.length) {
+    admin.initializeApp();
+}
+
+const db = getFirestore();
+const messaging = getMessaging();
 
 /**
  * Helper to save notification to global collection
  */
 async function saveNotification(title, body, type, relatedId) {
     try {
-        await admin.firestore().collection('notifications').add({
+        await db.collection('notifications').add({
             title: title,
             body: body,
             type: type,
             relatedId: relatedId,
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            timestamp: FieldValue.serverTimestamp(),
         });
         
-        // Keep only latest 20 notifications to save space (user only needs 10)
-        const snapshot = await admin.firestore().collection('notifications')
+        // Keep only latest 20 notifications to save space
+        const snapshot = await db.collection('notifications')
             .orderBy('timestamp', 'desc')
             .offset(20)
             .get();
         
-        const batch = admin.firestore().batch();
+        const batch = db.batch();
         snapshot.docs.forEach(doc => batch.delete(doc.ref));
         await batch.commit();
     } catch (error) {
@@ -31,111 +38,179 @@ async function saveNotification(title, body, type, relatedId) {
     }
 }
 
+function chunk(items, size) {
+    const chunks = [];
+    for (let index = 0; index < items.length; index += size) {
+        chunks.push(items.slice(index, index + size));
+    }
+    return chunks;
+}
+
+async function sendLostFoundBroadcast(itemId, data) {
+    const title = data.title || 'New Item';
+    const type = data.type || 'lost';
+    
+    const notificationTitle = type === 'lost' ? 'New Lost Item Approved' : 'New Found Item Approved';
+    const notificationBody = `"${title}" has been approved and is now listed in Lost & Found.`;
+
+    await saveNotification(notificationTitle, notificationBody, 'lost_found', itemId);
+
+    const payloadData = {
+        type: 'lost_found',
+        id: String(itemId),
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+    };
+
+    try {
+        const tokensSnapshot = await db.collection('device_tokens').get();
+        const allTokens = tokensSnapshot.docs
+            .map(doc => doc.data().token)
+            .filter(token => token); // send to ALL devices
+
+        if (allTokens.length > 0) {
+            await Promise.all(
+                chunk(allTokens, 500).map((tokenBatch) =>
+                    messaging.sendEachForMulticast({
+                        tokens: tokenBatch,
+                        notification: {
+                            title: notificationTitle,
+                            body: notificationBody,
+                        },
+                        data: payloadData,
+                        android: {
+                            notification: { channelId: 'high_importance_channel' },
+                        },
+                    }),
+                ),
+            );
+        }
+    } catch (error) {
+        console.error('Error fetching tokens for broadcast:', error);
+    }
+}
+
+async function sendCollaborationBroadcast(collabId, collabInfo) {
+    const title = collabInfo.title || 'New Collaboration';
+    const category = collabInfo.category || 'Project';
+    
+    const notificationTitle = 'New Collaboration Approved';
+    const notificationBody = `"${title}" (${category}) has been approved and is open for collaboration!`;
+
+    await saveNotification(notificationTitle, notificationBody, 'collaboration', collabId);
+
+    const payloadData = {
+        type: 'collaboration',
+        id: String(collabId),
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+    };
+
+    try {
+        const tokensSnapshot = await db.collection('device_tokens').get();
+        const allTokens = tokensSnapshot.docs
+            .map(doc => doc.data().token)
+            .filter(token => token); // send to ALL devices
+
+        if (allTokens.length > 0) {
+            await Promise.all(
+                chunk(allTokens, 500).map((tokenBatch) =>
+                    messaging.sendEachForMulticast({
+                        tokens: tokenBatch,
+                        notification: {
+                            title: notificationTitle,
+                            body: notificationBody,
+                        },
+                        data: payloadData,
+                        android: {
+                            notification: { channelId: 'high_importance_channel' },
+                        },
+                    }),
+                ),
+            );
+        }
+    } catch (error) {
+        console.error('Error broadcasting collaboration:', error);
+    }
+}
+
 /**
- * Triggered when a new Lost & Found listing is created.
+ * Triggered when a Lost & Found listing is updated (e.g. approved by admin).
  */
-exports.onLostFoundListingCreated = onDocumentCreated(
+exports.onLostFoundListingUpdated = onDocumentUpdated(
     'lost_found_items/{itemId}',
     async (event) => {
-        const snapshot = event.data;
-        if (!snapshot) return null;
+        const beforeData = event.data.before ? event.data.before.data() : null;
+        const afterData = event.data.after ? event.data.after.data() : null;
+        if (!afterData) return null;
 
-        const data = snapshot.data();
-        if (!data) return null;
+        const beforeStatus = beforeData ? (beforeData.status || '').toLowerCase() : '';
+        const afterStatus = (afterData.status || '').toLowerCase();
 
-        const itemId = event.params.itemId;
-        const title = data.title || 'New Item';
-        const type = data.type || 'lost';
-        const authorToken = data.authorToken;
-        
-        const notificationTitle = type === 'lost' ? 'New Lost Item' : 'New Found Item';
-        const notificationBody = `A new ${type} item "${title}" was reported. Tap to view details.`;
-
-        await saveNotification(notificationTitle, notificationBody, 'lost_found', itemId);
-
-        const payloadData = {
-            type: 'lost_found',
-            id: String(itemId),
-            click_action: 'FLUTTER_NOTIFICATION_CLICK',
-        };
-
-        const promises = [];
-        try {
-            const tokensSnapshot = await admin.firestore().collection('device_tokens').get();
-            const allTokens = tokensSnapshot.docs
-                .map(doc => doc.data().token)
-                .filter(token => token && token !== authorToken);
-
-            if (allTokens.length > 0) {
-                const broadcastMessage = {
-                    tokens: allTokens,
-                    notification: {
-                        title: notificationTitle,
-                        body: notificationBody,
-                    },
-                    data: payloadData,
-                };
-                promises.push(admin.messaging().sendEachForMulticast(broadcastMessage));
-            }
-        } catch (error) {
-            console.error('Error fetching tokens for broadcast:', error);
+        // If status changed to active (approved)
+        if (beforeStatus !== 'active' && afterStatus === 'active') {
+            await sendLostFoundBroadcast(event.params.itemId, afterData);
         }
-
-        return Promise.all(promises);
+        return null;
     }
 );
 
 /**
- * Triggered when a new Collaboration is created.
+ * Sends an administrator-authored broadcast. The client creates only a
+ * request document; FCM delivery and public notification history stay server-side.
  */
-exports.onCollaborationCreated = onDocumentCreated(
+exports.onAdminNotificationCreated = onDocumentCreated(
+    'admin_notifications/{notificationId}',
+    async (event) => {
+        const data = event.data ? event.data.data() : null;
+        if (!data) return null;
+
+        const title = String(data.title || 'LGU Connect');
+        const body = String(data.body || 'You have a new update.');
+        await saveNotification(title, body, 'announcement', event.params.notificationId);
+
+        const tokensSnapshot = await db.collection('device_tokens').get();
+        const tokens = tokensSnapshot.docs
+            .map(doc => doc.data().token)
+            .filter(token => token);
+
+        if (tokens.length === 0) return null;
+
+        const responses = await Promise.all(
+            chunk(tokens, 500).map(tokenBatch => messaging.sendEachForMulticast({
+                tokens: tokenBatch,
+                notification: { title, body },
+                data: {
+                    type: 'announcement',
+                    id: String(event.params.notificationId),
+                    click_action: 'FLUTTER_NOTIFICATION_CLICK',
+                },
+                android: {
+                    notification: { channelId: 'high_importance_channel' },
+                },
+            })),
+        );
+        console.log(`Admin notification sent to ${tokens.length} device(s).`, responses);
+        return null;
+    },
+);
+
+/**
+ * Triggered when a Collaboration is updated (e.g. approved by admin).
+ */
+exports.onCollaborationUpdated = onDocumentUpdated(
     'collaborations/{collabId}',
     async (event) => {
-        const snapshot = event.data;
-        if (!snapshot) return null;
+        const beforeData = event.data.before ? event.data.before.data() : null;
+        const afterData = event.data.after ? event.data.after.data() : null;
+        if (!afterData || !afterData.info) return null;
 
-        const data = snapshot.data();
-        if (!data || !data.info) return null;
+        const beforeStatus = beforeData && beforeData.info ? (beforeData.info.status || '').toLowerCase() : '';
+        const afterStatus = (afterData.info.status || '').toLowerCase();
 
-        const collabInfo = data.info;
-        const title = collabInfo.title || 'New Collaboration';
-        const category = collabInfo.category || 'Project';
-        const authorToken = collabInfo.authorToken;
-        
-        const notificationTitle = 'New Collaboration Opportunity';
-        const notificationBody = `Looking for partners for "${title}" (${category}). Check it out!`;
-
-        await saveNotification(notificationTitle, notificationBody, 'collaboration', event.params.collabId);
-
-        const payloadData = {
-            type: 'collaboration',
-            id: String(event.params.collabId),
-            click_action: 'FLUTTER_NOTIFICATION_CLICK',
-        };
-
-        const promises = [];
-        try {
-            const tokensSnapshot = await admin.firestore().collection('device_tokens').get();
-            const allTokens = tokensSnapshot.docs
-                .map(doc => doc.data().token)
-                .filter(token => token && token !== authorToken);
-
-            if (allTokens.length > 0) {
-                const broadcastMessage = {
-                    tokens: allTokens,
-                    notification: {
-                        title: notificationTitle,
-                        body: notificationBody,
-                    },
-                    data: payloadData,
-                };
-                promises.push(admin.messaging().sendEachForMulticast(broadcastMessage));
-            }
-        } catch (error) {
-            console.error('Error broadcasting collaboration:', error);
+        // If status changed to open (approved)
+        if (beforeStatus !== 'open' && afterStatus === 'open') {
+            await sendCollaborationBroadcast(event.params.collabId, afterData.info);
         }
-
-        return Promise.all(promises);
+        return null;
     }
 );
 
@@ -167,7 +242,7 @@ exports.onEventCreated = onDocumentCreated(
         };
 
         try {
-            const tokensSnapshot = await admin.firestore().collection('device_tokens').get();
+            const tokensSnapshot = await db.collection('device_tokens').get();
             const allTokens = tokensSnapshot.docs
                 .map(doc => doc.data().token)
                 .filter(token => token);
@@ -181,7 +256,7 @@ exports.onEventCreated = onDocumentCreated(
                     },
                     data: payloadData,
                 };
-                await admin.messaging().sendEachForMulticast(broadcastMessage);
+                await messaging.sendEachForMulticast(broadcastMessage);
             }
         } catch (error) {
             console.error('Error broadcasting new event:', error);
@@ -208,14 +283,14 @@ exports.sendDailyEventReminders = onSchedule(
         const endOfTomorrow = new Date(tomorrow.setHours(23, 59, 59, 999));
 
         try {
-            const eventsSnapshot = await admin.firestore().collection('events')
-                .where('eventDate', '>=', admin.firestore.Timestamp.fromDate(startOfTomorrow))
-                .where('eventDate', '<=', admin.firestore.Timestamp.fromDate(endOfTomorrow))
+            const eventsSnapshot = await db.collection('events')
+                .where('eventDate', '>=', Timestamp.fromDate(startOfTomorrow))
+                .where('eventDate', '<=', Timestamp.fromDate(endOfTomorrow))
                 .get();
 
             if (eventsSnapshot.empty) return null;
 
-            const tokensSnapshot = await admin.firestore().collection('device_tokens').get();
+            const tokensSnapshot = await db.collection('device_tokens').get();
             const allTokens = tokensSnapshot.docs
                 .map(doc => doc.data().token)
                 .filter(token => token);
@@ -241,12 +316,110 @@ exports.sendDailyEventReminders = onSchedule(
                         click_action: 'FLUTTER_NOTIFICATION_CLICK',
                     },
                 };
-                return admin.messaging().sendEachForMulticast(broadcastMessage);
+                return messaging.sendEachForMulticast(broadcastMessage);
             });
 
             await Promise.all(notificationPromises);
         } catch (error) {
             console.error('Error sending daily event reminders:', error);
+        }
+
+        return null;
+    }
+);
+
+/**
+ * Scheduled function running every 5 minutes to send weekly class reminders.
+ */
+exports.sendTimetableReminders = onSchedule(
+    {
+        schedule: '*/5 * * * *',
+        timeZone: 'Asia/Karachi',
+    },
+    async (event) => {
+        const now = new Date();
+        const pkTimeStr = now.toLocaleString("en-US", { timeZone: "Asia/Karachi" });
+        const pkDate = new Date(pkTimeStr);
+
+        const currentDayOfWeek = pkDate.getDay() === 0 ? 7 : pkDate.getDay(); // 1=Mon ... 7=Sun
+        const currentHour = pkDate.getHours();
+        const currentMinute = pkDate.getMinutes();
+        const currentTotalMinutes = currentHour * 60 + currentMinute;
+        const endWindow = currentTotalMinutes + 5;
+
+        const nextDayOfWeek = currentDayOfWeek === 7 ? 1 : currentDayOfWeek + 1;
+
+        try {
+            // Fetch reminders scheduled for today
+            const todaySnapshot = await db.collection('timetable_reminders')
+                .where('alertDayOfWeek', '==', currentDayOfWeek)
+                .get();
+
+            let docs = todaySnapshot.docs;
+
+            // Fetch tomorrow's if the window crosses midnight
+            if (endWindow >= 1440) {
+                const tomorrowSnapshot = await db.collection('timetable_reminders')
+                    .where('alertDayOfWeek', '==', nextDayOfWeek)
+                    .get();
+                docs = docs.concat(tomorrowSnapshot.docs);
+            }
+
+            // Filter matching alerts inside the 5-minute window
+            const matchingReminders = docs.filter(doc => {
+                const data = doc.data();
+                const alertMinutes = data.alertHour * 60 + data.alertMinute;
+                
+                if (data.alertDayOfWeek === currentDayOfWeek) {
+                    return alertMinutes >= currentTotalMinutes && alertMinutes < endWindow;
+                } else {
+                    const tomorrowMinutes = alertMinutes + 1440;
+                    return tomorrowMinutes >= currentTotalMinutes && tomorrowMinutes < endWindow;
+                }
+            });
+
+            if (matchingReminders.length === 0) return null;
+
+            // Send FCM notifications to each user
+            const promises = matchingReminders.map(async (doc) => {
+                const reminder = doc.data();
+                const userId = reminder.userId;
+                const className = reminder.className;
+                const offset = reminder.reminderMinutesBefore;
+
+                const bodyText = offset === 0 
+                    ? `Your class "${className}" is starting now!`
+                    : `Your class "${className}" starts in ${offset} minutes.`;
+
+                // Fetch tokens for this user
+                const tokensSnapshot = await db.collection('device_tokens')
+                    .where('userId', '==', userId)
+                    .get();
+
+                const tokens = tokensSnapshot.docs
+                    .map(tDoc => tDoc.data().token)
+                    .filter(t => t);
+
+                if (tokens.length > 0) {
+                    const message = {
+                        tokens: tokens,
+                        notification: {
+                            title: '📚 Class Reminder',
+                            body: bodyText,
+                        },
+                        data: {
+                            type: 'timetable',
+                            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+                        },
+                    };
+                    return messaging.sendEachForMulticast(message);
+                }
+                return null;
+            });
+
+            await Promise.all(promises);
+        } catch (error) {
+            console.error('Error running sendTimetableReminders:', error);
         }
 
         return null;

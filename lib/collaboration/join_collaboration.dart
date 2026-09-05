@@ -296,16 +296,17 @@ class JoinCollaborationScreen extends StatelessWidget {
                   whatsappController.text.trim(),
                 });
 
-                Navigator.pop(context);
+                if (context.mounted) {
+                  Navigator.pop(context);
 
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      "Collaboration Updated",
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "Collaboration Updated",
+                      ),
                     ),
-                  ),
-                );
+                  );
+                }
               },
               child: const Text("Update"),
             ),
@@ -541,18 +542,22 @@ class JoinCollaborationScreen extends StatelessWidget {
             );
           }
 
-          if (!snapshot.hasData ||
-              snapshot.data!.docs.isEmpty) {
+          final collaborations = (snapshot.data?.docs ?? []).where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final info = data['info'] is Map<String, dynamic>
+                ? data['info'] as Map<String, dynamic>
+                : data;
+            final status = (info['status'] ?? '').toString().toLowerCase();
+            return status == 'open' || status == 'approved';
+          }).toList();
 
+          if (collaborations.isEmpty) {
             return const Center(
               child: Text(
                 "No Collaborations Found",
               ),
             );
           }
-
-          final collaborations =
-              snapshot.data!.docs;
 
           return ListView.builder(
 

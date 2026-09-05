@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lgu_one/Lost_Found/listing_screen.dart';
 import 'package:lgu_one/gpa/gpa_calculator_screen.dart';
-import 'package:lgu_one/pastpapers/subject_screen.dart';
 import 'package:lgu_one/student_portal_screen.dart';
 
 class DashboardGrid extends StatefulWidget {
@@ -14,68 +13,81 @@ class DashboardGrid extends StatefulWidget {
 class _DashboardGridState extends State<DashboardGrid> {
   @override
   Widget build(BuildContext context) {
+    final items = [
+      GridItem(
+        title: "LGU Student Portal",
+        icon: Icons.account_balance,
+        // imageAsset: "assets/images/lgu_connect_icon.png",
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const StudentPortalScreen()),
+          );
+        },
+      ),
+      GridItem(
+        title: "Lost and Found",
+        icon: Icons.location_on_outlined,
+        imageAsset: "assets/images/lostnfound.png",
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ListingsScreen()),
+          );
+        },
+      ),
+      GridItem(
+        title: "GPA/CGPA Calculator",
+        icon: Icons.calculate_outlined,
+        imageAsset: "assets/images/calculator_icon.png",
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const GpaCalculatorScreen()),
+          );
+        },
+      ),
+    ];
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              GridItem(
-                title: "LGU Student Portal",
-                icon: Icons.account_balance,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const StudentPortalScreen()),
-                  );
-                },
+      child: SizedBox(
+        height: 160,
+        child: Stack(
+          children: [
+            ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              itemBuilder: (context, index) => items[index],
+            ),
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                child: Container(
+                  width: 40,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.0),
+                        Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.9),
+                      ],
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.chevron_right,
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                  ),
+                ),
               ),
-              const SizedBox(width: 14),
-              GridItem(
-                title: "Lost and Found",
-                icon: Icons.location_on_outlined,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ListingsScreen()),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 30),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              GridItem(
-                title: "Course Outlines",
-                icon: Icons.file_copy,
-                onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SubjectScreen(),
-                      ));
-                },
-              ),
-              const SizedBox(width: 14),
-              GridItem(
-                title: "GPA/CGPA Calculator",
-                icon: Icons.calculate_outlined,
-                onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const GpaCalculatorScreen(),
-                      ));
-                },
-              )
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -84,12 +96,14 @@ class _DashboardGridState extends State<DashboardGrid> {
 class GridItem extends StatelessWidget {
   final String title;
   final IconData icon;
+  final String? imageAsset;
   final VoidCallback? onTap;
 
   const GridItem({
     super.key,
     required this.title,
     required this.icon,
+    this.imageAsset,
     this.onTap,
   });
 
@@ -105,13 +119,13 @@ class GridItem extends StatelessWidget {
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: theme.colorScheme.primary.withOpacity(isDark ? 0.3 : 0.25),
+          color: theme.colorScheme.primary.withValues(alpha: isDark ? 0.3 : 0.25),
           width: 1,
         ),
         boxShadow: [
           if (!isDark)
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -131,13 +145,20 @@ class GridItem extends StatelessWidget {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: theme.colorScheme.primary.withOpacity(0.12),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 28,
-                    color: theme.colorScheme.primary,
-                  ),
+                  child: imageAsset == null
+                      ? Icon(
+                          icon,
+                          size: 28,
+                          color: theme.colorScheme.primary,
+                        )
+                      : Image.asset(
+                          imageAsset!,
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.contain,
+                        ),
                 ),
                 const SizedBox(height: 12),
                 Text(

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lgu_one/auth/signUp.dart';
 import 'package:lgu_one/home_screen.dart';
 import 'package:lgu_one/utils/utils.dart';
+import 'package:lgu_one/auth/verify_email_screen.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -26,12 +27,17 @@ class _SignInScreenState extends State<SignInScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      
+
+      await FirebaseAuth.instance.currentUser?.reload();
+      final verified = FirebaseAuth.instance.currentUser?.emailVerified ?? false;
+
       if (!mounted) return;
-      
+
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(
+          builder: (context) => verified ? const HomeScreen() : const VerifyEmailScreen(),
+        ),
       );
     } on FirebaseAuthException catch (e) {
       Utils().toastMessage(e.message ?? "Authentication failed");

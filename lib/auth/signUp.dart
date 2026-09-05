@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:lgu_one/home_screen.dart';
-
+import 'package:lgu_one/auth/verify_email_screen.dart';
 import '../../utils/utils.dart';
 import '../round_button.dart';
 
@@ -14,15 +13,15 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
-
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool loading = false;
 
-  /// LGU EMAIL REGEX
+  /// LGU EMAIL REGEX - Supports prefixes like f20, fa22, sp23 and subdomains
   final RegExp lguRegex = RegExp(
-    r'^[a-z]{2}\d{2}-[a-z]+-\d+@[a-z]+\.lgu\.edu\.pk$',
+    r'^[a-z]+\d{2}-[a-z]+-\d+@([a-z]+\.)?lgu\.edu\.pk$',
+    caseSensitive: false,
   );
 
   @override
@@ -34,29 +33,33 @@ class _SignupScreenState extends State<SignupScreen> {
 
   void signup() async {
     if (_formKey.currentState!.validate()) {
+      setState(() => loading = true);
       try {
-        await _auth.createUserWithEmailAndPassword(
-          email: emailController.text.trim(),
+        UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+          email: emailController.text.trim().toLowerCase(),
           password: passwordController.text.trim(),
         );
 
-        /// SEND EMAIL VERIFICATION
-        await _auth.currentUser!.sendEmailVerification();
-
-        Utils().toastMessage(
-          "Verification email sent",
-        );
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomeScreen(),
-          ),
-        );
+        try {
+          await userCredential.user!.sendEmailVerification();
+          Utils().toastMessage("Verification email sent! Check your inbox & SPAM folder.");
+          
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const VerifyEmailScreen()),
+          );
+        } catch (e) {
+          // If mail fails, delete the user immediately so Auth stays clean
+          await userCredential.user!.delete();
+          Utils().toastMessage("Failed to send verification email. Try again.");
+        }
       } on FirebaseAuthException catch (e) {
-        Utils().toastMessage(
-          e.message.toString(),
-        );
+        Utils().toastMessage(e.message.toString());
+      } catch (e) {
+        Utils().toastMessage("An unexpected error occurred");
+      } finally {
+        if (mounted) setState(() => loading = false);
       }
     }
   }
@@ -64,276 +67,62 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark
-        ? const Color(0xFF021E16)
-        : const Color(0xFF4CAF50);
-    final secondaryColor = isDark
-        ? const Color(0xFFD4AF37) // Gold
-        : const Color(0xFF81C784); // Soft Green
-    final textColor = isDark ? Colors.white : const Color(0xFF2E7D32);
+    final primaryColor = isDark ? const Color(0xFF021E16) : const Color(0xFF4CAF50);
+    final secondaryColor = isDark ? const Color(0xFFD4AF37) : const Color(0xFF81C784);
 
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF021E16)
-          : Colors.white,
-
+      backgroundColor: isDark ? const Color(0xFF021E16) : Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 22,
-          ),
-
+          padding: const EdgeInsets.symmetric(horizontal: 22),
           child: Center(
             child: SingleChildScrollView(
               child: Form(
                 key: _formKey,
-
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    /// LOGO ICON
-                    Container(
-                      height: 100,
-                      width: 100,
-
-                      decoration: BoxDecoration(
-                        color: primaryColor,
-                        borderRadius: BorderRadius.circular(25),
-                        boxShadow: [
-                          BoxShadow(
-                            color: primaryColor.withValues(alpha: 0.3),
-                            blurRadius: 15,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-
-                      child: const Icon(
-                        Icons.groups,
-                        color: Colors.white,
-                        size: 55,
-                      ),
-                    ),
-
+                    const Icon(Icons.school, size: 80, color: Color(0xFF4CAF50)),
                     const SizedBox(height: 25),
-
-                    /// APP NAME
-                    Text(
-                      "LGU Connect",
-                      style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    Text(
-                      "Create your student account",
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: isDark ? Colors.white70 : Colors.grey,
-                      ),
-                    ),
-
+                    Text("LGU Connect", style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: primaryColor)),
                     const SizedBox(height: 40),
-
-                    /// EMAIL FIELD
                     TextFormField(
                       controller: emailController,
-                      keyboardType: TextInputType.emailAddress,
-
                       decoration: InputDecoration(
-                        hintText: "fa25-bscs-103@cs.lgu.edu.pk",
-                        labelText: "LGU Email",
-                        prefixIcon: Icon(
-                          Icons.email,
-                          color: primaryColor,
-                        ),
-
-                        filled: true,
-                        fillColor: isDark
-                            ? const Color(0xFF0B3D2E)
-                            : Colors.white,
-
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
-
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? secondaryColor.withValues(alpha: 0.3)
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(
-                            color: primaryColor,
-                            width: 2,
-                          ),
-                        ),
-
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: Colors.red,
-                          ),
-                        ),
+                        labelText: "LGU Student Email",
+                        hintText: "fa22-bscs-001@lgu.edu.pk",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        prefixIcon: const Icon(Icons.email),
                       ),
-
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return "Enter LGU Email";
-                        }
-
+                        if (value == null || value.isEmpty) return "Enter email";
                         if (!lguRegex.hasMatch(value.trim())) {
-                          return "Enter valid LGU student email";
+                          return "Enter valid LGU email (e.g. fa22-bscs-001@lgu.edu.pk)";
                         }
-
                         return null;
                       },
                     ),
-
                     const SizedBox(height: 18),
-
-                    /// PASSWORD FIELD
                     TextFormField(
                       controller: passwordController,
                       obscureText: true,
-
                       decoration: InputDecoration(
-                        hintText: "Enter Password",
                         labelText: "Password",
-                        prefixIcon: Icon(
-                          Icons.lock,
-                          color: primaryColor,
-                        ),
-
-                        filled: true,
-                        fillColor: isDark
-                            ? const Color(0xFF0B3D2E)
-                            : Colors.white,
-
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
-
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? secondaryColor.withValues(alpha: 0.3)
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(
-                            color: primaryColor,
-                            width: 2,
-                          ),
-                        ),
-
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: Colors.red,
-                          ),
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        prefixIcon: const Icon(Icons.lock),
                       ),
-
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return "Enter Password";
-                        }
-
-                        if (value.length < 6) {
-                          return "Password must be at least 6 characters";
-                        }
-
-                        return null;
-                      },
+                      validator: (value) => (value == null || value.length < 6) ? "Minimum 6 characters" : null,
                     ),
-
                     const SizedBox(height: 35),
-
-                    /// SIGNUP BUTTON
                     RoundButton(
                       title: "Signup",
                       width: double.infinity,
-                      ontap: () {
-                        signup();
-                      },
+                      loading: loading,
+                      ontap: signup,
                     ),
-
-                    const SizedBox(height: 18),
-
-                    /// LOGIN
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Already have an account?",
-                          style: TextStyle(
-                            color: isDark ? Colors.white70 : Colors.black87,
-                          ),
-                        ),
-
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-
-                          child: Text(
-                            "Login",
-                            style: TextStyle(
-                              color: secondaryColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
                     const SizedBox(height: 20),
-
-                    /// CONTINUE WITHOUT ACCOUNT
                     TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const HomeScreen(),
-                          ),
-                        );
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: secondaryColor,
-                      ),
-                      child: Text(
-                        "Continue without an account",
-                        style: TextStyle(
-                          decoration: TextDecoration.underline,
-                          fontSize: 14,
-                          color: secondaryColor,
-                        ),
-                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: Text("Already have an account? Login", style: TextStyle(color: secondaryColor, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
