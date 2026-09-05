@@ -53,6 +53,7 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
     final cardColor = isDark ? const Color(0xFF0B3D2E) : Colors.white;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(title: const Text('Collaboration Hub')),
       body: Container(
         decoration: BoxDecoration(
@@ -96,9 +97,11 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                       Expanded(
                         child: _HeroCard(
                           gradientColors: isDark
-                              ? [const Color(0xFFD4AF37), const Color(0xFFB8860B)]
+                              ? [const Color(0xFF1C5A4D), const Color(0xFF0B3D2E)]
                               : [const Color(0xFF4CAF50), const Color(0xFF66BB6A)],
-                          shadowColor: highlight,
+                            shadowColor: isDark
+                              ? const Color(0xFF2E8B76)
+                              : highlight,
                           icon: Icons.add_circle_outline,
                           topLabel: 'CREATE',
                           mainLabel: 'COLLABORATION',
@@ -115,10 +118,10 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                       Expanded(
                         child: _HeroCard(
                           gradientColors: isDark
-                              ? [const Color(0xFF00897B), const Color(0xFF00695C)]
+                              ? [const Color(0xFF1C5A4D), const Color(0xFF0B3D2E)]
                               : [const Color(0xFF43A047), const Color(0xFF2E7D32)],
                           shadowColor: isDark
-                              ? const Color(0xFF00897B)
+                              ? const Color(0xFF2E8B76)
                               : const Color(0xFF43A047),
                           icon: Icons.people_outline,
                           topLabel: 'JOIN',
@@ -173,6 +176,7 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
 
           return AlertDialog(
             backgroundColor: dialogBg,
+            scrollable: true,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(color: highlight.withValues(alpha: 0.35)),
@@ -423,7 +427,7 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                         'requiredMembers':
                         int.tryParse(membersController.text.trim()) ?? 0,
                         'requiredPosts': requiredPosts,
-                        'status': 'open',
+                        'status': 'pending',
                         'whatsappNumber': whatsappController.text.trim(),
                         'existingMembers': int.tryParse(
                           existingMembersController.text.trim(),
@@ -448,7 +452,7 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Collaboration created successfully'),
+                          content: Text('Collaboration submitted! Waiting for admin approval.'),
                         ),
                       );
                     }

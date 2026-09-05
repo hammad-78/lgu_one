@@ -52,6 +52,7 @@ dependencies:
   app_settings: ^7.0.0
   http: ^1.2.2
   shared_preferences: ^2.3.5
+  timezone: ^0.11.0
   flutter_launcher_icons: ^0.14.4
 
 

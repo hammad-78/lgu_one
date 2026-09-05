@@ -2,56 +2,108 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    match /notifications/{notifId} {
-      allow read: if true;
-      allow write: if false; // only Cloud Functions write here
+    function isAdmin() {
+      return request.auth != null
+             && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // ─── Notifications ───────────────────────────────────────────────────────
+    // Readable by everyone (for in-app notification screen). Only Cloud
+    // Functions use the Admin SDK to create and prune these documents.
+    match /notifications/{notifId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Broadcast requests may only be created by authenticated administrators.
+    // The Cloud Function turns each request into FCM and notification history.
+    match /admin_notifications/{notifId} {
+      allow read: if request.auth != null
+                  && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow create: if request.auth != null
+                    && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow update, delete: if false;
+    }
+
+    // ─── Lost & Found ─────────────────────────────────────────────────────────
+    // Anyone can read listings.
+    // Create requires a secret-key hash (SHA-256 hex = 64 chars).
+    // Updates that keep the current status are allowed for listing edits.
+    // Only admins may approve or reject a listing. Approval triggers the
+    // onLostFoundListingUpdated Cloud Function notification.
     match /lost_found_items/{itemId} {
       allow read: if true;
       allow create: if request.resource.data.secretKeyHash is string
                     && request.resource.data.secretKeyHash.size() == 64;
-      allow update: if request.resource.data.secretKeyHash == resource.data.secretKeyHash
-                    || (request.auth != null
-                        && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-      allow delete: if true;
+      allow update: if request.resource.data.status == resource.data.status
+                    || (isAdmin()
+                        && request.resource.data.status in ['active', 'rejected']);
+      allow delete: if true; // TODO: owner secretKeyHash == resource OR admin auth
     }
 
+    // ─── Collaborations ───────────────────────────────────────────────────────
+    // Anyone can read (public listing filtered by status in-app).
+    // Create: must supply a non-empty secretKey.
+    // Update/Delete: open until ownership auth is implemented. Status changes
+    // to open or rejected are restricted to admins; the approval transition
+    // triggers the onCollaborationUpdated Cloud Function.
     match /collaborations/{collabId} {
       allow read: if true;
       allow create: if request.resource.data.info.secretKey is string
                     && request.resource.data.info.secretKey.size() > 0;
-      allow update: if request.resource.data.info.secretKey == resource.data.info.secretKey;
-      allow delete: if true;
+      allow update: if request.resource.data.info.status == resource.data.info.status
+                    || (isAdmin()
+                        && request.resource.data.info.status in ['open', 'rejected']);
+      allow delete: if true; // TODO: owner secretKey == resource OR admin auth
     }
 
+    // ─── Device Tokens ────────────────────────────────────────────────────────
+    // Write-only for clients (token registration). Cloud Functions read only.
     match /device_tokens/{token} {
-      allow read: if false;
+      allow read: if false;  // Cloud Functions only
+      allow write: if true;  // any device may register its token
+    }
+
+    // ─── Timetable Reminders ──────────────────────────────────────────────────
+    // Users can only read/write their own reminders.
+    match /timetable_reminders/{reminderId} {
+      allow read:           if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create, update: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow delete:         if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // ─── Users ────────────────────────────────────────────────────────────────
+    // Each user can only read/write their own profile document.
+    match /users/{userId} {
+      allow read:  if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ─── Admins ───────────────────────────────────────────────────────────────
+    // An admin can read their own admin doc (used for role verification in rules above).
+    // Write is restricted to server/Admin SDK only — no client writes.
+    match /admins/{uid} {
+      allow read:  if request.auth != null && request.auth.uid == uid;
+      allow write: if false; // admin records managed server-side only
+    }
+
+    // ─── News ─────────────────────────────────────────────────────────────────
+    // Public read; write open until auth is implemented (TODO: restrict to admin auth).
+    match /news/{document=**} {
+      allow read:  if true;
       allow write: if true;
     }
 
-    match /admins/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-    }
-    
-    match /news/{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
+    // ─── Jobs ─────────────────────────────────────────────────────────────────
     match /jobs/{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read:  if true;
+      allow write: if true;
     }
 
+    // ─── Events ───────────────────────────────────────────────────────────────
     match /events/{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    match /admins/{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read:  if true;
+      allow write: if true;
     }
 
   }

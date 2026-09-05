@@ -12,8 +12,53 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
   final CollectionReference _collabRef =
       FirebaseFirestore.instance.collection('collaborations');
 
-  String _statusFilter = 'All';
-  final List<String> _statusOptions = ['All', 'Open', 'Closed'];
+  Future<void> _approveCollaboration(String docId) async {
+    try {
+      await _collabRef.doc(docId).update({
+        'info.status': 'open',
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Collaboration approved and notification sent")),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Approval failed: $e")),
+        );
+      }
+    }
+  }
+
+  Future<void> _rejectCollaboration(String docId) async {
+    try {
+      await _collabRef.doc(docId).update({
+        'info.status': 'rejected',
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Collaboration rejected")),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Rejection failed: $e")),
+        );
+      }
+    }
+  }
+
+  String _statusFilter = 'Pending';
+  final List<String> _statusOptions = [
+    'Pending',
+    'Open',
+    'Closed',
+    'Rejected',
+    'All'
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +175,23 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
         : [];
     final String whatsappNumber = info['whatsappNumber'] ?? '';
 
-    final Color statusColor = isOpen ? Colors.green : Colors.redAccent;
+    Color statusColor;
+    switch (status.toLowerCase()) {
+      case 'open':
+        statusColor = Colors.green;
+        break;
+      case 'pending':
+        statusColor = Colors.orange;
+        break;
+      case 'rejected':
+        statusColor = Colors.redAccent;
+        break;
+      case 'closed':
+        statusColor = Colors.grey;
+        break;
+      default:
+        statusColor = Colors.blue;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -238,7 +299,44 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                     minimumSize: const Size(50, 30),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
+                if (status.toLowerCase() == 'pending') ...[
+                  ElevatedButton.icon(
+                    onPressed: () => _approveCollaboration(docId),
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text("Approve"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => _rejectCollaboration(docId),
+                    icon: const Icon(Icons.close, size: 18),
+                    label: const Text("Reject"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                if (status.toLowerCase() == 'rejected') ...[
+                  ElevatedButton.icon(
+                    onPressed: () => _approveCollaboration(docId),
+                    icon: const Icon(Icons.restore, size: 18),
+                    label: const Text("Restore"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 TextButton.icon(
                   onPressed: () => _confirmDelete(docId),
                   icon: const Icon(Icons.delete, size: 18),
@@ -348,11 +446,15 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: status.toLowerCase(),
+                      value: ['pending', 'open', 'closed', 'rejected'].contains(status.toLowerCase())
+                          ? status.toLowerCase()
+                          : 'open',
                       decoration: const InputDecoration(labelText: "Status"),
                       items: const [
+                        DropdownMenuItem(value: 'pending', child: Text("Pending")),
                         DropdownMenuItem(value: 'open', child: Text("Open")),
                         DropdownMenuItem(value: 'closed', child: Text("Closed")),
+                        DropdownMenuItem(value: 'rejected', child: Text("Rejected")),
                       ],
                       onChanged: (value) {
                         setDialogState(() => status = value ?? status);

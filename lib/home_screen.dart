@@ -1,9 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/about.dart';
 import 'package:lgu_one/admin/admin_signin.dart';
-import 'package:lgu_one/auth/signIn.dart';
 import 'package:lgu_one/collaboration/collaboration_screen.dart';
 import 'package:lgu_one/events/upcoming_events_screen.dart';
 import 'package:lgu_one/dashboard_grid.dart';
@@ -27,35 +25,42 @@ class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey _jobsKey = GlobalKey();
   Set<String> _seenIds = {};
 
-  NotificationService notificationService = NotificationService();
+  final NotificationService notificationService = NotificationService();
 
   @override
   void initState() {
     super.initState();
-    notificationService.initLocalNotification(context);
-    notificationService.firebaseInit(context);
-    notificationService.setupInteractMessage(context);
-    notificationService.isTokenRefreshed();
-    _initNotifications();
+    _initializeNotifications();
     _loadSeenIds();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSeenIds() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _seenIds = prefs.getStringList('seen_notification_ids')?.toSet() ?? {};
     });
   }
 
-  Future<void> _initNotifications() async {
+  Future<void> _initializeNotifications() async {
+    await notificationService.initLocalNotification(context);
     await notificationService.requestNotificationPermission();
     await notificationService.getDeviceToken();
+    if (!mounted) return;
+    notificationService.firebaseInit(context);
+    await notificationService.setupInteractMessage(context);
+    notificationService.isTokenRefreshed();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -67,7 +72,19 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.school),
+            Container(
+              width: 36,
+              height: 36,
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Image.asset(
+                'assets/images/lgu_connect_icon.png',
+                fit: BoxFit.contain,
+              ),
+            ),
             const SizedBox(width: 8),
             Text(
               'LGU Connect',
@@ -94,9 +111,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 alignment: Alignment.center,
                 children: [
                   IconButton(
-                    icon: const Icon(
-                      Icons.notifications_none,
-                      size: 25,
+                    icon: Image.asset(
+                      'assets/images/bell_icon.png',
+                      width: 32,
+                      height: 32,
+                      fit: BoxFit.contain,
                     ),
                     onPressed: () async {
                       await Navigator.push(
@@ -110,8 +129,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   if (unreadCount > 0)
                     Positioned(
-                      right: 8,
-                      top: 8,
+                      right: 2,
+                      top: 2,
                       child: Container(
                         padding: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
@@ -141,105 +160,124 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       drawer: _buildDrawer(),
-      body: ListView(
+      body: Scrollbar(
         controller: _scrollController,
-        children: [
-          const SizedBox(height: 5),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.campaign_outlined,
-                  size: 25,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    "Latest News & Updates",
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
+        child: ListView(
+          controller: _scrollController,
+          children: [
+            const SizedBox(height: 5),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.campaign_outlined,
+                    size: 25,
+                    color: theme.colorScheme.primary,
                   ),
-                ),
-              ],
-            ),
-          ),
-          const NewsCarousel(),
-          const SizedBox(height: 10),
-          const DashboardGrid(),
-          const SizedBox(height: 10),
-          
-          // Quick Action Cards
-          _buildQuickActionCard(
-            context,
-            title: "Upcoming Events",
-            icon: Icons.event,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UpcomingEventsScreen())),
-            isEvent: true,
-          ),
-          _buildQuickActionCard(
-            context,
-            title: "Join LGU Societies",
-            icon: Icons.groups,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SocietiesScreen())),
-          ),
-          _buildQuickActionCard(
-            context,
-            title: "Student Collaboration",
-            icon: Icons.diversity_3,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CollaborationScreen())),
-          ),
-          
-          const SizedBox(height: 10),
-          Padding(
-            key: _jobsKey,
-            padding: const EdgeInsets.fromLTRB(20, 10, 0, 0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.work_outline,
-                  size: 25,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    "Jobs and Internship Opportunities",
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "Latest News & Updates",
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(0, 4, 20, 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Icon(Icons.swipe,
-                    size: 14,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-                const SizedBox(width: 4),
-                Text(
-                  "Swipe",
-                  style: theme.textTheme.bodySmall?.copyWith(
-                        fontSize: 12,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            const NewsCarousel(),
+            const SizedBox(height: 10),
+            const DashboardGrid(),
+            const SizedBox(height: 10),
+            
+            // Quick Action Cards
+            _buildQuickActionCard(
+              context,
+              title: "Upcoming Events",
+              icon: Icons.event,
+              imageAsset: "assets/images/calender_icon.png",
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UpcomingEventsScreen())),
+              isEvent: true,
+            ),
+            _buildQuickActionCard(
+              context,
+              title: "Join LGU Societies",
+              icon: Icons.handshake,
+              imageAsset: "assets/images/handshake_icon.png",
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SocietiesScreen())),
+            ),
+            _buildQuickActionCard(
+              context,
+              title: "Student Collaboration",
+              icon: Icons.diversity_3,
+              imageAsset: "assets/images/group_icon.png",
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CollaborationScreen())),
+            ),
+            
+            const SizedBox(height: 10),
+            Padding(
+              key: _jobsKey,
+              padding: const EdgeInsets.fromLTRB(20, 10, 0, 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.brightness == Brightness.dark
+                            ? Colors.white.withValues(alpha: 0.16)
+                            : theme.colorScheme.primary.withValues(alpha: 0.12),
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.35),
+                        ),
                       ),
-                ),
-              ],
+                      child: Image.asset(
+                        'assets/images/suitecase_icon.png',
+                        width: 27,
+                        height: 27,
+                        fit: BoxFit.contain,
+                      ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "Jobs and Internship Opportunities",
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const JobsSwiper(),
-        ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 4, 20, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Icon(Icons.swipe,
+                      size: 14,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                  const SizedBox(width: 4),
+                  Text(
+                    "Swipe",
+                    style: theme.textTheme.bodySmall?.copyWith(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const JobsSwiper(),
+          ],
+        ),
       ),
     );
   }
@@ -247,6 +285,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildQuickActionCard(BuildContext context, {
     required String title,
     required IconData icon,
+    String? imageAsset,
     required VoidCallback onTap,
     bool isEvent = false,
   }) {
@@ -284,11 +323,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   shape: BoxShape.circle,
                   color: theme.colorScheme.primary.withValues(alpha: 0.12),
                 ),
-                child: Icon(
-                  icon,
-                  size: 22,
-                  color: theme.colorScheme.primary,
-                ),
+                child: imageAsset == null
+                    ? Icon(
+                        icon,
+                        size: 22,
+                        color: theme.colorScheme.primary,
+                      )
+                    : Image.asset(
+                        imageAsset,
+                        width: 34,
+                        height: 34,
+                        fit: BoxFit.contain,
+                      ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -371,13 +417,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _drawerIcon(String assetPath) {
+    return SizedBox.square(
+      dimension: 30,
+      child: Image.asset(
+        assetPath,
+        fit: BoxFit.fill,
+        filterQuality: FilterQuality.high,
+      ),
+    );
+  }
+
   Widget _buildDrawer() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final iconColor = theme.iconTheme.color;
     final highlight = theme.colorScheme.primary;
-
-    final user = FirebaseAuth.instance.currentUser;
 
     return Drawer(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -410,7 +464,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       child: CircleAvatar(
                         radius: 26,
-                        backgroundColor: highlight.withValues(alpha: 0.15),
+                        backgroundColor: Colors.white,
                         child: Image.asset("assets/images/lgu_connect_icon.png"),
                       ),
                     ),
@@ -428,12 +482,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 8),
           ListTile(
-            leading: Icon(Icons.home_outlined, color: iconColor),
+            leading: _drawerIcon("assets/images/home_icon.png"),
             title: const Text("Home"),
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
-            leading: Icon(Icons.article_outlined, color: iconColor),
+            leading: _drawerIcon("assets/images/abouUs_icon.png"),
             title: const Text("About Us"),
             onTap: () {
               Navigator.push(
@@ -443,7 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           ListTile(
-            leading: Icon(Icons.star_outline, color: iconColor),
+            leading: _drawerIcon("assets/images/recommendation_icon.png"),
             title: const Text("Recommendations"),
             onTap: () {
               Navigator.push(
@@ -453,7 +507,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           ListTile(
-            leading: Icon(Icons.delete_sweep_outlined, color: iconColor),
+            leading: _drawerIcon("assets/images/cache_icon.png"),
             title: const Text("Clear Cache History"),
             onTap: () async {
               Navigator.pop(context);
@@ -473,7 +527,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Divider(color: highlight.withValues(alpha: 0.2)),
           ),
           ListTile(
-            leading: Icon(Icons.admin_panel_settings_outlined, color: iconColor),
+            leading: _drawerIcon("assets/images/group_icon.png"),
             title: const Text("Admin Signin"),
             onTap: () {
               Navigator.push(
@@ -481,35 +535,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(
                     builder: (context) => const AdminSignin(),
                   ));
-            },
-          ),
-          ListTile(
-            leading: Icon(
-              user != null ? Icons.logout : Icons.login,
-              color: user != null ? Colors.red : Colors.green,
-            ),
-            title: Text(
-              user != null ? "Logout" : "Student Signin",
-              style: TextStyle(
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            onTap: () async {
-              if (user != null) {
-                await FirebaseAuth.instance.signOut();
-                if (mounted) {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SignInScreen()),
-                    (route) => false,
-                  );
-                }
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SignInScreen()),
-                );
-              }
             },
           ),
           const SizedBox(height: 12),

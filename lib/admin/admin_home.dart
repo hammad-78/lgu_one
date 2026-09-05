@@ -19,11 +19,18 @@ class _AdminHomeState extends State<AdminHome> {
   String? _name;
   String? _role;
   bool _isLoading = true;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _fetchAdminData();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchAdminData() async {
@@ -143,119 +150,123 @@ class _AdminHomeState extends State<AdminHome> {
         ),
         body: _isLoading
             ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
-            : ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Profile Card
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: theme.cardTheme.color,
-                      borderRadius: BorderRadius.circular(16),
-                      border: isDark ? Border.all(color: theme.colorScheme.primary.withOpacity(0.2)) : null,
-                      boxShadow: [
-                        if (!isDark)
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundColor: theme.colorScheme.primary,
-                          child: Text(
-                            avatarChar,
-                            style: TextStyle(
-                              color: theme.colorScheme.onPrimary,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
+            : Scrollbar(
+                controller: _scrollController,
+                child: ListView(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    // Profile Card
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.cardTheme.color,
+                        borderRadius: BorderRadius.circular(16),
+                        border: isDark ? Border.all(color: theme.colorScheme.primary.withOpacity(0.2)) : null,
+                        boxShadow: [
+                          if (!isDark)
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 30,
+                            backgroundColor: theme.colorScheme.primary,
+                            child: Text(
+                              avatarChar,
+                              style: TextStyle(
+                                color: theme.colorScheme.onPrimary,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _name ?? "Administrator",
-                                style: theme.textTheme.headlineMedium?.copyWith(fontSize: 20),
-                              ),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _name ?? "Administrator",
+                                  style: theme.textTheme.headlineMedium?.copyWith(fontSize: 20),
                                 ),
-                                child: Text(
-                                  _role ?? "Staff",
-                                  style: TextStyle(
-                                    color: theme.colorScheme.primary,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    _role ?? "Staff",
+                                    style: TextStyle(
+                                      color: theme.colorScheme.primary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+                    Text(
+                      "Management Console",
+                      style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
+                    ),
+                    const SizedBox(height: 16),
+
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: 1.2,
+                      children: [
+                        _buildActionButton(
+                          context: context,
+                          icon: Icons.search,
+                          label: "Lost & Found",
+                          onTap: () => _navigate(const AdminLostFound()),
+                        ),
+                        _buildActionButton(
+                          context: context,
+                          icon: Icons.groups_outlined,
+                          label: "Collaborations",
+                          onTap: () => _navigate(const AdminCollaboration()),
+                        ),
+                        _buildActionButton(
+                          context: context,
+                          icon: Icons.event_note,
+                          label: "Events",
+                          onTap: () => _navigate(const AdminEventsScreen()),
+                        ),
+                        _buildActionButton(
+                          context: context,
+                          icon: Icons.work_outline,
+                          label: "Jobs",
+                          onTap: () => _navigate(const AdminJobsScreen()),
+                        ),
+                        _buildActionButton(
+                          context: context,
+                          icon: Icons.newspaper,
+                          label: "News Feed",
+                          onTap: () => _navigate(const AdminNewsScreen()),
                         ),
                       ],
                     ),
-                  ),
-
-                  const SizedBox(height: 24),
-                  Text(
-                    "Management Console",
-                    style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
-                  ),
-                  const SizedBox(height: 16),
-
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 1.2,
-                    children: [
-                      _buildActionButton(
-                        context: context,
-                        icon: Icons.search,
-                        label: "Lost & Found",
-                        onTap: () => _navigate(const AdminLostFound()),
-                      ),
-                      _buildActionButton(
-                        context: context,
-                        icon: Icons.groups_outlined,
-                        label: "Collaborations",
-                        onTap: () => _navigate(const AdminCollaboration()),
-                      ),
-                      _buildActionButton(
-                        context: context,
-                        icon: Icons.event_note,
-                        label: "Events",
-                        onTap: () => _navigate(const AdminEventsScreen()),
-                      ),
-                      _buildActionButton(
-                        context: context,
-                        icon: Icons.work_outline,
-                        label: "Jobs",
-                        onTap: () => _navigate(const AdminJobsScreen()),
-                      ),
-                      _buildActionButton(
-                        context: context,
-                        icon: Icons.newspaper,
-                        label: "News Feed",
-                        onTap: () => _navigate(const AdminNewsScreen()),
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
       ),
     );

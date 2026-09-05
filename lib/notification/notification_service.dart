@@ -4,6 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tzlib;
 import 'package:lgu_one/collaboration/join_collaboration.dart';
 import 'package:lgu_one/Lost_Found/listing_screen.dart';
 
@@ -11,6 +14,11 @@ import 'package:lgu_one/Lost_Found/listing_screen.dart';
 void notificationTapBackground(NotificationResponse notificationResponse) {}
 
 class NotificationService {
+  static const _androidChannelId = 'high_importance_channel';
+  static const _androidChannelName = 'High Importance Notifications';
+  static const _androidChannelDescription =
+      'Important updates from LGU Connect.';
+
   FirebaseMessaging messaging = FirebaseMessaging.instance;
   bool _isRequestingPermission = false;
 
@@ -22,6 +30,7 @@ class NotificationService {
     _isRequestingPermission = true;
 
     try {
+      // FCM Permission request
       NotificationSettings settings = await messaging.requestPermission(
         alert: true,
         announcement: true,
@@ -32,10 +41,19 @@ class NotificationService {
         sound: true,
       );
 
+      // Local Notifications Permission request for Android 13+
+      if (Platform.isAndroid) {
+        final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+        await androidImplementation?.requestNotificationsPermission();
+      }
+
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         debugPrint("User Granted Permission");
         return true;
-      } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
+      } else
+      if (settings.authorizationStatus == AuthorizationStatus.provisional) {
         debugPrint("User granted provisional permission");
         return true;
       } else {
@@ -51,6 +69,10 @@ class NotificationService {
   }
 
   Future<void> initLocalNotification(BuildContext context) async {
+    // Initialize timezone data for scheduled notifications
+    tz.initializeTimeZones();
+    tzlib.setLocalLocation(tzlib.getLocation('Asia/Karachi'));
+
     const AndroidInitializationSettings androidInitializationSettings =
     AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -65,6 +87,20 @@ class NotificationService {
         handleMessageByPayload(context, response.payload);
       },
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+    );
+
+    // Android notification channels are persistent. Create one stable channel
+    // that matches the channel configured for FCM in AndroidManifest.xml.
+    final androidImplementation = _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    await androidImplementation?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _androidChannelId,
+        _androidChannelName,
+        description: _androidChannelDescription,
+        importance: Importance.high,
+      ),
     );
 
     debugPrint("Local notifications initialized");
@@ -85,13 +121,11 @@ class NotificationService {
   static Future<void> showNotification(RemoteMessage message) async {
     debugPrint("showNotification called: ${message.notification?.title}");
     final int id = Random.secure().nextInt(100000);
-    final String channelId = id.toString();
-
     final AndroidNotificationDetails androidNotificationDetails =
     AndroidNotificationDetails(
-      channelId,
-      'High Importance Notifications',
-      channelDescription: 'Your Channel Description',
+      _androidChannelId,
+      _androidChannelName,
+      channelDescription: _androidChannelDescription,
       importance: Importance.high,
       priority: Priority.high,
       ticker: 'ticker',
@@ -122,6 +156,7 @@ class NotificationService {
   }
 
   Future<void> _saveTokenToFirestore(String token) async {
+    final user = FirebaseAuth.instance.currentUser;
     await FirebaseFirestore.instance
         .collection('device_tokens')
         .doc(token) // token as doc ID = auto deduplication
@@ -129,7 +164,9 @@ class NotificationService {
       'token': token,
       'createdAt': FieldValue.serverTimestamp(),
       'platform': Platform.operatingSystem, // 'android' or 'ios'
-    }, SetOptions(merge: true)); // merge so createdAt isn't overwritten on refresh
+      'userId': user?.uid,
+    }, SetOptions(
+        merge: true)); // merge so createdAt isn't overwritten on refresh
   }
 
   void isTokenRefreshed() {
@@ -143,7 +180,8 @@ class NotificationService {
     if (payload == 'collaboration') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const JoinCollaborationScreen()),
+        MaterialPageRoute(
+            builder: (context) => const JoinCollaborationScreen()),
       );
     } else if (payload == 'lost_found') {
       Navigator.push(
@@ -158,7 +196,8 @@ class NotificationService {
     if (type == 'collaboration') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const JoinCollaborationScreen()),
+        MaterialPageRoute(
+            builder: (context) => const JoinCollaborationScreen()),
       );
     } else if (type == 'lost_found') {
       Navigator.push(
@@ -170,7 +209,8 @@ class NotificationService {
 
   Future<void> setupInteractMessage(BuildContext context) async {
     // terminated state
-    RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+    RemoteMessage? initialMessage = await FirebaseMessaging.instance
+        .getInitialMessage();
     if (initialMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {

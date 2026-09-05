@@ -4,9 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:lgu_one/auth/splash_screen.dart';
 import 'theme.dart';
 
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tzlib;
+
 void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize timezone database for scheduled notifications
+  tz.initializeTimeZones();
+  tzlib.setLocalLocation(tzlib.getLocation('Asia/Karachi'));
 
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -17,7 +24,7 @@ void main() async {
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async{
   await Firebase.initializeApp();
-  print(message.notification!.title.toString());
+  // print(message.notification!.title.toString());
 }
 
 class MyApp extends StatefulWidget {
