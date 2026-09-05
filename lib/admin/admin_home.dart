@@ -6,6 +6,7 @@ import 'package:lgu_one/admin/admin_events_screen.dart';
 import 'package:lgu_one/admin/admin_jobs_screen.dart';
 import 'package:lgu_one/admin/admin_lost_found.dart';
 import 'package:lgu_one/admin/admin_news_screen.dart';
+import 'package:lgu_one/admin/admin_societies_screen.dart';
 import 'package:lgu_one/home_screen.dart';
 
 class AdminHome extends StatefulWidget {
@@ -262,6 +263,12 @@ class _AdminHomeState extends State<AdminHome> {
                           icon: Icons.newspaper,
                           label: "News Feed",
                           onTap: () => _navigate(const AdminNewsScreen()),
+                        ),
+                        _buildActionButton(
+                          context: context,
+                          icon: Icons.groups_outlined,
+                          label: "Societies",
+                          onTap: () => _navigate(const AdminSocietiesScreen()),
                         ),
                       ],
                     ),

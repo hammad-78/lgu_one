@@ -106,5 +106,13 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // ─── Societies ───────────────────────────────────────────────────────────
+    // Society listings are public to students; only verified administrators may
+    // create, edit, or delete them.
+    match /societies/{societyId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
   }
 }
