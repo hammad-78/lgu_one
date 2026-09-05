@@ -232,7 +232,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                           ),
                         ],
                       ),
-                      Divider(height: 24, color: theme.dividerColor.withOpacity(0.5)),
+                      Divider(height: 24, color: theme.dividerColor.withValues(alpha: 0.5)),
 
                       // Title Field
                       TextFormField(
@@ -277,7 +277,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                           final isNarrow = constraints.maxWidth < 360;
 
                           final typeDropdown = DropdownButtonFormField<String>(
-                            value: _selectedType,
+                            initialValue: _selectedType,
                             isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: "Category / Type",
@@ -355,9 +355,9 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                         constraints: const BoxConstraints(minHeight: 120),
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
+                          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+                          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
                         ),
                         child: _pickedImageFile != null
                             ? Stack(
@@ -419,7 +419,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                                   Text(
                                     "OR enter Image URL below",
                                     style: TextStyle(
-                                        fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                                        fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                                   ),
                                 ],
                               ),
@@ -505,7 +505,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                       padding: const EdgeInsets.all(20.0),
                       child: Text(
                         "No published news yet",
-                        style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                        style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                       ),
                     ),
                   );
@@ -538,11 +538,11 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(14),
-        border: isDark ? Border.all(color: theme.colorScheme.primary.withOpacity(0.2)) : null,
+        border: isDark ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)) : null,
         boxShadow: [
           if (!isDark)
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 6,
               offset: const Offset(0, 3),
             ),
@@ -611,7 +611,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                           news.date,
                           style: TextStyle(
                             fontSize: 11,
-                            color: theme.colorScheme.onSurface.withOpacity(0.5),
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -632,7 +632,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     news.description,
-                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.8)),
+                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.8)),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -705,7 +705,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                       maxLines: 3,
                     ),
                     DropdownButtonFormField<String>(
-                      value: typeValue,
+                      initialValue: typeValue,
                       decoration: const InputDecoration(labelText: "Category / Type"),
                       items: options
                           .map((opt) => DropdownMenuItem(

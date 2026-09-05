@@ -28,7 +28,6 @@ class _AdminLostFoundState extends State<AdminLostFound> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -92,7 +91,7 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                   return Center(
                     child: Text(
                       "No $_statusFilter listings found",
-                      style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                      style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                     ),
                   );
                 }
@@ -133,11 +132,11 @@ class _AdminLostFoundState extends State<AdminLostFound> {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(14),
-        border: isDark ? Border.all(color: theme.colorScheme.primary.withOpacity(0.2)) : null,
+        border: isDark ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)) : null,
         boxShadow: [
           if (!isDark)
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -217,7 +216,7 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              fontSize: 13, color: theme.colorScheme.onSurface.withOpacity(0.8)),
+                              fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.8)),
                         ),
                       const SizedBox(height: 6),
                       Wrap(
@@ -235,7 +234,7 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                 ),
               ],
             ),
-            Divider(height: 20, color: theme.dividerColor.withOpacity(0.5)),
+            Divider(height: 20, color: theme.dividerColor.withValues(alpha: 0.5)),
             Wrap(
               alignment: WrapAlignment.end,
               spacing: 8,
@@ -315,18 +314,17 @@ class _AdminLostFoundState extends State<AdminLostFound> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+        Icon(icon, size: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
         const SizedBox(width: 3),
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+          style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
       ],
     );
   }
 
   void _showEditDialog(String docId, Map<String, dynamic> data) {
-    final theme = Theme.of(context);
     final titleController = TextEditingController(text: data['title'] ?? '');
     final descController = TextEditingController(text: data['description'] ?? '');
     final categoryController = TextEditingController(text: data['category'] ?? '');
@@ -356,7 +354,7 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                       maxLines: 3,
                     ),
                     DropdownButtonFormField<String>(
-                      value: lostFoundCategories.contains(categoryController.text) 
+                      initialValue: lostFoundCategories.contains(categoryController.text) 
                           ? categoryController.text 
                           : lostFoundCategories.first,
                       decoration: const InputDecoration(labelText: "Category"),
@@ -373,7 +371,7 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: type.toLowerCase(),
+                      initialValue: type.toLowerCase(),
                       decoration: const InputDecoration(labelText: "Type"),
                       items: const [
                         DropdownMenuItem(value: 'lost', child: Text("Lost")),
@@ -382,7 +380,7 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                       onChanged: (value) => setDialogState(() => type = value ?? type),
                     ),
                     DropdownButtonFormField<String>(
-                      value: status.toLowerCase(),
+                      initialValue: status.toLowerCase(),
                       decoration: const InputDecoration(labelText: "Status"),
                       items: const [
                         DropdownMenuItem(value: 'pending', child: Text("Pending")),

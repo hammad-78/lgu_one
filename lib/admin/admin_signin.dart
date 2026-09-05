@@ -103,7 +103,6 @@ class _AdminSigninState extends State<AdminSignin> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -139,11 +138,11 @@ class _AdminSigninState extends State<AdminSignin> {
                     style: TextStyle(color: theme.colorScheme.onSurface),
                     decoration: InputDecoration(
                       labelText: "Email",
-                      labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                      labelStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
                       prefixIcon: Icon(Icons.email, color: theme.colorScheme.primary),
                       border: const OutlineInputBorder(),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.2)),
+                        borderSide: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
@@ -159,18 +158,18 @@ class _AdminSigninState extends State<AdminSignin> {
                     onFieldSubmitted: (_) => _handleSignIn(),
                     decoration: InputDecoration(
                       labelText: "Password",
-                      labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                      labelStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
                       prefixIcon: Icon(Icons.lock, color: theme.colorScheme.primary),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                          color: theme.colorScheme.onSurface.withOpacity(0.5),
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                         onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
                       border: const OutlineInputBorder(),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.2)),
+                        borderSide: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),

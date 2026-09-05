@@ -69,7 +69,7 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
                     const SizedBox(height: 8),
                     Text(
                       "This will send a push notification to every student and add it to the app's notification history.",
-                      style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 13),
+                      style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13),
                     ),
                     const SizedBox(height: 24),
                     TextFormField(
