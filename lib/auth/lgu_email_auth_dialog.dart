@@ -3,6 +3,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const _rememberedEmailKey = 'remembered_lgu_student_email';
 
+Future<void> clearRememberedLguStudentEmail() async {
+  final preferences = await SharedPreferences.getInstance();
+  await preferences.remove(_rememberedEmailKey);
+}
+
 Future<bool> showLguEmailAuthDialog(BuildContext context) async {
   final preferences = await SharedPreferences.getInstance();
   final rememberedEmail = preferences.getString(_rememberedEmailKey);
@@ -88,6 +93,8 @@ Future<bool> showLguEmailAuthDialog(BuildContext context) async {
 
   if (rememberMe) {
     await preferences.setString(_rememberedEmailKey, authorizedEmail);
+  } else {
+    await preferences.remove(_rememberedEmailKey);
   }
   return true;
 }

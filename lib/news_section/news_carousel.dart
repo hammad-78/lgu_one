@@ -14,6 +14,10 @@ class NewsCarousel extends StatefulWidget {
 
 class _NewsCarouselState extends State<NewsCarousel> {
   final ValueNotifier<int> _currentIndex = ValueNotifier(0);
+  final CarouselSliderController _carouselController =
+      CarouselSliderController();
+  late final Stream<QuerySnapshot> _newsStream =
+      FirebaseFirestore.instance.collection('news').snapshots();
 
   @override
   void dispose() {
@@ -24,7 +28,7 @@ class _NewsCarouselState extends State<NewsCarousel> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('news').snapshots(),
+      stream: _newsStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           final errorStr = snapshot.error.toString();
@@ -152,8 +156,10 @@ class _NewsCarouselState extends State<NewsCarousel> {
           children: [
             // 🔥 CAROUSEL
             CarouselSlider(
+              carouselController: _carouselController,
               options: CarouselOptions(
                 height: 200,
+                initialPage: _currentIndex.value,
                 autoPlay: newsList.length > 1,
                 autoPlayInterval: const Duration(seconds: 3),
                 enlargeCenterPage: true,
