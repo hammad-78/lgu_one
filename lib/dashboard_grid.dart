@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lgu_one/Lost_Found/listing_screen.dart';
+import 'package:lgu_one/auth/lgu_email_auth_dialog.dart';
 import 'package:lgu_one/gpa/gpa_calculator_screen.dart';
 import 'package:lgu_one/student_portal_screen.dart';
 
@@ -29,7 +30,10 @@ class _DashboardGridState extends State<DashboardGrid> {
         title: "Lost and Found",
         icon: Icons.location_on_outlined,
         imageAsset: "assets/images/lostnfound.png",
-        onTap: () {
+        onTap: () async {
+          if (!await showLguEmailAuthDialog(context) || !context.mounted) {
+            return;
+          }
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ListingsScreen()),
