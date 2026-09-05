@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/about.dart';
 import 'package:lgu_one/admin/admin_signin.dart';
+import 'package:lgu_one/auth/lgu_email_auth_dialog.dart';
 import 'package:lgu_one/collaboration/collaboration_screen.dart';
 import 'package:lgu_one/events/upcoming_events_screen.dart';
 import 'package:lgu_one/dashboard_grid.dart';
@@ -215,7 +216,15 @@ class _HomeScreenState extends State<HomeScreen> {
               title: "Student Collaboration",
               icon: Icons.diversity_3,
               imageAsset: "assets/images/group_icon.png",
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CollaborationScreen())),
+              onTap: () async {
+                if (!await showLguEmailAuthDialog(context) || !context.mounted) {
+                  return;
+                }
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CollaborationScreen()),
+                );
+              },
             ),
             
             const SizedBox(height: 10),
@@ -508,7 +517,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           ListTile(
             leading: _drawerIcon("assets/images/cache_icon.png"),
-            title: const Text("Clear Cache History"),
+            title: const Text("Clear Cache"),
             onTap: () async {
               Navigator.pop(context);
               final prefs = await SharedPreferences.getInstance();
