@@ -4,15 +4,31 @@ import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'card.dart';
 import 'model.dart';
 
-class JobsSwiper extends StatelessWidget {
+class JobsSwiper extends StatefulWidget {
   const JobsSwiper({super.key});
+
+  @override
+  State<JobsSwiper> createState() => _JobsSwiperState();
+}
+
+class _JobsSwiperState extends State<JobsSwiper> {
+  final CardSwiperController _swiperController = CardSwiperController();
+  late final Stream<QuerySnapshot> _jobsStream =
+      FirebaseFirestore.instance.collection('jobs').snapshots();
+  int _currentIndex = 0;
+
+  @override
+  void dispose() {
+    _swiperController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('jobs').snapshots(),
+      stream: _jobsStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           final err = snapshot.error.toString();
@@ -124,9 +140,17 @@ class JobsSwiper extends StatelessWidget {
           child: SizedBox(
             height: 500,
             child: CardSwiper(
+              controller: _swiperController,
               cardsCount: jobsList.length,
+              initialIndex: _currentIndex.clamp(0, jobsList.length - 1),
               numberOfCardsDisplayed: jobsList.length < 2 ? jobsList.length : 2,
               isDisabled: jobsList.length <= 1,
+              onSwipe: (previousIndex, currentIndex, direction) {
+                if (currentIndex != null) {
+                  _currentIndex = currentIndex;
+                }
+                return true;
+              },
               cardBuilder: (context, index, h, v) {
                 return JobCard(job: jobsList[index]);
               },

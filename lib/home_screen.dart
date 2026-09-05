@@ -522,6 +522,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pop(context);
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
+              await clearRememberedLguStudentEmail();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
