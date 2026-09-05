@@ -447,7 +447,7 @@ class _ListingsScreenState extends State<ListingsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = Theme.of(context).colorScheme.secondary;
+    final accent = Theme.of(context).colorScheme.primary;
     final highlight = isDark ? accent : const Color(0xFF4CAF50);
     final cardColor = isDark ? const Color(0xFF0B3D2E) : Colors.white;
 
