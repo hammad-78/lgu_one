@@ -17,7 +17,7 @@ class _DashboardGridState extends State<DashboardGrid> {
       GridItem(
         title: "LGU Student Portal",
         icon: Icons.account_balance,
-        // imageAsset: "assets/images/lgu_connect_icon.png",
+        imageAsset: "assets/images/lahore_garrison_university_logo.png",
         onTap: () {
           Navigator.push(
             context,
