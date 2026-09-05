@@ -46,6 +46,7 @@ class _AdminHomeState extends State<AdminHome> {
           .collection('admins')
           .doc(user.uid)
           .get();
+        if (!mounted) return;
 
       if (doc.exists) {
         final data = doc.data();
@@ -79,11 +80,11 @@ class _AdminHomeState extends State<AdminHome> {
         decoration: BoxDecoration(
           color: theme.cardTheme.color,
           borderRadius: BorderRadius.circular(14),
-          border: isDark ? Border.all(color: theme.colorScheme.primary.withOpacity(0.2)) : null,
+          border: isDark ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)) : null,
           boxShadow: [
             if (!isDark)
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -95,7 +96,7 @@ class _AdminHomeState extends State<AdminHome> {
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: theme.colorScheme.primary.withOpacity(0.12),
+              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
               child: Icon(icon, color: theme.colorScheme.primary, size: 22),
             ),
             const SizedBox(height: 10),
@@ -138,10 +139,10 @@ class _AdminHomeState extends State<AdminHome> {
             IconButton(
               icon: const Icon(Icons.logout),
               onPressed: () async {
+                final navigator = Navigator.of(context);
                 await FirebaseAuth.instance.signOut();
                 if (!mounted) return;
-                Navigator.pushReplacement(
-                  context,
+                navigator.pushReplacement(
                   MaterialPageRoute(builder: (_) => const HomeScreen()),
                 );
               },
@@ -163,11 +164,11 @@ class _AdminHomeState extends State<AdminHome> {
                       decoration: BoxDecoration(
                         color: theme.cardTheme.color,
                         borderRadius: BorderRadius.circular(16),
-                        border: isDark ? Border.all(color: theme.colorScheme.primary.withOpacity(0.2)) : null,
+                        border: isDark ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)) : null,
                         boxShadow: [
                           if (!isDark)
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -200,7 +201,7 @@ class _AdminHomeState extends State<AdminHome> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary.withOpacity(0.1),
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(

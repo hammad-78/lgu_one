@@ -24,7 +24,6 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -111,11 +110,11 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.event_busy, size: 48, color: theme.colorScheme.onSurface.withOpacity(0.38)),
+                        Icon(Icons.event_busy, size: 48, color: theme.colorScheme.onSurface.withValues(alpha: 0.38)),
                         const SizedBox(height: 12),
                         Text(
                           "No events found",
-                          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.54), fontSize: 16),
+                          style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.54), fontSize: 16),
                         ),
                       ],
                     ),
@@ -166,17 +165,17 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isPast ? (isDark ? Colors.white.withOpacity(0.02) : Colors.grey.shade50) : theme.cardTheme.color,
+        color: isPast ? (isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey.shade50) : theme.cardTheme.color,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isPast
               ? (isDark ? Colors.white10 : Colors.grey.shade300)
-              : (isDark ? theme.colorScheme.primary.withOpacity(0.2) : theme.colorScheme.primary.withOpacity(0.2)),
+              : (isDark ? theme.colorScheme.primary.withValues(alpha: 0.2) : theme.colorScheme.primary.withValues(alpha: 0.2)),
         ),
         boxShadow: [
           if (!isDark)
             BoxShadow(
-              color: Colors.black.withOpacity(isPast ? 0.04 : 0.08),
+              color: Colors.black.withValues(alpha: isPast ? 0.04 : 0.08),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -209,7 +208,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                       height: 72,
                       color: isPast
                           ? (isDark ? Colors.white10 : Colors.grey.shade200)
-                          : theme.colorScheme.primary.withOpacity(0.1),
+                          : theme.colorScheme.primary.withValues(alpha: 0.1),
                       child: Icon(
                         Icons.event,
                         color: isPast ? Colors.grey : theme.colorScheme.primary,
@@ -232,7 +231,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
-                            color: isPast ? theme.colorScheme.onSurface.withOpacity(0.54) : theme.colorScheme.onSurface,
+                            color: isPast ? theme.colorScheme.onSurface.withValues(alpha: 0.54) : theme.colorScheme.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -268,8 +267,8 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: categoryRaw == 'Lahore'
-                          ? Colors.orange.withOpacity(0.15)
-                          : Colors.blue.withOpacity(0.15),
+                          ? Colors.orange.withValues(alpha: 0.15)
+                          : Colors.blue.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -290,7 +289,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                   Row(
                     children: [
                       Icon(Icons.access_time,
-                          size: 13, color: theme.colorScheme.onSurface.withOpacity(0.54)),
+                          size: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.54)),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -309,13 +308,13 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                     Row(
                       children: [
                         Icon(Icons.location_on_outlined,
-                            size: 13, color: theme.colorScheme.onSurface.withOpacity(0.54)),
+                            size: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.54)),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             location,
                             style: TextStyle(
-                                fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.54)),
+                                fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.54)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -332,7 +331,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
-                        color: isPast ? theme.colorScheme.onSurface.withOpacity(0.38) : theme.colorScheme.onSurface.withOpacity(0.54),
+                        color: isPast ? theme.colorScheme.onSurface.withValues(alpha: 0.38) : theme.colorScheme.onSurface.withValues(alpha: 0.54),
                       ),
                     ),
                   ],

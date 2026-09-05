@@ -276,7 +276,6 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
 
   Widget _buildImagePreview(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final pastedUrl = _imageUrlController.text.trim();
 
     if (_pickedImageFile != null) {
@@ -315,7 +314,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
           errorBuilder: (_, __, ___) => Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 40, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+              Icon(Icons.error_outline, size: 40, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
               const Text("Failed to load image"),
             ],
           ),
@@ -330,7 +329,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
           Text(
             "Tap to upload Cover Image or paste URL below",
             style: TextStyle(
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               fontSize: 13,
             ),
           ),
@@ -374,11 +373,11 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                         height: 180,
                         decoration: BoxDecoration(
                           color: isDark
-                              ? Colors.white.withOpacity(0.05)
+                              ? Colors.white.withValues(alpha: 0.05)
                               : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: theme.dividerColor.withOpacity(0.5),
+                            color: theme.dividerColor.withValues(alpha: 0.5),
                             style: BorderStyle.solid,
                           ),
                         ),
@@ -482,7 +481,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 16),
                         decoration: BoxDecoration(
-                          border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+                          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -501,12 +500,12 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                                       ? FontWeight.normal
                                       : FontWeight.w600,
                                   color: _selectedDateTime == null
-                                      ? theme.colorScheme.onSurface.withOpacity(0.6)
+                                      ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
                                       : theme.colorScheme.onSurface,
                                 ),
                               ),
                             ),
-                            Icon(Icons.arrow_drop_down, color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                            Icon(Icons.arrow_drop_down, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                           ],
                         ),
                       ),

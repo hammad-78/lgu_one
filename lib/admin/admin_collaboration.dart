@@ -63,7 +63,6 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -130,7 +129,7 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                   return Center(
                     child: Text(
                       "No collaborations found",
-                      style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                      style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                     ),
                   );
                 }
@@ -163,7 +162,6 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
     final String description = info['description'] ?? '';
     final String category = info['category'] ?? '';
     final String status = info['status'] ?? 'open';
-    final bool isOpen = status.toLowerCase() == 'open';
     final int requiredMembers = info['requiredMembers'] is int
         ? info['requiredMembers']
         : int.tryParse(info['requiredMembers']?.toString() ?? '0') ?? 0;
@@ -198,11 +196,11 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(14),
-        border: isDark ? Border.all(color: theme.colorScheme.primary.withOpacity(0.2)) : null,
+        border: isDark ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)) : null,
         boxShadow: [
           if (!isDark)
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -251,7 +249,7 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                 description,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withOpacity(0.8)),
+                style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.8)),
               ),
             const SizedBox(height: 8),
             Wrap(
@@ -281,7 +279,7 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                       post.toString(),
                       style: const TextStyle(fontSize: 11),
                     ),
-                    backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade100,
+                    backgroundColor: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade100,
                   );
                 }).toList(),
               ),
@@ -360,11 +358,11 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+        Icon(icon, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
         const SizedBox(width: 4),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+          style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
       ],
     );
@@ -446,7 +444,7 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: ['pending', 'open', 'closed', 'rejected'].contains(status.toLowerCase())
+                      initialValue: ['pending', 'open', 'closed', 'rejected'].contains(status.toLowerCase())
                           ? status.toLowerCase()
                           : 'open',
                       decoration: const InputDecoration(labelText: "Status"),
