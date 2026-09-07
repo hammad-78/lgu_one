@@ -36,6 +36,7 @@ class JobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () => openLink(context),
@@ -138,6 +139,18 @@ class JobCard extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
+                        style: isDark
+                            ? ElevatedButton.styleFrom(
+                                backgroundColor: theme.cardTheme.color,
+                                foregroundColor: Colors.white,
+                                side: BorderSide(
+                                  color: theme.colorScheme.primary.withValues(
+                                    alpha: 0.3,
+                                  ),
+                                  width: 1,
+                                ),
+                              )
+                            : null,
                         onPressed: () => openLink(context),
                         child: const Text("Apply Now"),
                       ),

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tzlib;
@@ -22,16 +23,35 @@ class NotificationService {
   FirebaseMessaging messaging = FirebaseMessaging.instance;
   bool _isRequestingPermission = false;
 
-  static final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
-  FlutterLocalNotificationsPlugin();
+  static final FlutterLocalNotificationsPlugin
+  _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   Future<bool> requestNotificationPermission() async {
     if (_isRequestingPermission) return false;
     _isRequestingPermission = true;
 
     try {
-      // FCM Permission request
-      NotificationSettings settings = await messaging.requestPermission(
+      final permissionStatus = await Permission.notification.status;
+      if (permissionStatus.isPermanentlyDenied) {
+        await openAppSettings();
+        return false;
+      }
+
+      if (Platform.isAndroid) {
+        // permission_handler already talks to the native Android
+        // POST_NOTIFICATIONS permission directly — no custom platform
+        // channel is needed here.
+        final updatedStatus = await Permission.notification.request();
+        if (updatedStatus.isGranted) {
+          debugPrint("Android notification permission granted");
+          return true;
+        }
+
+        debugPrint("Permission Denied");
+        return false;
+      }
+
+      final settings = await messaging.requestPermission(
         alert: true,
         announcement: true,
         badge: true,
@@ -41,25 +61,14 @@ class NotificationService {
         sound: true,
       );
 
-      // Local Notifications Permission request for Android 13+
-      if (Platform.isAndroid) {
-        final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-        await androidImplementation?.requestNotificationsPermission();
-      }
-
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
         debugPrint("User Granted Permission");
         return true;
-      } else
-      if (settings.authorizationStatus == AuthorizationStatus.provisional) {
-        debugPrint("User granted provisional permission");
-        return true;
-      } else {
-        debugPrint("Permission Denied");
-        return false;
       }
+
+      debugPrint("Permission Denied");
+      return false;
     } catch (e) {
       debugPrint("Error requesting permission: $e");
       return false;
@@ -74,11 +83,10 @@ class NotificationService {
     tzlib.setLocalLocation(tzlib.getLocation('Asia/Karachi'));
 
     const AndroidInitializationSettings androidInitializationSettings =
-    AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    final InitializationSettings initializationSettings = InitializationSettings(
-      android: androidInitializationSettings,
-    );
+    final InitializationSettings initializationSettings =
+        InitializationSettings(android: androidInitializationSettings);
 
     await _flutterLocalNotificationsPlugin.initialize(
       settings: initializationSettings,
@@ -93,7 +101,8 @@ class NotificationService {
     // that matches the channel configured for FCM in AndroidManifest.xml.
     final androidImplementation = _flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await androidImplementation?.createNotificationChannel(
       const AndroidNotificationChannel(
         _androidChannelId,
@@ -122,14 +131,14 @@ class NotificationService {
     debugPrint("showNotification called: ${message.notification?.title}");
     final int id = Random.secure().nextInt(100000);
     final AndroidNotificationDetails androidNotificationDetails =
-    AndroidNotificationDetails(
-      _androidChannelId,
-      _androidChannelName,
-      channelDescription: _androidChannelDescription,
-      importance: Importance.high,
-      priority: Priority.high,
-      ticker: 'ticker',
-    );
+        AndroidNotificationDetails(
+          _androidChannelId,
+          _androidChannelName,
+          channelDescription: _androidChannelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+          ticker: 'ticker',
+        );
 
     final NotificationDetails notificationDetails = NotificationDetails(
       android: androidNotificationDetails,
@@ -160,13 +169,15 @@ class NotificationService {
     await FirebaseFirestore.instance
         .collection('device_tokens')
         .doc(token) // token as doc ID = auto deduplication
-        .set({
-      'token': token,
-      'createdAt': FieldValue.serverTimestamp(),
-      'platform': Platform.operatingSystem, // 'android' or 'ios'
-      'userId': user?.uid,
-    }, SetOptions(
-        merge: true)); // merge so createdAt isn't overwritten on refresh
+        .set(
+          {
+            'token': token,
+            'createdAt': FieldValue.serverTimestamp(),
+            'platform': Platform.operatingSystem, // 'android' or 'ios'
+            'userId': user?.uid,
+          },
+          SetOptions(merge: true),
+        ); // merge so createdAt isn't overwritten on refresh
   }
 
   void isTokenRefreshed() {
@@ -181,7 +192,8 @@ class NotificationService {
       Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (context) => const JoinCollaborationScreen()),
+          builder: (context) => const JoinCollaborationScreen(),
+        ),
       );
     } else if (payload == 'lost_found') {
       Navigator.push(
@@ -197,7 +209,8 @@ class NotificationService {
       Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (context) => const JoinCollaborationScreen()),
+          builder: (context) => const JoinCollaborationScreen(),
+        ),
       );
     } else if (type == 'lost_found') {
       Navigator.push(

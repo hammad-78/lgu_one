@@ -12,6 +12,8 @@ import 'package:lgu_one/notification/notification_service.dart';
 import 'package:lgu_one/notification/notification_screen.dart';
 import 'package:lgu_one/recommendation_page.dart';
 import 'package:lgu_one/societies/society_screen.dart';
+import 'package:app_settings/app_settings.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -21,24 +23,35 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _jobsKey = GlobalKey();
   Set<String> _seenIds = {};
+  bool _showNotificationBanner = false;
+  bool _notificationPermanentlyDenied = false;
 
   final NotificationService notificationService = NotificationService();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeNotifications();
     _loadSeenIds();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshNotificationPermissionStatus();
+    }
   }
 
   Future<void> _loadSeenIds() async {
@@ -52,11 +65,56 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _initializeNotifications() async {
     await notificationService.initLocalNotification(context);
     await notificationService.requestNotificationPermission();
+    await _refreshNotificationPermissionStatus();
     await notificationService.getDeviceToken();
     if (!mounted) return;
     notificationService.firebaseInit(context);
     await notificationService.setupInteractMessage(context);
     notificationService.isTokenRefreshed();
+  }
+
+  Future<void> _enableNotifications() async {
+    final permissionStatus = await Permission.notification.status;
+
+    if (permissionStatus.isPermanentlyDenied) {
+      if (mounted) {
+        setState(() {
+          _showNotificationBanner = true;
+          _notificationPermanentlyDenied = true;
+        });
+      }
+      debugPrint(
+        'Notification permission permanently denied; opening notification settings.',
+      );
+      await AppSettings.openAppSettings(type: AppSettingsType.notification);
+      return;
+    }
+
+    final notificationEnabled =
+        await notificationService.requestNotificationPermission();
+    if (!mounted) return;
+
+    final updatedStatus = await Permission.notification.status;
+    setState(() {
+      _notificationPermanentlyDenied = updatedStatus.isPermanentlyDenied;
+      _showNotificationBanner =
+          !notificationEnabled || !updatedStatus.isGranted;
+    });
+
+    // If this request just resulted in a permanent denial, go straight to
+    // settings instead of making the user tap "Enable" a second time.
+    if (updatedStatus.isPermanentlyDenied) {
+      await AppSettings.openAppSettings(type: AppSettingsType.notification);
+    }
+  }
+
+  Future<void> _refreshNotificationPermissionStatus() async {
+    final permissionStatus = await Permission.notification.status;
+    if (!mounted) return;
+    setState(() {
+      _notificationPermanentlyDenied = permissionStatus.isPermanentlyDenied;
+      _showNotificationBanner = !permissionStatus.isGranted;
+    });
   }
 
   @override
@@ -66,9 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(20),
-          ),
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -87,10 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            Text(
-              'LGU Connect',
-              style: theme.appBarTheme.titleTextStyle,
-            ),
+            Text('LGU Connect', style: theme.appBarTheme.titleTextStyle),
           ],
         ),
         actions: [
@@ -167,6 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
           controller: _scrollController,
           children: [
             const SizedBox(height: 5),
+            if (_showNotificationBanner) _buildNotificationBanner(theme),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
               child: Row(
@@ -182,9 +236,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Text(
                       "Latest News & Updates",
                       style: theme.textTheme.headlineMedium?.copyWith(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -194,14 +248,17 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
             const DashboardGrid(),
             const SizedBox(height: 10),
-            
+
             // Quick Action Cards
             _buildQuickActionCard(
               context,
               title: "Upcoming Events",
               icon: Icons.event,
               imageAsset: "assets/images/calender_icon.png",
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UpcomingEventsScreen())),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const UpcomingEventsScreen()),
+              ),
               isEvent: true,
             ),
             _buildQuickActionCard(
@@ -209,7 +266,10 @@ class _HomeScreenState extends State<HomeScreen> {
               title: "Join LGU Societies",
               icon: Icons.handshake,
               imageAsset: "assets/images/handshake_icon.png",
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SocietiesScreen())),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SocietiesScreen()),
+              ),
             ),
             _buildQuickActionCard(
               context,
@@ -217,16 +277,19 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.diversity_3,
               imageAsset: "assets/images/group_icon.png",
               onTap: () async {
-                if (!await showLguEmailAuthDialog(context) || !context.mounted) {
+                if (!await showLguEmailAuthDialog(context) ||
+                    !context.mounted) {
                   return;
                 }
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const CollaborationScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const CollaborationScreen(),
+                  ),
                 );
               },
             ),
-            
+
             const SizedBox(height: 10),
             Padding(
               key: _jobsKey,
@@ -234,32 +297,34 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                    Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: theme.brightness == Brightness.dark
-                            ? Colors.white.withValues(alpha: 0.16)
-                            : theme.colorScheme.primary.withValues(alpha: 0.12),
-                        border: Border.all(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.35),
+                  Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: theme.brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.16)
+                          : theme.colorScheme.primary.withValues(alpha: 0.12),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.35,
                         ),
                       ),
-                      child: Image.asset(
-                        'assets/images/suitecase_icon.png',
-                        width: 27,
-                        height: 27,
-                        fit: BoxFit.contain,
-                      ),
+                    ),
+                    child: Image.asset(
+                      'assets/images/suitecase_icon.png',
+                      width: 27,
+                      height: 27,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       "Jobs and Internship Opportunities",
                       style: theme.textTheme.headlineMedium?.copyWith(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -270,16 +335,18 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Icon(Icons.swipe,
-                      size: 14,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                  Icon(
+                    Icons.swipe,
+                    size: 14,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     "Swipe",
                     style: theme.textTheme.bodySmall?.copyWith(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
                   ),
                 ],
               ),
@@ -291,7 +358,62 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildQuickActionCard(BuildContext context, {
+  Widget _buildNotificationBanner(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final backgroundColor = isDark
+        ? const Color(0xFF5D4B12)
+        : const Color(0xFFFFF3CD);
+    final foregroundColor = isDark
+        ? const Color(0xFFFFF3CD)
+        : const Color(0xFF5D4300);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: foregroundColor.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.notifications_none, size: 18, color: foregroundColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Enable notifications to stay updated',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: foregroundColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: _enableNotifications,
+            style: TextButton.styleFrom(
+              foregroundColor: foregroundColor,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              minimumSize: const Size(0, 32),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              _notificationPermanentlyDenied ? 'Open Settings' : 'Enable',
+            ),
+          ),
+          IconButton(
+            onPressed: () => setState(() => _showNotificationBanner = false),
+            icon: Icon(Icons.close, size: 18, color: foregroundColor),
+            tooltip: 'Dismiss',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionCard(
+    BuildContext context, {
     required String title,
     required IconData icon,
     String? imageAsset,
@@ -312,7 +434,9 @@ class _HomeScreenState extends State<HomeScreen> {
             color: theme.cardTheme.color,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: theme.colorScheme.primary.withValues(alpha: isDark ? 0.3 : 0.25),
+              color: theme.colorScheme.primary.withValues(
+                alpha: isDark ? 0.3 : 0.25,
+              ),
               width: 1,
             ),
             boxShadow: [
@@ -333,11 +457,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: theme.colorScheme.primary.withValues(alpha: 0.12),
                 ),
                 child: imageAsset == null
-                    ? Icon(
-                        icon,
-                        size: 22,
-                        color: theme.colorScheme.primary,
-                      )
+                    ? Icon(icon, size: 22, color: theme.colorScheme.primary)
                     : Image.asset(
                         imageAsset,
                         width: 34,
@@ -347,13 +467,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: isEvent ? _buildEventSubtitle(context, title) : Text(
-                  title,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
+                child: isEvent
+                    ? _buildEventSubtitle(context, title)
+                    : Text(
+                        title,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
               ),
               Icon(
                 Icons.arrow_forward_ios,
@@ -375,7 +497,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('events')
-          .where('eventDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
+          .where(
+            'eventDate',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday),
+          )
           .orderBy('eventDate', descending: false)
           .limit(1)
           .snapshots(),
@@ -386,13 +511,18 @@ class _HomeScreenState extends State<HomeScreen> {
           final eventTitle = data['title'] ?? 'Upcoming Event';
           if (data['eventDate'] is Timestamp) {
             final eventDate = (data['eventDate'] as Timestamp).toDate();
-            final diff = DateTime(eventDate.year, eventDate.month, eventDate.day)
-                .difference(startOfToday)
-                .inDays;
+            final diff = DateTime(
+              eventDate.year,
+              eventDate.month,
+              eventDate.day,
+            ).difference(startOfToday).inDays;
             String countdown;
-            if (diff == 0) countdown = "Today";
-            else if (diff == 1) countdown = "Tomorrow";
-            else countdown = "in $diff days";
+            if (diff == 0)
+              countdown = "Today";
+            else if (diff == 1)
+              countdown = "Tomorrow";
+            else
+              countdown = "in $diff days";
             eventSubtitle = "$eventTitle — $countdown";
           } else {
             eventSubtitle = eventTitle;
@@ -474,14 +604,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: CircleAvatar(
                         radius: 26,
                         backgroundColor: Colors.white,
-                        child: Image.asset("assets/images/lgu_connect_icon.png"),
+                        child: Image.asset(
+                          "assets/images/lgu_connect_icon.png",
+                        ),
                       ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Text(
                         "LGU-Connect",
-                        style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontSize: 18,
+                        ),
                       ),
                     ),
                   ],
@@ -511,7 +645,9 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const RecommendationsPage()),
+                MaterialPageRoute(
+                  builder: (context) => const RecommendationsPage(),
+                ),
               );
             },
           ),
@@ -541,10 +677,9 @@ class _HomeScreenState extends State<HomeScreen> {
             title: const Text("Admin Signin"),
             onTap: () {
               Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AdminSignin(),
-                  ));
+                context,
+                MaterialPageRoute(builder: (context) => const AdminSignin()),
+              );
             },
           ),
           const SizedBox(height: 12),
@@ -583,7 +718,11 @@ class _AnimatedAvatarState extends State<AnimatedAvatar>
   Widget build(BuildContext context) {
     return ScaleTransition(
       scale: _scale,
-      child: Icon(Icons.school, size: 55, color: Theme.of(context).colorScheme.onSurface),
+      child: Icon(
+        Icons.school,
+        size: 55,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
     );
   }
 
