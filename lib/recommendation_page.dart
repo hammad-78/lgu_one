@@ -76,8 +76,10 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final secondary = Theme.of(context).colorScheme.secondary;
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final secondary = theme.colorScheme.secondary;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -94,7 +96,12 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
               padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [primary, secondary],
+                  colors: isDark
+                      ? [
+                          secondary,
+                          const Color(0xFF145A45),
+                        ]
+                      : [primary, secondary],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -105,7 +112,12 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
               ),
               child: const Column(
                 children: [
-                  Icon(Icons.feedback, size: 60, color: Colors.white),
+                  Image(
+                    image: AssetImage('assets/images/idea_icon.png'),
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.contain,
+                  ),
                   SizedBox(height: 10),
                   Text(
                     "Share Your Ideas",
@@ -184,6 +196,18 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
+                          style: isDark
+                              ? ElevatedButton.styleFrom(
+                                  backgroundColor: theme.cardTheme.color,
+                                  foregroundColor: Colors.white,
+                                  side: BorderSide(
+                                    color: theme.colorScheme.primary.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                    width: 1,
+                                  ),
+                                )
+                              : null,
                           onPressed: _isSubmitting ? null : submitRecommendation,
                           icon: _isSubmitting
                               ? const SizedBox(
@@ -259,7 +283,8 @@ class _SuccessDialogState extends State<_SuccessDialog>
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -297,9 +322,9 @@ class _SuccessDialogState extends State<_SuccessDialog>
 
             const SizedBox(height: 24),
 
-            const Text(
+            Text(
               "Submitted!",
-              style: TextStyle(
+              style: theme.textTheme.titleLarge?.copyWith(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -307,10 +332,13 @@ class _SuccessDialogState extends State<_SuccessDialog>
 
             const SizedBox(height: 8),
 
-            const Text(
+            Text(
               "Thanks for your recommendation.\nWe'll review it shortly.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, height: 1.5),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                height: 1.5,
+              ),
             ),
 
             const SizedBox(height: 28),

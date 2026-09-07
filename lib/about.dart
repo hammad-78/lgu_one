@@ -21,10 +21,12 @@ class About extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 35, horizontal: 20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    primary,
-                    isDark ? primary.withValues(alpha: 0.8) : secondary,
-                  ],
+                  colors: isDark
+                      ? [
+                          secondary,
+                          const Color(0xFF145A45),
+                        ]
+                      : [primary, secondary],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -107,6 +109,9 @@ LGU Connect brings students, societies, and campus resources together in one pla
     required String title,
     required String text,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Card(
@@ -117,7 +122,10 @@ LGU Connect brings students, societies, and campus resources together in one pla
             children: [
               Row(
                 children: [
-                  Icon(icon, color: Theme.of(context).colorScheme.primary),
+                  Icon(
+                    icon,
+                    color: isDark ? Colors.white : theme.colorScheme.primary,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     title,
@@ -129,7 +137,7 @@ LGU Connect brings students, societies, and campus resources together in one pla
                 ],
               ),
               const SizedBox(height: 10),
-              Text(text, style: Theme.of(context).textTheme.bodyMedium),
+              Text(text, style: theme.textTheme.bodyMedium),
             ],
           ),
         ),
