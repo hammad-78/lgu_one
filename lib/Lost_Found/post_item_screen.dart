@@ -8,6 +8,7 @@ import 'package:lgu_one/notification/notification_service.dart';
 
 import 'lost_found_item.dart';
 import 'lost_found_service.dart';
+import 'pakistani_phone_formatter.dart';
 
 class PostItemScreen extends StatefulWidget {
   const PostItemScreen({super.key});
@@ -42,10 +43,10 @@ class _PostItemScreenState extends State<PostItemScreen> {
   }
 
   InputDecoration _decoration(
-      BuildContext context, {
-        required String label,
-        String? hint,
-      }) {
+    BuildContext context, {
+    required String label,
+    String? hint,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = Theme.of(context).colorScheme.secondary;
     final highlight = isDark ? accent : const Color(0xFF4CAF50);
@@ -60,7 +61,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
       filled: true,
       fillColor: cardColor,
       labelStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
-      hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey.shade600),
+      hintStyle: TextStyle(
+        color: isDark ? Colors.white38 : Colors.grey.shade600,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: borderColor),
@@ -115,7 +118,10 @@ class _PostItemScreenState extends State<PostItemScreen> {
               ),
               ListTile(
                 leading: Icon(Icons.photo_library_outlined, color: highlight),
-                title: Text('Choose from gallery', style: TextStyle(color: textColor)),
+                title: Text(
+                  'Choose from gallery',
+                  style: TextStyle(color: textColor),
+                ),
                 onTap: () => Navigator.of(context).pop(ImageSource.gallery),
               ),
               const SizedBox(height: 8),
@@ -128,9 +134,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
     try {
       final picked = await _picker.pickImage(
-          source: source,
-          imageQuality: 50, // Reduced quality for faster loading
-          maxWidth: 800     // Resize to reasonable width
+        source: source,
+        imageQuality: 50, // Reduced quality for faster loading
+        maxWidth: 800, // Resize to reasonable width
       );
       if (picked != null) {
         setState(() => _image = File(picked.path));
@@ -171,9 +177,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
     if (value == null || value.trim().isEmpty) {
       return 'WhatsApp number is required';
     }
-    final pattern = RegExp(r'^\+[1-9]\d{9,14}$');
+    final pattern = RegExp(r'^03\d{2} \d{3} \d{4}$');
     if (!pattern.hasMatch(value.trim())) {
-      return 'Use international format, e.g. +923001234567';
+      return 'Use a Pakistani mobile number, e.g. 0300 123 4567';
     }
     return null;
   }
@@ -191,7 +197,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
         description: _descriptionController.text.trim(),
         location: _locationController.text.trim(),
         date: _date,
-        whatsappNumber: _whatsappController.text.trim(),
+        whatsappNumber: canonicalPakistaniPhone(
+          _whatsappController.text.trim(),
+        ),
         images: _image == null ? const [] : [_image!],
         authorToken: token,
       );
@@ -201,7 +209,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Item reported successfully. Waiting for admin approval.'),
+          content: Text(
+            'Item reported successfully. Waiting for admin approval.',
+          ),
           duration: Duration(seconds: 4),
         ),
       );
@@ -209,8 +219,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Could not post item: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not post item: $e')));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -237,14 +248,17 @@ class _PostItemScreenState extends State<PostItemScreen> {
                 : highlight.withValues(alpha: 0.35),
           ),
         ),
-        title: Text('Save your secret code', style: TextStyle(color: textColor)),
+        title: Text(
+          'Save your secret code',
+          style: TextStyle(color: textColor),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               "You'll need this code to edit or delete this listing later. "
-                  "Your post will be visible to others once an admin approves it.",
+              "Your post will be visible to others once an admin approves it.",
               style: TextStyle(color: subTextColor),
             ),
             const SizedBox(height: 16),
@@ -348,7 +362,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
                 hint: 'e.g. Black wallet, e.g. Blue water bottle',
               ),
               validator: (v) =>
-              (v == null || v.trim().isEmpty) ? 'Title is required' : null,
+                  (v == null || v.trim().isEmpty) ? 'Title is required' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -380,7 +394,10 @@ class _PostItemScreenState extends State<PostItemScreen> {
               onTap: _pickDate,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: cardColor,
                   borderRadius: BorderRadius.circular(12),
@@ -396,7 +413,10 @@ class _PostItemScreenState extends State<PostItemScreen> {
                         style: TextStyle(color: textColor),
                       ),
                     ),
-                    Icon(Icons.arrow_drop_down, color: isDark ? Colors.white60 : Colors.black54),
+                    Icon(
+                      Icons.arrow_drop_down,
+                      color: isDark ? Colors.white60 : Colors.black54,
+                    ),
                   ],
                 ),
               ),
@@ -408,9 +428,10 @@ class _PostItemScreenState extends State<PostItemScreen> {
               decoration: _decoration(
                 context,
                 label: 'WhatsApp number',
-                hint: '+923001234567',
+                hint: '0300 123 4567',
               ),
               keyboardType: TextInputType.phone,
+              inputFormatters: [PakistaniPhoneFormatter()],
               validator: _validateWhatsapp,
             ),
             const SizedBox(height: 16),
@@ -430,9 +451,16 @@ class _PostItemScreenState extends State<PostItemScreen> {
                       ? Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_a_photo_outlined, color: highlight, size: 40),
+                            Icon(
+                              Icons.add_a_photo_outlined,
+                              color: highlight,
+                              size: 40,
+                            ),
                             const SizedBox(height: 8),
-                            Text('Add photo (optional)', style: TextStyle(color: highlight)),
+                            Text(
+                              'Add photo (optional)',
+                              style: TextStyle(color: highlight),
+                            ),
                           ],
                         )
                       : Stack(
@@ -440,10 +468,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(10),
-                              child: Image.file(
-                                _image!,
-                                fit: BoxFit.cover,
-                              ),
+                              child: Image.file(_image!, fit: BoxFit.cover),
                             ),
                             Positioned(
                               top: 8,
@@ -453,7 +478,11 @@ class _PostItemScreenState extends State<PostItemScreen> {
                                 child: const CircleAvatar(
                                   radius: 14,
                                   backgroundColor: Colors.black54,
-                                  child: Icon(Icons.close, size: 18, color: Colors.white),
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
@@ -468,13 +497,13 @@ class _PostItemScreenState extends State<PostItemScreen> {
               onPressed: _isSubmitting ? null : _submit,
               child: _isSubmitting
                   ? SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: isDark ? Colors.black : Colors.white,
-                ),
-              )
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: isDark ? Colors.black : Colors.white,
+                      ),
+                    )
                   : const Text('Post item'),
             ),
           ],

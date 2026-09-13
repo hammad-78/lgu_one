@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import 'lost_found_item.dart';
 import 'lost_found_service.dart';
+import 'pakistani_phone_formatter.dart';
 
 class EditItemScreen extends StatefulWidget {
   final LostFoundItem item;
@@ -47,7 +48,9 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _titleController = TextEditingController(text: item.title);
     _descriptionController = TextEditingController(text: item.description);
     _locationController = TextEditingController(text: item.location);
-    _whatsappController = TextEditingController(text: item.whatsappNumber);
+    _whatsappController = TextEditingController(
+      text: displayPakistaniPhone(item.whatsappNumber),
+    );
     _date = item.date;
     // We only take the first image if multiple existed (legacy)
     if (item.imageUrls.isNotEmpty) {
@@ -88,14 +91,15 @@ class _EditItemScreenState extends State<EditItemScreen> {
 
     try {
       final picked = await _picker.pickImage(
-          source: source,
-          imageQuality: 50,
-          maxWidth: 800
+        source: source,
+        imageQuality: 50,
+        maxWidth: 800,
       );
       if (picked != null) {
         setState(() {
           _newImage = File(picked.path);
-          _existingImageUrl = null; // Mark existing for removal if we have a new one
+          _existingImageUrl =
+              null; // Mark existing for removal if we have a new one
         });
       }
     } catch (e) {
@@ -120,9 +124,9 @@ class _EditItemScreenState extends State<EditItemScreen> {
     if (value == null || value.trim().isEmpty) {
       return 'WhatsApp number is required';
     }
-    final pattern = RegExp(r'^\+[1-9]\d{9,14}$');
+    final pattern = RegExp(r'^03\d{2} \d{3} \d{4}$');
     if (!pattern.hasMatch(value.trim())) {
-      return 'Use international format, e.g. +923001234567';
+      return 'Use a Pakistani mobile number, e.g. 0300 123 4567';
     }
     return null;
   }
@@ -131,9 +135,9 @@ class _EditItemScreenState extends State<EditItemScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_existingImageUrl == null && _newImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add an image.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please add an image.')));
       return;
     }
 
@@ -155,20 +159,23 @@ class _EditItemScreenState extends State<EditItemScreen> {
         description: _descriptionController.text.trim(),
         location: _locationController.text.trim(),
         date: _date,
-        whatsappNumber: _whatsappController.text.trim(),
+        whatsappNumber: canonicalPakistaniPhone(
+          _whatsappController.text.trim(),
+        ),
         keptImageUrls: _existingImageUrl != null ? [_existingImageUrl!] : [],
         removedImageUrls: removed,
         newImages: _newImage != null ? [_newImage!] : [],
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Listing updated.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Listing updated.')));
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Could not update item: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not update item: $e')));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -211,7 +218,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                 border: OutlineInputBorder(),
               ),
               validator: (v) =>
-              (v == null || v.trim().isEmpty) ? 'Title is required' : null,
+                  (v == null || v.trim().isEmpty) ? 'Title is required' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -248,10 +255,11 @@ class _EditItemScreenState extends State<EditItemScreen> {
               controller: _whatsappController,
               decoration: const InputDecoration(
                 labelText: 'WhatsApp number',
-                hintText: '+923001234567',
+                hintText: '0300 123 4567',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.phone,
+              inputFormatters: [PakistaniPhoneFormatter()],
               validator: _validateWhatsapp,
             ),
             const SizedBox(height: 16),
@@ -284,35 +292,35 @@ class _EditItemScreenState extends State<EditItemScreen> {
                         ],
                       )
                     : _existingImageUrl != null
-                        ? Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  _existingImageUrl!,
-                                  fit: BoxFit.cover,
-                                  cacheWidth: 800,
-                                ),
-                              ),
-                              const Positioned(
-                                bottom: 8,
-                                right: 8,
-                                child: CircleAvatar(
-                                  backgroundColor: Colors.black54,
-                                  child: Icon(Icons.edit, color: Colors.white),
-                                ),
-                              ),
-                            ],
-                          )
-                        : const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.add_a_photo_outlined, size: 40),
-                              SizedBox(height: 8),
-                              Text('Add photo'),
-                            ],
+                    ? Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              _existingImageUrl!,
+                              fit: BoxFit.cover,
+                              cacheWidth: 800,
+                            ),
                           ),
+                          const Positioned(
+                            bottom: 8,
+                            right: 8,
+                            child: CircleAvatar(
+                              backgroundColor: Colors.black54,
+                              child: Icon(Icons.edit, color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      )
+                    : const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_a_photo_outlined, size: 40),
+                          SizedBox(height: 8),
+                          Text('Add photo'),
+                        ],
+                      ),
               ),
             ),
 
@@ -321,13 +329,13 @@ class _EditItemScreenState extends State<EditItemScreen> {
               onPressed: _isSubmitting ? null : _submit,
               child: _isSubmitting
                   ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Text('Save changes'),
             ),
           ],

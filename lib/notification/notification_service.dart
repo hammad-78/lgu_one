@@ -33,7 +33,6 @@ class NotificationService {
     try {
       final permissionStatus = await Permission.notification.status;
       if (permissionStatus.isPermanentlyDenied) {
-        await openAppSettings();
         return false;
       }
 
