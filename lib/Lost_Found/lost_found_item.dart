@@ -21,7 +21,8 @@ class LostFoundItem {
   final List<String> imageUrls;
   final String location;
   final DateTime date;
-  final String whatsappNumber; // E.164 format, e.g. +923001234567
+  final String
+  whatsappNumber; // Pakistani international digits, e.g. 923001234567
   final String secretKeyHash; // SHA-256 hash only — never the plain code
   final String status; // 'pending', 'active', 'rejected', 'resolved'
   final DateTime createdAt;
