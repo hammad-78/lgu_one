@@ -1,29 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:lgu_one/utils/whatsApp_support.dart';
 import 'model.dart';
 
 class SocietyCard extends StatelessWidget {
   final Society society;
 
   const SocietyCard({super.key, required this.society});
-
-  Future<void> openWhatsApp(String phone, String message) async {
-    final encodedMessage = Uri.encodeComponent(message);
-
-    final Uri appUri =
-    Uri.parse("whatsapp://send?phone=+92$phone&text=$encodedMessage");
-
-    final Uri webUri =
-    Uri.parse("https://wa.me/92$phone?text=$encodedMessage");
-
-    try {
-      if (await canLaunchUrl(appUri)) {
-        await launchUrl(appUri, mode: LaunchMode.externalApplication);
-      } else {
-        await launchUrl(webUri, mode: LaunchMode.externalApplication);
-      }
-    } catch (_) {}
-  }
 
   @override
   Widget build(BuildContext context) {
