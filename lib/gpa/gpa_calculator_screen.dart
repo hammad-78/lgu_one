@@ -42,10 +42,6 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
   bool isCGPAMode = false;
   List<Semester> semesters = [Semester(name: 'Semester 1')];
 
-  // What-If Calculator Controllers
-  final TextEditingController _targetCGPAController = TextEditingController();
-  final TextEditingController _remainingCreditsController = TextEditingController();
-
   // LGU Grading Scale (for SGPA mode only)
   static const List<String> _lguGrades = [
     'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D', 'F', 'W', 'I', 'Tr'
@@ -110,23 +106,6 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
     if (cgpa >= 3.00) return 'Good Standing ✅';
     if (cgpa >= 2.00) return 'Satisfactory ⚠️';
     return 'At Risk ❌';
-  }
-
-  double _calculateRequiredGPA() {
-    if (_targetCGPAController.text.isEmpty || _remainingCreditsController.text.isEmpty) {
-      return 0.0;
-    }
-    final targetCGPA = double.tryParse(_targetCGPAController.text) ?? 0.0;
-    final remainingCredits = int.tryParse(_remainingCreditsController.text) ?? 0;
-
-    if (remainingCredits == 0) return 0.0;
-
-    final currentCGPA = _calculateCGPA();
-    final completedCredits = semesters.fold<int>(0, (sum, sem) => sum + sem.creditHours);
-
-    final requiredPoints = (targetCGPA * (completedCredits + remainingCredits)) -
-        (currentCGPA * completedCredits);
-    return requiredPoints / remainingCredits;
   }
 
   // ───────────────────────────────────────────────────────────────────
@@ -247,11 +226,6 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
 
             // Results Card
             _buildResultsCard(currentSGPA, currentCGPA),
-
-            const SizedBox(height: 24),
-
-            // What-If Calculator
-            _buildWhatIfSection(),
 
             const SizedBox(height: 24),
 
@@ -489,6 +463,15 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
               ),
             ),
 
+            const SizedBox(height: 4),
+            Text(
+              'This result is an estimate, not an absolute value.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+
             const SizedBox(height: 8),
 
             Container(
@@ -530,79 +513,9 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
       ),
     );
   }
-  Widget _buildWhatIfSection() {
-    return Card(
-      child: ExpansionTile(
-        leading: const Icon(Icons.auto_graph),
-        title: const Text('What-If Calculator', style: TextStyle(fontWeight: FontWeight.bold)),
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _targetCGPAController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Target CGPA',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.flag),
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _remainingCreditsController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Remaining Credit Hours',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.school),
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 16),
-                if (_targetCGPAController.text.isNotEmpty && _remainingCreditsController.text.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Theme.of(context).colorScheme.secondary),
-                    ),
-                    child: Column(
-                      children: [
-                        const Text('You need:', style: TextStyle(fontSize: 14)),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${_calculateRequiredGPA().toStringAsFixed(2)} GPA',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.secondary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'in your remaining ${_remainingCreditsController.text} credit hours',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   void dispose() {
-    _targetCGPAController.dispose();
-    _remainingCreditsController.dispose();
     super.dispose();
   }
 }
