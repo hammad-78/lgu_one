@@ -12,6 +12,7 @@ import 'package:lgu_one/notification/notification_service.dart';
 import 'package:lgu_one/notification/notification_screen.dart';
 import 'package:lgu_one/recommendation_page.dart';
 import 'package:lgu_one/societies/society_screen.dart';
+import 'package:lgu_one/utils/whatsApp_support.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -518,9 +519,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ).difference(startOfToday).inDays;
             String countdown;
             if (diff == 0)
+            {
               countdown = "Today";
+            }
             else if (diff == 1)
+             {
               countdown = "Tomorrow";
+             }
             else
               countdown = "in $diff days";
             eventSubtitle = "$eventTitle — $countdown";
@@ -650,6 +655,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               );
             },
+          ),
+          ListTile(
+           leading: _drawerIcon("assets/images/message_icon.png"),
+            title: const Text("Contact us"),
+            onTap: () => contactUsOnWhatsApp(context),
           ),
           ListTile(
             leading: _drawerIcon("assets/images/cache_icon.png"),
