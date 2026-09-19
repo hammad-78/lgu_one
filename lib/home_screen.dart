@@ -75,39 +75,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _enableNotifications() async {
-    final permissionStatus = await Permission.notification.status;
+  final status = await Permission.notification.status;
 
-    if (permissionStatus.isPermanentlyDenied) {
-      if (mounted) {
-        setState(() {
-          _showNotificationBanner = true;
-          _notificationPermanentlyDenied = true;
-        });
-      }
-      debugPrint(
-        'Notification permission permanently denied; opening notification settings.',
-      );
-      await AppSettings.openAppSettings(type: AppSettingsType.notification);
-      return;
-    }
-
-    final notificationEnabled =
-        await notificationService.requestNotificationPermission();
-    if (!mounted) return;
-
-    final updatedStatus = await Permission.notification.status;
-    setState(() {
-      _notificationPermanentlyDenied = updatedStatus.isPermanentlyDenied;
-      _showNotificationBanner =
-          !notificationEnabled || !updatedStatus.isGranted;
-    });
-
-    // If this request just resulted in a permanent denial, go straight to
-    // settings instead of making the user tap "Enable" a second time.
-    if (updatedStatus.isPermanentlyDenied) {
-      await AppSettings.openAppSettings(type: AppSettingsType.notification);
-    }
+  if (status.isGranted) {
+    await _refreshNotificationPermissionStatus();
+    return;
   }
+
+  if (status.isPermanentlyDenied || status.isRestricted) {
+    await AppSettings.openAppSettings(type: AppSettingsType.notification);
+    return;
+  }
+
+  // If the system dialog is suppressed, request() returns almost instantly
+  // and permission is still "denied" -> send the user to settings.
+  final stopwatch = Stopwatch()..start();
+  final granted = await notificationService.requestNotificationPermission();
+  stopwatch.stop();
+  if (!mounted) return;
+
+  await _refreshNotificationPermissionStatus();
+
+  if (!granted && stopwatch.elapsedMilliseconds < 400) {
+    await AppSettings.openAppSettings(type: AppSettingsType.notification);
+  }
+}
 
   Future<void> _refreshNotificationPermissionStatus() async {
     final permissionStatus = await Permission.notification.status;

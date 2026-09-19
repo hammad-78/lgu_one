@@ -26,48 +26,38 @@ class NotificationService {
   static final FlutterLocalNotificationsPlugin
   _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
+  /// Returns true if notification permission is currently granted.
+  Future<bool> isNotificationPermissionGranted() async {
+    final status = await Permission.notification.status;
+    return status.isGranted;
+  }
+
+  /// Requests notification permission.
+  ///
+  /// This only requests the permission. Opening the system settings page is
+  /// handled by the calling screen (see HomeScreen._enableNotifications), so
+  /// settings never open unexpectedly at app launch.
   Future<bool> requestNotificationPermission() async {
     if (_isRequestingPermission) return false;
     _isRequestingPermission = true;
 
     try {
-      final permissionStatus = await Permission.notification.status;
-      if (permissionStatus.isPermanentlyDenied) {
-        return false;
-      }
+      final status = await Permission.notification.status;
+      if (status.isGranted) return true;
+      if (status.isPermanentlyDenied) return false;
 
       if (Platform.isAndroid) {
-        // permission_handler already talks to the native Android
-        // POST_NOTIFICATIONS permission directly — no custom platform
-        // channel is needed here.
-        final updatedStatus = await Permission.notification.request();
-        if (updatedStatus.isGranted) {
-          debugPrint("Android notification permission granted");
-          return true;
-        }
-
-        debugPrint("Permission Denied");
-        return false;
+        final updated = await Permission.notification.request();
+        return updated.isGranted;
       }
 
       final settings = await messaging.requestPermission(
         alert: true,
-        announcement: true,
         badge: true,
-        carPlay: true,
-        criticalAlert: true,
-        provisional: true,
         sound: true,
       );
-
-      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
-          settings.authorizationStatus == AuthorizationStatus.provisional) {
-        debugPrint("User Granted Permission");
-        return true;
-      }
-
-      debugPrint("Permission Denied");
-      return false;
+      return settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
     } catch (e) {
       debugPrint("Error requesting permission: $e");
       return false;
