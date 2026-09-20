@@ -51,7 +51,7 @@ async function sendLostFoundBroadcast(itemId, data) {
     const type = data.type || 'lost';
     
     const notificationTitle = type === 'lost' ? 'New Lost Item Approved' : 'New Found Item Approved';
-    const notificationBody = `"${title}" has been approved and is now listed in Lost & Found.`;
+    const notificationBody = `"${title}" is listed in Lost & Found.`;
 
     await saveNotification(notificationTitle, notificationBody, 'lost_found', itemId);
 
@@ -214,57 +214,56 @@ exports.onCollaborationUpdated = onDocumentUpdated(
     }
 );
 
-/**
- * Triggered when a new Event is created.
- */
-exports.onEventCreated = onDocumentCreated(
-    'events/{eventId}',
-    async (event) => {
-        const snapshot = event.data;
-        if (!snapshot) return null;
+// Event creation does not send a notification. Event reminders are sent by
+// sendDailyEventReminders below.
+// exports.onEventCreated = onDocumentCreated(
+//     'events/{eventId}',
+//     async (event) => {
+//         const snapshot = event.data;
+//         if (!snapshot) return null;
 
-        const data = snapshot.data();
-        if (!data) return null;
+//         const data = snapshot.data();
+//         if (!data) return null;
 
-        const eventId = event.params.eventId;
-        const title = data.title || 'New Event';
-        const location = data.location || 'Campus';
-        
-        const notificationTitle = 'New Event Added!';
-        const notificationBody = `${title} is happening at ${location}. Don't miss out!`;
+//         const eventId = event.params.eventId;
+//         const title = data.title || 'New Event';
+//         const location = data.location || 'Campus';
 
-        await saveNotification(notificationTitle, notificationBody, 'event', eventId);
+//         const notificationTitle = 'New Event Added!';
+//         const notificationBody = `${title} is happening at ${location}. Don't miss out!`;
 
-        const payloadData = {
-            type: 'event',
-            id: String(eventId),
-            click_action: 'FLUTTER_NOTIFICATION_CLICK',
-        };
+//         await saveNotification(notificationTitle, notificationBody, 'event', eventId);
 
-        try {
-            const tokensSnapshot = await db.collection('device_tokens').get();
-            const allTokens = tokensSnapshot.docs
-                .map(doc => doc.data().token)
-                .filter(token => token);
+//         const payloadData = {
+//             type: 'event',
+//             id: String(eventId),
+//             click_action: 'FLUTTER_NOTIFICATION_CLICK',
+//         };
 
-            if (allTokens.length > 0) {
-                const broadcastMessage = {
-                    tokens: allTokens,
-                    notification: {
-                        title: notificationTitle,
-                        body: notificationBody,
-                    },
-                    data: payloadData,
-                };
-                await messaging.sendEachForMulticast(broadcastMessage);
-            }
-        } catch (error) {
-            console.error('Error broadcasting new event:', error);
-        }
+//         try {
+//             const tokensSnapshot = await db.collection('device_tokens').get();
+//             const allTokens = tokensSnapshot.docs
+//                 .map(doc => doc.data().token)
+//                 .filter(token => token);
 
-        return null;
-    }
-);
+//             if (allTokens.length > 0) {
+//                 const broadcastMessage = {
+//                     tokens: allTokens,
+//                     notification: {
+//                         title: notificationTitle,
+//                         body: notificationBody,
+//                     },
+//                     data: payloadData,
+//                 };
+//                 await messaging.sendEachForMulticast(broadcastMessage);
+//             }
+//         } catch (error) {
+//             console.error('Error broadcasting new event:', error);
+//         }
+
+//         return null;
+//     }
+// );
 
 /**
  * Scheduled function to check for events happening tomorrow.
