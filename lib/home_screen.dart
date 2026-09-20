@@ -75,37 +75,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _enableNotifications() async {
-  final status = await Permission.notification.status;
+    final status = await Permission.notification.status;
 
-  if (status.isGranted) {
+    if (status.isGranted) {
+      await _refreshNotificationPermissionStatus();
+      return;
+    }
+
+    if (status.isPermanentlyDenied || status.isRestricted) {
+      await AppSettings.openAppSettings(type: AppSettingsType.notification);
+      return;
+    }
+
+    // If the system dialog is suppressed, request() returns almost instantly
+    // and permission is still "denied" -> send the user to settings.
+    final stopwatch = Stopwatch()..start();
+    final granted = await notificationService.requestNotificationPermission();
+    stopwatch.stop();
+    if (!mounted) return;
+
     await _refreshNotificationPermissionStatus();
-    return;
-  }
 
-  if (status.isPermanentlyDenied || status.isRestricted) {
-    await AppSettings.openAppSettings(type: AppSettingsType.notification);
-    return;
-  }
-
-  // If the system dialog is suppressed, request() returns almost instantly
-  // and permission is still "denied" -> send the user to settings.
-  final stopwatch = Stopwatch()..start();
-  final granted = await notificationService.requestNotificationPermission();
-  stopwatch.stop();
-  if (!mounted) return;
-
-  await _refreshNotificationPermissionStatus();
-
-  if (!granted && stopwatch.elapsedMilliseconds < 400) {
-    await AppSettings.openAppSettings(type: AppSettingsType.notification);
-  }
+    if (!granted && stopwatch.elapsedMilliseconds < 400) {
+      await AppSettings.openAppSettings(type: AppSettingsType.notification);
+    }
 }
 
   Future<void> _refreshNotificationPermissionStatus() async {
     final permissionStatus = await Permission.notification.status;
     if (!mounted) return;
     setState(() {
-      _notificationPermanentlyDenied = permissionStatus.isPermanentlyDenied;
+      _notificationPermanentlyDenied =
+          permissionStatus.isPermanentlyDenied || permissionStatus.isRestricted;
       _showNotificationBanner = !permissionStatus.isGranted;
     });
   }
@@ -518,8 +519,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
              {
               countdown = "Tomorrow";
              }
-            else
+            else {
               countdown = "in $diff days";
+            }
             eventSubtitle = "$eventTitle — $countdown";
           } else {
             eventSubtitle = eventTitle;
