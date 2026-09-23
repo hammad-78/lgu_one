@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import '../utils/app_cached_image.dart';
 import 'edit_item_screen.dart';
 import 'lost_found_item.dart';
 import 'lost_found_service.dart';
@@ -155,13 +156,14 @@ class _ListingsScreenState extends State<ListingsScreen> {
                         padding: const EdgeInsets.all(12),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16),
-                          child: Image.network(
-                            item.imageUrls.first,
+                          child: AppCachedImage(
+                            imageUrl: item.imageUrls.first,
                             width: double.infinity,
                             height: 240,
                             fit: BoxFit.cover,
-                            cacheWidth: 1000, // Optimized decoding size
-                            errorBuilder: (context, error, stackTrace) => Container(
+                            memCacheWidth: 800,
+                            memCacheHeight: 480,
+                            errorWidget: Container(
                               width: double.infinity,
                               height: 240,
                               color: isDark ? Colors.white10 : Colors.grey.shade200,
@@ -589,13 +591,14 @@ class _ListingsScreenState extends State<ListingsScreen> {
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
                                 child: item.imageUrls.isNotEmpty
-                                    ? Image.network(
-                                  item.imageUrls.first,
+                                    ? AppCachedImage(
+                                  imageUrl: item.imageUrls.first,
                                   width: 80,
                                   height: 80,
                                   fit: BoxFit.cover,
-                                  cacheWidth: 240, // Optimization: only decode at thumbnail size
-                                  errorBuilder: (context, error, stackTrace) => Container(
+                                  memCacheWidth: 240,
+                                  memCacheHeight: 240,
+                                  errorWidget: Container(
                                     width: 80,
                                     height: 80,
                                     color: isDark ? Colors.white10 : Colors.grey.shade200,

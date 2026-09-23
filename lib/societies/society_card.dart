@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lgu_one/utils/whatsApp_support.dart';
+import '../utils/app_cached_image.dart';
 import 'model.dart';
 
 class SocietyCard extends StatelessWidget {
@@ -27,33 +28,17 @@ class SocietyCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // 🖼 IMAGE — with loading + error handling
+            // 🖼 IMAGE — with cached network image & skeleton loading
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: Image.network(
-                society.imageUrl,
+              child: AppCachedImage(
+                imageUrl: society.imageUrl,
                 height: 60,
                 width: 60,
                 fit: BoxFit.cover,
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return Container(
-                    height: 60,
-                    width: 60,
-                    color: highlight.withValues(alpha: isDark ? 0.12 : 0.08),
-                    child: Center(
-                      child: SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: highlight,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) => Container(
+                memCacheWidth: 150,
+                memCacheHeight: 150,
+                errorWidget: Container(
                   height: 60,
                   width: 60,
                   color: highlight.withValues(alpha: isDark ? 0.12 : 0.08),

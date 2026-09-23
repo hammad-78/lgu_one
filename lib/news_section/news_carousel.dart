@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 
+import 'package:skeletonizer/skeletonizer.dart';
+import '../utils/app_cached_image.dart';
 import 'news_model.dart';
 import 'news_detail_screen.dart';
 
@@ -76,19 +78,7 @@ class _NewsCarouselState extends State<NewsCarousel> {
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            height: 200,
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFF0B3D2E)
-                  : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Center(
-              child: CircularProgressIndicator(color: Colors.green),
-            ),
-          );
+          return _buildSkeletonCarousel(context);
         }
 
         final docs = snapshot.data?.docs ?? [];
@@ -152,6 +142,13 @@ class _NewsCarouselState extends State<NewsCarousel> {
           _currentIndex.value = 0;
         }
 
+        // Proactively pre-cache carousel images into disk & memory cache
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            AppImageCache.precache(context, newsList.map((n) => n.image));
+          }
+        });
+
         return Column(
           children: [
             // 🔥 CAROUSEL
@@ -182,33 +179,14 @@ class _NewsCarouselState extends State<NewsCarousel> {
                     borderRadius: BorderRadius.circular(20),
                     child: Stack(
                       children: [
-                        // 🔹 IMAGE (keep clean & visible)
+                        // 🔹 IMAGE (cached disk/memory + skeleton loader)
                         Positioned.fill(
-                          child: news.image.isNotEmpty
-                              ? Image.network(
-                                  news.image,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
-                                    color: Colors.grey.shade300,
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.broken_image_outlined,
-                                        size: 40,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : Container(
-                                  color: Colors.grey.shade300,
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.image_not_supported_outlined,
-                                      size: 40,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ),
+                          child: AppCachedImage(
+                            imageUrl: news.image,
+                            fit: BoxFit.cover,
+                            memCacheWidth: 800,
+                            memCacheHeight: 450,
+                          ),
                         ),
 
                         // 🔹 EDGE DARKNESS (vignette only)
@@ -323,6 +301,63 @@ class _NewsCarouselState extends State<NewsCarousel> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildSkeletonCarousel(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDark ? const Color(0xFF0F382A) : Colors.grey.shade300;
+    final highlightColor =
+        isDark ? const Color(0xFF1E5240) : Colors.grey.shade100;
+
+    return Skeletonizer(
+      enabled: true,
+      containersColor: baseColor,
+      effect: ShimmerEffect(
+        baseColor: baseColor,
+        highlightColor: highlightColor,
+        duration: const Duration(milliseconds: 1200),
+      ),
+      child: Container(
+        height: 200,
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: baseColor,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Bone.button(
+                    width: 75,
+                    height: 24,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  Bone.button(
+                    width: 65,
+                    height: 24,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Bone.text(words: 4, fontSize: 16),
+                  const SizedBox(height: 6),
+                  Bone.text(words: 8, fontSize: 12),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
