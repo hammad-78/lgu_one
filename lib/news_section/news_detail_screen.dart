@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'news_model.dart';
+import '../utils/app_cached_image.dart';
 
 class NewsDetailScreen extends StatefulWidget {
   final NewsModel news;
@@ -174,11 +175,13 @@ class _NewsImage extends StatelessWidget {
       return _ImageFallback(color: fallbackColor);
     }
 
-    return Image.network(
-      imageUrl,
+    return AppCachedImage(
+      imageUrl: imageUrl,
       width: double.infinity,
       fit: fit,
-      errorBuilder: (_, __, ___) => _ImageFallback(color: fallbackColor),
+      memCacheWidth: 1080,
+      memCacheHeight: 1080,
+      errorWidget: _ImageFallback(color: fallbackColor),
     );
   }
 }

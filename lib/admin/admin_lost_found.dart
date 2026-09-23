@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../Lost_Found/lost_found_item.dart';
 import '../Lost_Found/lost_found_service.dart';
+import '../utils/app_cached_image.dart';
 
 class AdminLostFound extends StatefulWidget {
   const AdminLostFound({super.key});
@@ -152,12 +153,14 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: imageUrl.isNotEmpty
-                      ? Image.network(
-                          imageUrl,
+                      ? AppCachedImage(
+                          imageUrl: imageUrl,
                           width: 72,
                           height: 72,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
+                          memCacheWidth: 200,
+                          memCacheHeight: 200,
+                          errorWidget: Container(
                             width: 72,
                             height: 72,
                             color: isDark ? Colors.white10 : Colors.grey.shade200,

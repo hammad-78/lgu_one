@@ -5,6 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lgu_one/jobs/model.dart';
+import '../utils/app_cached_image.dart';
 
 class AdminJobsScreen extends StatefulWidget {
   const AdminJobsScreen({super.key});
@@ -460,12 +461,14 @@ class _AdminJobsScreenState extends State<AdminJobsScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: job.image.isNotEmpty
-                  ? Image.network(
-                      job.image,
+                  ? AppCachedImage(
+                      imageUrl: job.image,
                       width: 70,
                       height: 70,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      memCacheWidth: 200,
+                      memCacheHeight: 200,
+                      errorWidget: Container(
                         width: 70,
                         height: 70,
                         color: isDark ? Colors.white10 : Colors.grey.shade200,

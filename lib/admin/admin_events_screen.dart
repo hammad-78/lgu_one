@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lgu_one/admin/add_edit_event_screen.dart';
+import '../utils/app_cached_image.dart';
 
 class AdminEventsScreen extends StatefulWidget {
   const AdminEventsScreen({super.key});
@@ -190,12 +191,14 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: imageUrl != null && imageUrl.isNotEmpty
-                  ? Image.network(
-                      imageUrl,
+                  ? AppCachedImage(
+                      imageUrl: imageUrl,
                       width: 72,
                       height: 72,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      memCacheWidth: 200,
+                      memCacheHeight: 200,
+                      errorWidget: Container(
                         width: 72,
                         height: 72,
                         color: isDark ? Colors.white10 : Colors.grey.shade200,

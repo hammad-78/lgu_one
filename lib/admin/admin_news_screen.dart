@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:lgu_one/news_section/news_model.dart';
+import '../utils/app_cached_image.dart';
 
 class AdminNewsScreen extends StatefulWidget {
   const AdminNewsScreen({super.key});
@@ -557,12 +558,14 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: news.image.isNotEmpty
-                  ? Image.network(
-                      news.image,
+                  ? AppCachedImage(
+                      imageUrl: news.image,
                       width: 70,
                       height: 70,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      memCacheWidth: 200,
+                      memCacheHeight: 200,
+                      errorWidget: Container(
                         width: 70,
                         height: 70,
                         color: isDark ? Colors.white10 : Colors.grey.shade200,
