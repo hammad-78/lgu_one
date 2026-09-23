@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+import '../utils/app_cached_image.dart';
 import 'card.dart';
 import 'model.dart';
 
@@ -67,17 +69,7 @@ class _JobsSwiperState extends State<JobsSwiper> {
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            height: 250,
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0B3D2E) : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Center(
-              child: CircularProgressIndicator(color: Colors.green),
-            ),
-          );
+          return _buildSkeletonJobSwiper(context);
         }
 
         final docs = snapshot.data?.docs ?? [];
@@ -135,6 +127,13 @@ class _JobsSwiperState extends State<JobsSwiper> {
           return 0;
         });
 
+        // Proactively pre-cache job images into disk & memory cache
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            AppImageCache.precache(context, jobsList.map((j) => j.image));
+          }
+        });
+
         return Transform.translate(
           offset: const Offset(0, -12),
           child: SizedBox(
@@ -158,6 +157,89 @@ class _JobsSwiperState extends State<JobsSwiper> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSkeletonJobSwiper(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDark ? const Color(0xFF0F382A) : Colors.grey.shade300;
+    final highlightColor =
+        isDark ? const Color(0xFF1E5240) : Colors.grey.shade100;
+
+    return Transform.translate(
+      offset: const Offset(0, -12),
+      child: Container(
+        height: 480,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Skeletonizer(
+          enabled: true,
+          containersColor: baseColor,
+          effect: ShimmerEffect(
+            baseColor: baseColor,
+            highlightColor: highlightColor,
+            duration: const Duration(milliseconds: 1200),
+          ),
+          child: Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Stack(
+              children: [
+                // Background image bone
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Bone(
+                      width: double.infinity,
+                      height: double.infinity,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+                // Bottom content card
+                Positioned(
+                  bottom: 16,
+                  left: 16,
+                  right: 16,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.black45 : Colors.white70,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Bone.text(words: 3, fontSize: 18),
+                        const SizedBox(height: 8),
+                        Bone.text(words: 10, fontSize: 13),
+                        const SizedBox(height: 6),
+                        Bone.text(words: 6, fontSize: 13),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Bone.button(
+                              width: 80,
+                              height: 28,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            Bone.button(
+                              width: 100,
+                              height: 36,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

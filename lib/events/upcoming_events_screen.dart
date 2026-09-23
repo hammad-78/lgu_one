@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import '../utils/app_cached_image.dart';
 
 class UpcomingEventsScreen extends StatefulWidget {
   const UpcomingEventsScreen({super.key});
@@ -148,7 +149,14 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                   if (imageUrl != null && imageUrl.isNotEmpty) ...[
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: Image.network(imageUrl, width: double.infinity, height: 200, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(height: 160, color: Colors.grey.shade300, child: const Icon(Icons.image_not_supported, size: 40, color: Colors.grey))),
+                      child: AppCachedImage(
+                        imageUrl: imageUrl,
+                        width: double.infinity,
+                        height: 200,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 800,
+                        memCacheHeight: 400,
+                      ),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -353,7 +361,18 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (imageUrl != null && imageUrl.isNotEmpty) ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: Image.network(imageUrl, height: 150, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink())),
+            if (imageUrl != null && imageUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: AppCachedImage(
+                  imageUrl: imageUrl,
+                  height: 150,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  memCacheWidth: 800,
+                  memCacheHeight: 300,
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.all(14),
               child: Column(

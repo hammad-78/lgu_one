@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'model.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../utils/app_cached_image.dart';
 
 class JobCard extends StatelessWidget {
   final Job job;
@@ -45,35 +46,26 @@ class JobCard extends StatelessWidget {
         child: Stack(
           children: [
 
-            /// 🌄 Image
+            /// 🌄 Image (Fast disk cache + skeleton loading)
             Positioned.fill(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: job.image.isNotEmpty
-                    ? Image.network(
-                        job.image,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Colors.grey.shade800,
-                          child: const Center(
-                            child: Icon(
-                              Icons.broken_image_outlined,
-                              size: 44,
-                              color: Colors.white54,
-                            ),
-                          ),
-                        ),
-                      )
-                    : Container(
-                        color: Colors.grey.shade800,
-                        child: const Center(
-                          child: Icon(
-                            Icons.work_outline,
-                            size: 44,
-                            color: Colors.white54,
-                          ),
-                        ),
+                child: AppCachedImage(
+                  imageUrl: job.image,
+                  fit: BoxFit.cover,
+                  memCacheWidth: 800,
+                  memCacheHeight: 1000,
+                  errorWidget: Container(
+                    color: Colors.grey.shade800,
+                    child: const Center(
+                      child: Icon(
+                        Icons.work_outline,
+                        size: 44,
+                        color: Colors.white54,
                       ),
+                    ),
+                  ),
+                ),
               ),
             ),
 

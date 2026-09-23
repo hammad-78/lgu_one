@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import '../utils/app_cached_image.dart';
 
 import 'lost_found_item.dart';
 import 'lost_found_service.dart';
@@ -297,10 +298,10 @@ class _EditItemScreenState extends State<EditItemScreen> {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              _existingImageUrl!,
+                            child: AppCachedImage(
+                              imageUrl: _existingImageUrl!,
                               fit: BoxFit.cover,
-                              cacheWidth: 800,
+                              memCacheWidth: 800,
                             ),
                           ),
                           const Positioned(

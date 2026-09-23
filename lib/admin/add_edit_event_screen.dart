@@ -5,6 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import '../utils/app_cached_image.dart';
 
 class AddEditEventScreen extends StatefulWidget {
   final String? eventId;
@@ -290,11 +291,12 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
     } else if (pastedUrl.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: Image.network(
-          pastedUrl,
+        child: AppCachedImage(
+          imageUrl: pastedUrl,
           fit: BoxFit.cover,
           width: double.infinity,
-          errorBuilder: (_, __, ___) => const Column(
+          memCacheWidth: 800,
+          errorWidget: const Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.broken_image, size: 40, color: Colors.orange),
@@ -307,11 +309,12 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
     } else if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: Image.network(
-          _existingImageUrl!,
+        child: AppCachedImage(
+          imageUrl: _existingImageUrl!,
           fit: BoxFit.cover,
           width: double.infinity,
-          errorBuilder: (_, __, ___) => Column(
+          memCacheWidth: 800,
+          errorWidget: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.error_outline, size: 40, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
