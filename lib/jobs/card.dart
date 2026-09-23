@@ -34,6 +34,72 @@ class JobCard extends StatelessWidget {
     }
   }
 
+  void _showImagePreview(BuildContext context) {
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: 'Job image preview',
+      barrierColor: Colors.black.withValues(alpha: 0.88),
+      transitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(16),
+          child: Stack(
+            alignment: Alignment.topRight,
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.sizeOf(context).width - 32,
+                  maxHeight: MediaQuery.sizeOf(context).height - 80,
+                ),
+                child: InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 4,
+                  child: AppCachedImage(
+                    imageUrl: job.image,
+                    fit: BoxFit.contain,
+                    memCacheWidth: 1600,
+                    memCacheHeight: 2000,
+                    errorWidget: const Icon(
+                      Icons.broken_image_outlined,
+                      size: 64,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ),
+              ),
+              Material(
+                color: Colors.black54,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  tooltip: 'Close image preview',
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curvedAnimation = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+
+        return FadeTransition(
+          opacity: curvedAnimation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.92, end: 1).animate(curvedAnimation),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -50,18 +116,22 @@ class JobCard extends StatelessWidget {
             Positioned.fill(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: AppCachedImage(
-                  imageUrl: job.image,
-                  fit: BoxFit.cover,
-                  memCacheWidth: 800,
-                  memCacheHeight: 1000,
-                  errorWidget: Container(
-                    color: Colors.grey.shade800,
-                    child: const Center(
-                      child: Icon(
-                        Icons.work_outline,
-                        size: 44,
-                        color: Colors.white54,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _showImagePreview(context),
+                  child: AppCachedImage(
+                    imageUrl: job.image,
+                    fit: BoxFit.cover,
+                    memCacheWidth: 800,
+                    memCacheHeight: 1000,
+                    errorWidget: Container(
+                      color: Colors.grey.shade800,
+                      child: const Center(
+                        child: Icon(
+                          Icons.work_outline,
+                          size: 44,
+                          color: Colors.white54,
+                        ),
                       ),
                     ),
                   ),
@@ -71,17 +141,19 @@ class JobCard extends StatelessWidget {
 
             /// 🌑 Gradient Overlay (Improved)
             Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.black.withValues(alpha: 0.3),
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.85),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.black.withValues(alpha: 0.3),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.85),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
                   ),
                 ),
               ),
