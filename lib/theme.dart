@@ -70,7 +70,7 @@ class AppTheme {
     colorScheme: ColorScheme.fromSeed(
       seedColor: const Color(0xFF021E16),
       brightness: Brightness.dark,
-      primary: const Color(0xFFD4AF37), // Gold as primary in dark mode for better visibility
+      primary: const Color(0xFFB0BEC5),
       secondary: const Color(0xFF0B3D2E),
       surface: const Color(0xFF021E16),
       onSurface: Colors.white,
@@ -99,7 +99,7 @@ class AppTheme {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFD4AF37),
+        backgroundColor: const Color(0xFFB0BEC5),
         foregroundColor: Colors.black,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -108,7 +108,7 @@ class AppTheme {
       ),
     ),
     iconTheme: const IconThemeData(
-      color: Color(0xFFD4AF37),
+      color: Color(0xFFB0BEC5),
     ),
     textTheme: const TextTheme(
       headlineMedium: TextStyle(

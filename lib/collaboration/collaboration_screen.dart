@@ -15,7 +15,7 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
 
   InputDecoration _fieldDecoration(BuildContext context, {required String label}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final highlight = isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50);
+    final highlight = isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50);
     final cardColor = isDark ? const Color(0xFF0B3D2E) : Colors.white;
     final borderColor = highlight.withValues(alpha: isDark ? 0.4 : 0.5);
 
@@ -49,7 +49,7 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final highlight = isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50);
+    final highlight = isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50);
     final cardColor = isDark ? const Color(0xFF0B3D2E) : Colors.white;
 
     return Scaffold(
@@ -169,7 +169,7 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
-          final highlight = isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50);
+          final highlight = isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50);
           final dialogBg = isDark ? const Color(0xFF0B3D2E) : Colors.white;
           final textColor = isDark ? Colors.white : Colors.black87;
           final subTextColor = isDark ? Colors.white60 : Colors.black54;

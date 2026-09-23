@@ -72,7 +72,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50),
+                  primary: isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50),
                   onPrimary: isDark ? Colors.black : Colors.white,
                   surface: isDark ? const Color(0xFF0B3D2E) : Colors.white,
                 ),
@@ -97,7 +97,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50),
+                  primary: isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50),
                   onPrimary: isDark ? Colors.black : Colors.white,
                   surface: isDark ? const Color(0xFF0B3D2E) : Colors.white,
                 ),
@@ -162,23 +162,23 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                   ],
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: categoryRaw == 'Lahore' ? (isDark ? const Color(0xFFD4AF37).withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.15)) : (isDark ? const Color(0xFF4CAF50).withValues(alpha: 0.2) : Colors.green.withValues(alpha: 0.15)), borderRadius: BorderRadius.circular(20)),
-                    child: Text(categoryDisplay, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: categoryRaw == 'Lahore' ? (isDark ? const Color(0xFFD4AF37) : Colors.orange.shade800) : (isDark ? Colors.lightGreenAccent : Colors.green.shade800))),
+                    decoration: BoxDecoration(color: categoryRaw == 'Lahore' ? (isDark ? const Color(0xFFB0BEC5).withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.15)) : (isDark ? const Color(0xFF4CAF50).withValues(alpha: 0.2) : Colors.green.withValues(alpha: 0.15)), borderRadius: BorderRadius.circular(20)),
+                    child: Text(categoryDisplay, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: categoryRaw == 'Lahore' ? (isDark ? const Color(0xFFB0BEC5) : Colors.orange.shade800) : (isDark ? Colors.lightGreenAccent : Colors.green.shade800))),
                   ),
                   const SizedBox(height: 10),
                   Text(title, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
                   const SizedBox(height: 14),
                   if (eventDate != null) ...[
-                    Row(children: [Icon(Icons.calendar_today, size: 18, color: isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50)), const SizedBox(width: 10), Expanded(child: Text(DateFormat('EEEE, dd MMMM yyyy • h:mm a').format(eventDate), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.black87)))]),
+                    Row(children: [Icon(Icons.calendar_today, size: 18, color: isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50)), const SizedBox(width: 10), Expanded(child: Text(DateFormat('EEEE, dd MMMM yyyy • h:mm a').format(eventDate), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.black87)))]),
                     const SizedBox(height: 10),
                   ],
-                  Row(children: [Icon(Icons.location_on, size: 18, color: isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50)), const SizedBox(width: 10), Expanded(child: Text(location, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isDark ? Colors.white70 : Colors.black87)))]),
+                  Row(children: [Icon(Icons.location_on, size: 18, color: isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50)), const SizedBox(width: 10), Expanded(child: Text(location, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isDark ? Colors.white70 : Colors.black87)))]),
                   const Divider(height: 30),
                   Text("About Event", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
                   const SizedBox(height: 8),
                   Text(description, style: TextStyle(fontSize: 14, height: 1.5, color: isDark ? Colors.white70 : Colors.black87)),
                   const SizedBox(height: 30),
-                  SizedBox(width: double.infinity, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50), foregroundColor: isDark ? Colors.black : Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 14)), onPressed: () => Navigator.pop(context), child: const Text("Close", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)))),
+                  SizedBox(width: double.infinity, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50), foregroundColor: isDark ? Colors.black : Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 14)), onPressed: () => Navigator.pop(context), child: const Text("Close", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)))),
                 ],
               ),
             );
@@ -235,7 +235,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                   selected: {_selectedCategory},
                   onSelectionChanged: (selection) => setState(() => _selectedCategory = selection.first),
                   style: SegmentedButton.styleFrom(
-                    selectedBackgroundColor: isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50),
+                    selectedBackgroundColor: isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50),
                     selectedForegroundColor: isDark ? Colors.black : Colors.white,
                     visualDensity: VisualDensity.compact,
                   ),
@@ -271,11 +271,11 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                   decoration: BoxDecoration(
                     color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? const Color(0xFFD4AF37).withValues(alpha: 0.3) : const Color(0xFF4CAF50).withValues(alpha: 0.3)),
+                    border: Border.all(color: isDark ? const Color(0xFFB0BEC5).withValues(alpha: 0.3) : const Color(0xFF4CAF50).withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.filter_alt, size: 14, color: isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50)),
+                      Icon(Icons.filter_alt, size: 14, color: isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -328,7 +328,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
   }
 
   Widget _buildFilterChip({required String label, required bool isSelected, required VoidCallback onTap, IconData? icon, required bool isDark}) {
-    final color = isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50);
+    final color = isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50);
     return FilterChip(
       label: Text(label),
       selected: isSelected,
@@ -357,7 +357,7 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
       onTap: () => _showEventDetail(context, data),
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
-        decoration: BoxDecoration(color: isDark ? const Color(0xFF0B3D2E) : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: isDark ? const Color(0xFFD4AF37).withValues(alpha: 0.25) : const Color(0xFF4CAF50).withValues(alpha: 0.2)), boxShadow: [if (!isDark) BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 4))]),
+        decoration: BoxDecoration(color: isDark ? const Color(0xFF0B3D2E) : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: isDark ? const Color(0xFFB0BEC5).withValues(alpha: 0.25) : const Color(0xFF4CAF50).withValues(alpha: 0.2)), boxShadow: [if (!isDark) BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 4))]),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -382,18 +382,18 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                        decoration: BoxDecoration(color: categoryRaw == 'Lahore' ? (isDark ? const Color(0xFFD4AF37).withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.15)) : (isDark ? const Color(0xFF4CAF50).withValues(alpha: 0.2) : Colors.green.withValues(alpha: 0.15)), borderRadius: BorderRadius.circular(20)),
-                        child: Text(categoryDisplay, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: categoryRaw == 'Lahore' ? (isDark ? const Color(0xFFD4AF37) : Colors.orange.shade800) : (isDark ? Colors.lightGreenAccent : Colors.green.shade800))),
+                        decoration: BoxDecoration(color: categoryRaw == 'Lahore' ? (isDark ? const Color(0xFFB0BEC5).withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.15)) : (isDark ? const Color(0xFF4CAF50).withValues(alpha: 0.2) : Colors.green.withValues(alpha: 0.15)), borderRadius: BorderRadius.circular(20)),
+                        child: Text(categoryDisplay, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: categoryRaw == 'Lahore' ? (isDark ? const Color(0xFFB0BEC5) : Colors.orange.shade800) : (isDark ? Colors.lightGreenAccent : Colors.green.shade800))),
                       ),
                       const Spacer(),
-                      Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), decoration: BoxDecoration(color: isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50), borderRadius: BorderRadius.circular(20)), child: Text(countdownStr, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? Colors.black : Colors.white))),
+                      Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), decoration: BoxDecoration(color: isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50), borderRadius: BorderRadius.circular(20)), child: Text(countdownStr, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? Colors.black : Colors.white))),
                     ],
                   ),
                   const SizedBox(height: 10),
                   Text(title, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
                   const SizedBox(height: 8),
-                  Row(children: [Icon(Icons.access_time, size: 15, color: isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50)), const SizedBox(width: 6), Expanded(child: Text(dateStr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: isDark ? Colors.white70 : Colors.black87)))]),
-                  if (location.isNotEmpty) ...[const SizedBox(height: 6), Row(children: [Icon(Icons.location_on_outlined, size: 15, color: isDark ? const Color(0xFFD4AF37) : const Color(0xFF4CAF50)), const SizedBox(width: 6), Expanded(child: Text(location, style: TextStyle(fontSize: 13, color: isDark ? Colors.white60 : Colors.black54), maxLines: 1, overflow: TextOverflow.ellipsis))])],
+                  Row(children: [Icon(Icons.access_time, size: 15, color: isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50)), const SizedBox(width: 6), Expanded(child: Text(dateStr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: isDark ? Colors.white70 : Colors.black87)))]),
+                  if (location.isNotEmpty) ...[const SizedBox(height: 6), Row(children: [Icon(Icons.location_on_outlined, size: 15, color: isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50)), const SizedBox(width: 6), Expanded(child: Text(location, style: TextStyle(fontSize: 13, color: isDark ? Colors.white60 : Colors.black54), maxLines: 1, overflow: TextOverflow.ellipsis))])],
                 ],
               ),
             ),
