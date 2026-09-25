@@ -227,51 +227,66 @@ class _AdminHomeState extends State<AdminHome> {
                     ),
                     const SizedBox(height: 16),
 
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 1.2,
-                      children: [
-                        _buildActionButton(
-                          context: context,
-                          icon: Icons.search,
-                          label: "Lost & Found",
-                          onTap: () => _navigate(const AdminLostFound()),
-                        ),
-                        _buildActionButton(
-                          context: context,
-                          icon: Icons.groups_outlined,
-                          label: "Collaborations",
-                          onTap: () => _navigate(const AdminCollaboration()),
-                        ),
-                        _buildActionButton(
-                          context: context,
-                          icon: Icons.event_note,
-                          label: "Events",
-                          onTap: () => _navigate(const AdminEventsScreen()),
-                        ),
-                        _buildActionButton(
-                          context: context,
-                          icon: Icons.work_outline,
-                          label: "Jobs",
-                          onTap: () => _navigate(const AdminJobsScreen()),
-                        ),
-                        _buildActionButton(
-                          context: context,
-                          icon: Icons.newspaper,
-                          label: "News Feed",
-                          onTap: () => _navigate(const AdminNewsScreen()),
-                        ),
-                        _buildActionButton(
-                          context: context,
-                          icon: Icons.groups_outlined,
-                          label: "Societies",
-                          onTap: () => _navigate(const AdminSocietiesScreen()),
-                        ),
-                      ],
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isDesktop = constraints.maxWidth >= 700;
+                        final grid = GridView.count(
+                          crossAxisCount: isDesktop ? 3 : 2,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: isDesktop ? 1.35 : 1.2,
+                          children: [
+                            _buildActionButton(
+                              context: context,
+                              icon: Icons.search,
+                              label: "Lost & Found",
+                              onTap: () => _navigate(const AdminLostFound()),
+                            ),
+                            _buildActionButton(
+                              context: context,
+                              icon: Icons.groups_outlined,
+                              label: "Collaborations",
+                              onTap: () => _navigate(const AdminCollaboration()),
+                            ),
+                            _buildActionButton(
+                              context: context,
+                              icon: Icons.event_note,
+                              label: "Events",
+                              onTap: () => _navigate(const AdminEventsScreen()),
+                            ),
+                            _buildActionButton(
+                              context: context,
+                              icon: Icons.work_outline,
+                              label: "Jobs",
+                              onTap: () => _navigate(const AdminJobsScreen()),
+                            ),
+                            _buildActionButton(
+                              context: context,
+                              icon: Icons.newspaper,
+                              label: "News Feed",
+                              onTap: () => _navigate(const AdminNewsScreen()),
+                            ),
+                            _buildActionButton(
+                              context: context,
+                              icon: Icons.groups_outlined,
+                              label: "Societies",
+                              onTap: () => _navigate(const AdminSocietiesScreen()),
+                            ),
+                          ],
+                        );
+
+                        return isDesktop
+                            ? Align(
+                                alignment: Alignment.center,
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 820),
+                                  child: grid,
+                                ),
+                              )
+                            : grid;
+                      },
                     ),
                   ],
                 ),

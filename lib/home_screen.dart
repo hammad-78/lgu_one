@@ -208,11 +208,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ],
       ),
       drawer: _buildDrawer(),
-      body: Scrollbar(
-        controller: _scrollController,
-        child: ListView(
-          controller: _scrollController,
-          children: [
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1180),
+          child: Scrollbar(
+            controller: _scrollController,
+            child: ListView(
+              controller: _scrollController,
+              children: [
             const SizedBox(height: 5),
             if (_showNotificationBanner) _buildNotificationBanner(theme),
             Padding(
@@ -346,7 +349,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
             const JobsSwiper(),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );

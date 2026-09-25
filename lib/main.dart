@@ -3,7 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/auth/splash_screen.dart';
 import 'theme.dart';
-
+import 'firebase_options.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tzlib;
 
@@ -15,7 +15,9 @@ void main() async {
   tz.initializeTimeZones();
   tzlib.setLocalLocation(tzlib.getLocation('Asia/Karachi'));
 
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(const MyApp());

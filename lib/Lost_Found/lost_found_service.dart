@@ -125,13 +125,38 @@ class LostFoundService {
     final ok = await verifySecretKey(itemId, enteredKey);
     if (!ok) throw InvalidSecretKeyException();
 
-    try {
-      final folder = _storage.ref('lost_found/$itemId');
-      final listed = await folder.listAll();
-      await Future.wait(listed.items.map((ref) => ref.delete()));
-    } catch (_) {}
+    final docRef = _firestore.collection(_collection).doc(itemId);
+    final snapshot = await docRef.get();
+    final imageUrls = List<String>.from(
+      snapshot.data()?['imageUrls'] as List? ?? const [],
+    );
+    final references = <String, Reference>{};
 
-    await _firestore.collection(_collection).doc(itemId).delete();
+    for (final url in imageUrls) {
+      final reference = _storage.refFromURL(url);
+      references[reference.fullPath] = reference;
+    }
+
+    // Include any legacy or orphaned files that still live under this item.
+    final listed = await _storage.ref('lost_found/$itemId').listAll();
+    for (final reference in listed.items) {
+      references[reference.fullPath] = reference;
+    }
+
+    await Future.wait(
+      references.values.map((reference) async {
+        try {
+          await reference.delete();
+        } on FirebaseException catch (error) {
+          if (error.code != 'object-not-found' &&
+              error.code != 'storage/object-not-found') {
+            rethrow;
+          }
+        }
+      }),
+    );
+
+    await docRef.delete();
   }
 
   /// Admin methods to approve or reject listings
