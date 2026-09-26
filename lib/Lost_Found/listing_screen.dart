@@ -31,7 +31,9 @@ class _ListingsScreenState extends State<ListingsScreen> {
     final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open WhatsApp. Is it installed?')),
+        const SnackBar(
+          content: Text('Could not open WhatsApp. Is it installed?'),
+        ),
       );
     }
   }
@@ -39,7 +41,11 @@ class _ListingsScreenState extends State<ListingsScreen> {
   Future<String?> _promptAndVerify(String title, LostFoundItem item) async {
     String? errorText;
     while (true) {
-      final key = await promptForSecretKey(context, title: title, errorText: errorText);
+      final key = await promptForSecretKey(
+        context,
+        title: title,
+        errorText: errorText,
+      );
       if (key == null) return null; // cancelled
       if (key.isEmpty) {
         errorText = 'Please enter the code.';
@@ -55,7 +61,10 @@ class _ListingsScreenState extends State<ListingsScreen> {
     }
   }
 
-  Future<void> _handleEdit(BuildContext sheetContext, LostFoundItem item) async {
+  Future<void> _handleEdit(
+    BuildContext sheetContext,
+    LostFoundItem item,
+  ) async {
     final key = await _promptAndVerify('Enter your secret code to edit', item);
     if (key == null || !mounted) return;
 
@@ -67,8 +76,14 @@ class _ListingsScreenState extends State<ListingsScreen> {
     );
   }
 
-  Future<void> _handleDelete(BuildContext sheetContext, LostFoundItem item) async {
-    final key = await _promptAndVerify('Enter your secret code to delete', item);
+  Future<void> _handleDelete(
+    BuildContext sheetContext,
+    LostFoundItem item,
+  ) async {
+    final key = await _promptAndVerify(
+      'Enter your secret code to delete',
+      item,
+    );
     if (key == null || !mounted) return;
 
     final confirmed = await showDialog<bool>(
@@ -96,13 +111,14 @@ class _ListingsScreenState extends State<ListingsScreen> {
       await _service.deleteItem(item.id, key);
       if (!mounted) return;
       Navigator.of(sheetContext).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Listing deleted.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Listing deleted.')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Could not delete: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not delete: $e')));
     }
   }
 
@@ -128,7 +144,9 @@ class _ListingsScreenState extends State<ListingsScreen> {
             return Container(
               decoration: BoxDecoration(
                 color: sheetBg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
                 border: Border.all(
                   color: highlight.withValues(alpha: isDark ? 0.2 : 0.35),
                   width: 1,
@@ -166,10 +184,16 @@ class _ListingsScreenState extends State<ListingsScreen> {
                             errorWidget: Container(
                               width: double.infinity,
                               height: 240,
-                              color: isDark ? Colors.white10 : Colors.grey.shade200,
-                              child: Icon(Icons.broken_image_outlined,
-                                  color: isDark ? Colors.white30 : Colors.grey.shade400,
-                                  size: 40),
+                              color: isDark
+                                  ? Colors.white10
+                                  : Colors.grey.shade200,
+                              child: Icon(
+                                Icons.broken_image_outlined,
+                                color: isDark
+                                    ? Colors.white30
+                                    : Colors.grey.shade400,
+                                size: 40,
+                              ),
                             ),
                           ),
                         ),
@@ -183,19 +207,30 @@ class _ListingsScreenState extends State<ListingsScreen> {
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   color: item.type == 'lost'
-                                      ? Colors.red.withValues(alpha: isDark ? 0.22 : 0.14)
-                                      : Colors.green.withValues(alpha: isDark ? 0.22 : 0.14),
+                                      ? Colors.red.withValues(
+                                          alpha: isDark ? 0.22 : 0.14,
+                                        )
+                                      : Colors.green.withValues(
+                                          alpha: isDark ? 0.22 : 0.14,
+                                        ),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
                                   item.type.toUpperCase(),
                                   style: TextStyle(
                                     color: item.type == 'lost'
-                                        ? (isDark ? Colors.red.shade200 : Colors.red.shade700)
-                                        : (isDark ? Colors.greenAccent.shade100 : Colors.green.shade800),
+                                        ? (isDark
+                                              ? Colors.red.shade200
+                                              : Colors.red.shade700)
+                                        : (isDark
+                                              ? Colors.greenAccent.shade100
+                                              : Colors.green.shade800),
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
                                   ),
@@ -204,7 +239,10 @@ class _ListingsScreenState extends State<ListingsScreen> {
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: isDark
                                         ? Colors.white.withValues(alpha: 0.08)
@@ -224,15 +262,51 @@ class _ListingsScreenState extends State<ListingsScreen> {
 
                           const SizedBox(height: 14),
 
-                          Text(
-                            item.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: textColor,
-                            ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor,
+                                  ),
+                                ),
+                              ),
+                              PopupMenuButton<String>(
+                                padding: EdgeInsets.zero,
+                                tooltip: 'Listing actions',
+                                onSelected: (action) {
+                                  if (action == 'edit') {
+                                    _handleEdit(context, item);
+                                  } else if (action == 'delete') {
+                                    _handleDelete(context, item);
+                                  }
+                                },
+                                itemBuilder: (context) => const [
+                                  PopupMenuItem<String>(
+                                    value: 'edit',
+                                    child: ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: Icon(Icons.edit_outlined),
+                                      title: Text('Edit'),
+                                    ),
+                                  ),
+                                  PopupMenuItem<String>(
+                                    value: 'delete',
+                                    child: ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: Icon(Icons.delete_outline),
+                                      title: Text('Delete'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
 
                           const SizedBox(height: 10),
@@ -248,16 +322,28 @@ class _ListingsScreenState extends State<ListingsScreen> {
                             ),
                             child: Text(
                               item.description,
-                              style: TextStyle(color: subTextColor, height: 1.4),
+                              style: TextStyle(
+                                color: subTextColor,
+                                height: 1.4,
+                              ),
                             ),
                           ),
 
                           const SizedBox(height: 16),
 
-                          _infoRow(context, Icons.location_on, "Location", item.location),
+                          _infoRow(
+                            context,
+                            Icons.location_on,
+                            "Location",
+                            item.location,
+                          ),
                           const SizedBox(height: 10),
-                          _infoRow(context, Icons.calendar_today, "Date",
-                              DateFormat.yMMMd().format(item.date)),
+                          _infoRow(
+                            context,
+                            Icons.calendar_today,
+                            "Date",
+                            DateFormat.yMMMd().format(item.date),
+                          ),
 
                           const SizedBox(height: 24),
 
@@ -265,7 +351,9 @@ class _ListingsScreenState extends State<ListingsScreen> {
                             width: double.infinity,
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -282,47 +370,6 @@ class _ListingsScreenState extends State<ListingsScreen> {
                           ),
 
                           const SizedBox(height: 12),
-
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: textColor,
-                                    side: BorderSide(color: highlight.withValues(alpha: 0.7)),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  onPressed: () => _handleEdit(sheetContext, item),
-                                  icon: const Icon(Icons.edit_outlined),
-                                  label: const Text('Edit'),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: isDark ? Colors.red.shade200 : Colors.red.shade700,
-                                    side: BorderSide(
-                                      color: (isDark ? Colors.red.shade200 : Colors.red.shade700)
-                                          .withValues(alpha: 0.7),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  onPressed: () => _handleDelete(sheetContext, item),
-                                  icon: const Icon(Icons.delete_outline),
-                                  label: const Text('Delete'),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 8),
                         ],
                       ),
                     ),
@@ -351,7 +398,10 @@ class _ListingsScreenState extends State<ListingsScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Bone.square(size: 80, borderRadius: BorderRadius.circular(12)),
+                  Bone.square(
+                    size: 80,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -359,49 +409,80 @@ class _ListingsScreenState extends State<ListingsScreen> {
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: isDark ? Colors.white24 : Colors.grey.shade300,
+                            color: isDark
+                                ? Colors.white24
+                                : Colors.grey.shade300,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Text(
                             'LOST',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 6),
                         const Text(
                           'Sample item title goes here',
                           maxLines: 1,
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            Icon(Icons.category, size: 14,
-                                color: isDark ? Colors.white38 : Colors.grey.shade600),
+                            Icon(
+                              Icons.category,
+                              size: 14,
+                              color: isDark
+                                  ? Colors.white38
+                                  : Colors.grey.shade600,
+                            ),
                             const SizedBox(width: 4),
                             const Expanded(
-                              child: Text('Category', maxLines: 1, style: TextStyle(fontSize: 12)),
+                              child: Text(
+                                'Category',
+                                maxLines: 1,
+                                style: TextStyle(fontSize: 12),
+                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 2),
                         Row(
                           children: [
-                            Icon(Icons.location_on, size: 14,
-                                color: isDark ? Colors.white38 : Colors.grey.shade600),
+                            Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: isDark
+                                  ? Colors.white38
+                                  : Colors.grey.shade600,
+                            ),
                             const SizedBox(width: 4),
                             const Expanded(
-                              child: Text('Location text', maxLines: 1, style: TextStyle(fontSize: 12)),
+                              child: Text(
+                                'Location text',
+                                maxLines: 1,
+                                style: TextStyle(fontSize: 12),
+                              ),
                             ),
                           ],
                         ),
                       ],
                     ),
                   ),
-                  Icon(Icons.arrow_forward_ios, size: 16,
-                      color: isDark ? Colors.white38 : Colors.grey.shade600),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: isDark ? Colors.white38 : Colors.grey.shade600,
+                  ),
                 ],
               ),
             ),
@@ -411,7 +492,12 @@ class _ListingsScreenState extends State<ListingsScreen> {
     );
   }
 
-  Widget _infoRow(BuildContext context, IconData icon, String label, String value) {
+  Widget _infoRow(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = Theme.of(context).colorScheme.secondary;
     final highlight = isDark ? accent : const Color(0xFF4CAF50);
@@ -420,12 +506,18 @@ class _ListingsScreenState extends State<ListingsScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? highlight.withValues(alpha: 0.2) : Colors.grey.shade300,
+          color: isDark
+              ? highlight.withValues(alpha: 0.2)
+              : Colors.grey.shade300,
         ),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: isDark ? highlight : Colors.grey.shade800),
+          Icon(
+            icon,
+            size: 18,
+            color: isDark ? highlight : Colors.grey.shade800,
+          ),
           const SizedBox(width: 10),
           Text(
             "$label:",
@@ -438,7 +530,9 @@ class _ListingsScreenState extends State<ListingsScreen> {
           Expanded(
             child: Text(
               value,
-              style: TextStyle(color: isDark ? Colors.white70 : Colors.grey.shade800),
+              style: TextStyle(
+                color: isDark ? Colors.white70 : Colors.grey.shade800,
+              ),
             ),
           ),
         ],
@@ -458,9 +552,9 @@ class _ListingsScreenState extends State<ListingsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: highlight,
         foregroundColor: isDark ? Colors.black : Colors.white,
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const PostItemScreen()),
-        ),
+        onPressed: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const PostItemScreen())),
         icon: const Icon(Icons.add),
         label: const Text('Report item'),
       ),
@@ -472,8 +566,13 @@ class _ListingsScreenState extends State<ListingsScreen> {
               style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               decoration: InputDecoration(
                 hintText: 'Search by title',
-                hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey.shade600),
-                prefixIcon: Icon(Icons.search, color: isDark ? Colors.white60 : Colors.grey.shade700),
+                hintStyle: TextStyle(
+                  color: isDark ? Colors.white38 : Colors.grey.shade600,
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: isDark ? Colors.white60 : Colors.grey.shade700,
+                ),
                 filled: true,
                 fillColor: cardColor,
                 border: OutlineInputBorder(
@@ -506,11 +605,29 @@ class _ListingsScreenState extends State<ListingsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
-                _buildChip('All', _typeFilter == 'all', () => setState(() => _typeFilter = 'all'), isDark, highlight),
+                _buildChip(
+                  'All',
+                  _typeFilter == 'all',
+                  () => setState(() => _typeFilter = 'all'),
+                  isDark,
+                  highlight,
+                ),
                 const SizedBox(width: 8),
-                _buildChip('Lost', _typeFilter == 'lost', () => setState(() => _typeFilter = 'lost'), isDark, highlight),
+                _buildChip(
+                  'Lost',
+                  _typeFilter == 'lost',
+                  () => setState(() => _typeFilter = 'lost'),
+                  isDark,
+                  highlight,
+                ),
                 const SizedBox(width: 8),
-                _buildChip('Found', _typeFilter == 'found', () => setState(() => _typeFilter = 'found'), isDark, highlight),
+                _buildChip(
+                  'Found',
+                  _typeFilter == 'found',
+                  () => setState(() => _typeFilter = 'found'),
+                  isDark,
+                  highlight,
+                ),
                 const SizedBox(width: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -527,15 +644,23 @@ class _ListingsScreenState extends State<ListingsScreen> {
                     child: DropdownButton<String>(
                       value: _categoryFilter,
                       dropdownColor: cardColor,
-                      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-                      icon: Icon(Icons.arrow_drop_down, color: isDark ? Colors.white70 : Colors.black54),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                      icon: Icon(
+                        Icons.arrow_drop_down,
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
                       items: ['all', ...lostFoundCategories]
-                          .map((c) => DropdownMenuItem(
-                        value: c,
-                        child: Text(c == 'all' ? 'All categories' : c),
-                      ))
+                          .map(
+                            (c) => DropdownMenuItem(
+                              value: c,
+                              child: Text(c == 'all' ? 'All categories' : c),
+                            ),
+                          )
                           .toList(),
-                      onChanged: (v) => setState(() => _categoryFilter = v ?? 'all'),
+                      onChanged: (v) =>
+                          setState(() => _categoryFilter = v ?? 'all'),
                     ),
                   ),
                 ),
@@ -548,7 +673,9 @@ class _ListingsScreenState extends State<ListingsScreen> {
               stream: _service.getItems(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(child: Text('Something went wrong: ${snapshot.error}'));
+                  return Center(
+                    child: Text('Something went wrong: ${snapshot.error}'),
+                  );
                 }
                 if (!snapshot.hasData) {
                   return _buildSkeletonList(context);
@@ -558,10 +685,12 @@ class _ListingsScreenState extends State<ListingsScreen> {
                 items = items.where((i) => i.status == 'active').toList();
 
                 items = items.where((i) {
-                  final matchesType = _typeFilter == 'all' || i.type == _typeFilter;
+                  final matchesType =
+                      _typeFilter == 'all' || i.type == _typeFilter;
                   final matchesCategory =
                       _categoryFilter == 'all' || i.category == _categoryFilter;
-                  final matchesSearch = _searchText.isEmpty ||
+                  final matchesSearch =
+                      _searchText.isEmpty ||
                       i.title.toLowerCase().contains(_searchText);
                   return matchesType && matchesCategory && matchesSearch;
                 }).toList();
@@ -569,7 +698,9 @@ class _ListingsScreenState extends State<ListingsScreen> {
                   return Center(
                     child: Text(
                       'No items match your filters yet.',
-                      style: TextStyle(color: isDark ? Colors.white60 : Colors.grey.shade700),
+                      style: TextStyle(
+                        color: isDark ? Colors.white60 : Colors.grey.shade700,
+                      ),
                     ),
                   );
                 }
@@ -592,37 +723,45 @@ class _ListingsScreenState extends State<ListingsScreen> {
                                 borderRadius: BorderRadius.circular(12),
                                 child: item.imageUrls.isNotEmpty
                                     ? AppCachedImage(
-                                  imageUrl: item.imageUrls.first,
-                                  width: 80,
-                                  height: 80,
-                                  fit: BoxFit.cover,
-                                  memCacheWidth: 240,
-                                  memCacheHeight: 240,
-                                  errorWidget: Container(
-                                    width: 80,
-                                    height: 80,
-                                    color: isDark ? Colors.white10 : Colors.grey.shade200,
-                                    child: Icon(Icons.broken_image_outlined,
-                                        color: isDark ? Colors.white30 : Colors.grey.shade400),
-                                  ),
-                                )
+                                        imageUrl: item.imageUrls.first,
+                                        width: 80,
+                                        height: 80,
+                                        fit: BoxFit.cover,
+                                        memCacheWidth: 240,
+                                        memCacheHeight: 240,
+                                        errorWidget: Container(
+                                          width: 80,
+                                          height: 80,
+                                          color: isDark
+                                              ? Colors.white10
+                                              : Colors.grey.shade200,
+                                          child: Icon(
+                                            Icons.broken_image_outlined,
+                                            color: isDark
+                                                ? Colors.white30
+                                                : Colors.grey.shade400,
+                                          ),
+                                        ),
+                                      )
                                     : Container(
-                                  width: 80,
-                                  height: 80,
-                                  color: highlight.withValues(alpha: isDark ? 0.12 : 0.1),
-                                  child: Center(
-                                    child: Text(
-                                      item.category.isNotEmpty
-                                          ? item.category[0]
-                                          : '?',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: highlight,
+                                        width: 80,
+                                        height: 80,
+                                        color: highlight.withValues(
+                                          alpha: isDark ? 0.12 : 0.1,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            item.category.isNotEmpty
+                                                ? item.category[0]
+                                                : '?',
+                                            style: TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                              color: highlight,
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ),
                               ),
 
                               const SizedBox(width: 12),
@@ -633,11 +772,17 @@ class _ListingsScreenState extends State<ListingsScreen> {
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: item.type == 'lost'
-                                            ? Colors.red.withValues(alpha: isDark ? 0.22 : 0.14)
-                                            : Colors.green.withValues(alpha: isDark ? 0.22 : 0.14),
+                                            ? Colors.red.withValues(
+                                                alpha: isDark ? 0.22 : 0.14,
+                                              )
+                                            : Colors.green.withValues(
+                                                alpha: isDark ? 0.22 : 0.14,
+                                              ),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
@@ -646,8 +791,14 @@ class _ListingsScreenState extends State<ListingsScreen> {
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                           color: item.type == 'lost'
-                                              ? (isDark ? Colors.red.shade200 : Colors.red.shade700)
-                                              : (isDark ? Colors.greenAccent.shade100 : Colors.green.shade800),
+                                              ? (isDark
+                                                    ? Colors.red.shade200
+                                                    : Colors.red.shade700)
+                                              : (isDark
+                                                    ? Colors
+                                                          .greenAccent
+                                                          .shade100
+                                                    : Colors.green.shade800),
                                         ),
                                       ),
                                     ),
@@ -661,7 +812,9 @@ class _ListingsScreenState extends State<ListingsScreen> {
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w600,
-                                        color: isDark ? Colors.white : Colors.black87,
+                                        color: isDark
+                                            ? Colors.white
+                                            : Colors.black87,
                                       ),
                                     ),
 
@@ -669,9 +822,13 @@ class _ListingsScreenState extends State<ListingsScreen> {
 
                                     Row(
                                       children: [
-                                        Icon(Icons.category,
-                                            size: 14,
-                                            color: isDark ? Colors.white54 : Colors.grey.shade700),
+                                        Icon(
+                                          Icons.category,
+                                          size: 14,
+                                          color: isDark
+                                              ? Colors.white54
+                                              : Colors.grey.shade700,
+                                        ),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
@@ -680,7 +837,9 @@ class _ListingsScreenState extends State<ListingsScreen> {
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                               fontSize: 12,
-                                              color: isDark ? Colors.white60 : Colors.grey.shade800,
+                                              color: isDark
+                                                  ? Colors.white60
+                                                  : Colors.grey.shade800,
                                             ),
                                           ),
                                         ),
@@ -691,9 +850,13 @@ class _ListingsScreenState extends State<ListingsScreen> {
 
                                     Row(
                                       children: [
-                                        Icon(Icons.location_on,
-                                            size: 14,
-                                            color: isDark ? Colors.white54 : Colors.grey.shade700),
+                                        Icon(
+                                          Icons.location_on,
+                                          size: 14,
+                                          color: isDark
+                                              ? Colors.white54
+                                              : Colors.grey.shade700,
+                                        ),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
@@ -702,7 +865,9 @@ class _ListingsScreenState extends State<ListingsScreen> {
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                               fontSize: 12,
-                                              color: isDark ? Colors.white54 : Colors.grey.shade700,
+                                              color: isDark
+                                                  ? Colors.white54
+                                                  : Colors.grey.shade700,
                                             ),
                                           ),
                                         ),
@@ -715,7 +880,9 @@ class _ListingsScreenState extends State<ListingsScreen> {
                               Icon(
                                 Icons.arrow_forward_ios,
                                 size: 16,
-                                color: isDark ? Colors.white38 : Colors.grey.shade600,
+                                color: isDark
+                                    ? Colors.white38
+                                    : Colors.grey.shade600,
                               ),
                             ],
                           ),
@@ -732,7 +899,13 @@ class _ListingsScreenState extends State<ListingsScreen> {
     );
   }
 
-  Widget _buildChip(String label, bool selected, VoidCallback onTap, bool isDark, Color highlight) {
+  Widget _buildChip(
+    String label,
+    bool selected,
+    VoidCallback onTap,
+    bool isDark,
+    Color highlight,
+  ) {
     return ChoiceChip(
       label: Text(label),
       selected: selected,
@@ -747,7 +920,9 @@ class _ListingsScreenState extends State<ListingsScreen> {
         fontWeight: selected ? FontWeight.bold : FontWeight.normal,
       ),
       side: BorderSide(
-        color: selected ? Colors.transparent : highlight.withValues(alpha: isDark ? 0.25 : 0.45),
+        color: selected
+            ? Colors.transparent
+            : highlight.withValues(alpha: isDark ? 0.25 : 0.45),
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );

@@ -6,15 +6,18 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../utils/app_cached_image.dart';
+import '../utils/pakistani_phone_formatter.dart';
 
 class AddEditEventScreen extends StatefulWidget {
   final String? eventId;
   final Map<String, dynamic>? eventData;
+  final bool studentSubmission;
 
   const AddEditEventScreen({
     super.key,
     this.eventId,
     this.eventData,
+    this.studentSubmission = false,
   });
 
   @override
@@ -26,6 +29,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _imageUrlController = TextEditingController();
 
   String _category = 'University'; // 'University' or 'Lahore'
@@ -44,6 +48,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
       _titleController.text = data['title'] ?? '';
       _descriptionController.text = data['description'] ?? '';
       _locationController.text = data['location'] ?? '';
+      _phoneController.text = data['phoneNumber'] ?? '';
       _category = (data['category'] == 'Lahore') ? 'Lahore' : 'University';
       _existingImageUrl = data['imageUrl'] as String?;
       if (_existingImageUrl != null) {
@@ -61,6 +66,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _locationController.dispose();
+    _phoneController.dispose();
     _imageUrlController.dispose();
     super.dispose();
   }
@@ -77,9 +83,9 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to pick image: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Failed to pick image: $e")));
       }
     }
   }
@@ -96,7 +102,10 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
           child: Wrap(
             children: [
               ListTile(
-                leading: Icon(Icons.photo_library, color: theme.colorScheme.primary),
+                leading: Icon(
+                  Icons.photo_library,
+                  color: theme.colorScheme.primary,
+                ),
                 title: const Text("Choose from Gallery"),
                 onTap: () {
                   Navigator.pop(context);
@@ -104,7 +113,10 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                 },
               ),
               ListTile(
-                leading: Icon(Icons.camera_alt, color: theme.colorScheme.primary),
+                leading: Icon(
+                  Icons.camera_alt,
+                  color: theme.colorScheme.primary,
+                ),
                 title: const Text("Take a Photo"),
                 onTap: () {
                   Navigator.pop(context);
@@ -204,9 +216,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
 
     if (_selectedDateTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please select event date and time"),
-        ),
+        const SnackBar(content: Text("Please select event date and time")),
       );
       return;
     }
@@ -240,20 +250,33 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
+      if (widget.studentSubmission) {
+        dataMap['phoneNumber'] = canonicalPakistaniPhone(
+          _phoneController.text.trim(),
+        );
+        dataMap['status'] = 'pending';
+        dataMap['submittedBy'] = user?.uid ?? 'anonymous';
+      }
+
       if (_isEditing) {
         await eventsRef.doc(widget.eventId).update(dataMap);
       } else {
         dataMap['createdBy'] = user?.uid ?? 'unknown';
         dataMap['createdAt'] = FieldValue.serverTimestamp();
+        dataMap['status'] = widget.studentSubmission ? 'pending' : 'approved';
         await eventsRef.add(dataMap);
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isEditing
-                ? "Event updated successfully"
-                : "Event created successfully"),
+            content: Text(
+              _isEditing
+                  ? "Event updated successfully"
+                  : widget.studentSubmission
+                  ? "Event submitted for admin approval"
+                  : "Event created successfully",
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -317,7 +340,11 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
           errorWidget: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 40, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+              Icon(
+                Icons.error_outline,
+                size: 40,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
               const Text("Failed to load image"),
             ],
           ),
@@ -348,7 +375,13 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? "Edit Event" : "Add Event"),
+        title: Text(
+          _isEditing
+              ? "Edit Event"
+              : widget.studentSubmission
+              ? "Submit Event"
+              : "Add Event",
+        ),
       ),
       body: _isSaving
           ? Center(
@@ -400,7 +433,10 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        prefixIcon: Icon(Icons.link, color: theme.colorScheme.primary),
+                        prefixIcon: Icon(
+                          Icons.link,
+                          color: theme.colorScheme.primary,
+                        ),
                         suffixIcon: _imageUrlController.text.isNotEmpty
                             ? IconButton(
                                 icon: const Icon(Icons.clear, size: 20),
@@ -414,7 +450,8 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                       ),
                       onChanged: (val) {
                         setState(() {
-                          _pickedImageFile = null; // Clear picked file if URL entered
+                          _pickedImageFile =
+                              null; // Clear picked file if URL entered
                         });
                       },
                     ),
@@ -431,7 +468,10 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        prefixIcon: Icon(Icons.title, color: theme.colorScheme.primary),
+                        prefixIcon: Icon(
+                          Icons.title,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) {
@@ -446,7 +486,9 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                     // Category Selector
                     Text(
                       "Category *",
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     SegmentedButton<String>(
@@ -482,33 +524,48 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 16),
+                          horizontal: 14,
+                          vertical: 16,
+                        ),
                         decoration: BoxDecoration(
-                          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
+                          border: Border.all(
+                            color: theme.dividerColor.withValues(alpha: 0.5),
+                          ),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.calendar_today, color: theme.colorScheme.primary),
+                            Icon(
+                              Icons.calendar_today,
+                              color: theme.colorScheme.primary,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 _selectedDateTime == null
                                     ? "Select Event Date & Time *"
-                                    : DateFormat('EEE, dd MMM yyyy - hh:mm a')
-                                        .format(_selectedDateTime!),
+                                    : DateFormat(
+                                        'EEE, dd MMM yyyy - hh:mm a',
+                                      ).format(_selectedDateTime!),
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: _selectedDateTime == null
                                       ? FontWeight.normal
                                       : FontWeight.w600,
                                   color: _selectedDateTime == null
-                                      ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
+                                      ? theme.colorScheme.onSurface.withValues(
+                                          alpha: 0.6,
+                                        )
                                       : theme.colorScheme.onSurface,
                                 ),
                               ),
                             ),
-                            Icon(Icons.arrow_drop_down, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                            Icon(
+                              Icons.arrow_drop_down,
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.5,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -526,8 +583,10 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        prefixIcon:
-                            Icon(Icons.location_on, color: theme.colorScheme.primary),
+                        prefixIcon: Icon(
+                          Icons.location_on,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) {
@@ -550,10 +609,39 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        prefixIcon:
-                            Icon(Icons.description, color: theme.colorScheme.primary),
+                        prefixIcon: Icon(
+                          Icons.description,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                     ),
+
+                    if (widget.studentSubmission) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [PakistaniPhoneFormatter()],
+                        style: TextStyle(color: theme.colorScheme.onSurface),
+                        decoration: InputDecoration(
+                          labelText: "Phone Number *",
+                          hintText: "0300 123 4567",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.phone,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return "Phone number is required";
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
 
                     const SizedBox(height: 24),
 
@@ -572,7 +660,11 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                         onPressed: _saveEvent,
                         icon: Icon(_isEditing ? Icons.check : Icons.add),
                         label: Text(
-                          _isEditing ? "Update Event" : "Publish Event",
+                          _isEditing
+                              ? "Update Event"
+                              : widget.studentSubmission
+                              ? "Submit for Approval"
+                              : "Publish Event",
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,

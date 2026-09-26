@@ -10,21 +10,21 @@ class Course {
   int creditHours;
   String grade;
 
-  Course({
-    this.name = '',
-    this.creditHours = 3,
-    this.grade = 'A',
-  });
+  Course({this.name = '', this.creditHours = 3, this.grade = 'A'});
 }
 
 class Semester {
   String name;
   List<Course> courses; // For SGPA mode
-  double? sgpa;         // For CGPA mode
-  int creditHours;      // For CGPA mode
+  double? sgpa; // For CGPA mode
+  int creditHours; // For CGPA mode
 
-  Semester({required this.name, List<Course>? courses, this.sgpa, this.creditHours = 0})
-      : courses = courses ?? [];
+  Semester({
+    required this.name,
+    List<Course>? courses,
+    this.sgpa,
+    this.creditHours = 0,
+  }) : courses = courses ?? [];
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -41,10 +41,24 @@ class GpaCalculatorScreen extends StatefulWidget {
 class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
   bool isCGPAMode = false;
   List<Semester> semesters = [Semester(name: 'Semester 1')];
+  double _submittedSGPA = 0.0;
+  double _submittedCGPA = 0.0;
 
   // LGU Grading Scale (for SGPA mode only)
   static const List<String> _lguGrades = [
-    'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D', 'F', 'W', 'I', 'Tr'
+    'A',
+    'A-',
+    'B+',
+    'B',
+    'B-',
+    'C+',
+    'C',
+    'C-',
+    'D',
+    'F',
+    'W',
+    'I',
+    'Tr',
   ];
 
   static const List<int> _creditOptions = [1, 2, 3, 4];
@@ -55,17 +69,28 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
 
   double _getGradePoints(String grade) {
     switch (grade) {
-      case 'A': return 4.00;
-      case 'A-': return 3.70;
-      case 'B+': return 3.30;
-      case 'B': return 3.00;
-      case 'B-': return 2.70;
-      case 'C+': return 2.30;
-      case 'C': return 2.00;
-      case 'C-': return 1.70;
-      case 'D': return 1.00;
-      case 'F': return 0.00;
-      default: return 0.0; // W, I, Tr excluded
+      case 'A':
+        return 4.00;
+      case 'A-':
+        return 3.70;
+      case 'B+':
+        return 3.30;
+      case 'B':
+        return 3.00;
+      case 'B-':
+        return 2.70;
+      case 'C+':
+        return 2.30;
+      case 'C':
+        return 2.00;
+      case 'C-':
+        return 1.70;
+      case 'D':
+        return 1.00;
+      case 'F':
+        return 0.00;
+      default:
+        return 0.0; // W, I, Tr excluded
     }
   }
 
@@ -101,10 +126,10 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
     return totalCredits == 0 ? 0.0 : totalPoints / totalCredits;
   }
 
-  String _getAcademicStanding(double cgpa) {
-    if (cgpa >= 3.70) return 'Honors Track 🏆';
-    if (cgpa >= 3.00) return 'Good Standing ✅';
-    if (cgpa >= 2.00) return 'Satisfactory ⚠️';
+  String _getAcademicStanding(double gpa) {
+    if (gpa >= 3.70) return 'Honors Track 🏆';
+    if (gpa >= 3.00) return 'Good Standing ✅';
+    if (gpa >= 2.00) return 'Satisfactory ⚠️';
     return 'At Risk ❌';
   }
 
@@ -171,15 +196,51 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
     });
   }
 
+  Future<void> _showInvalidGpaDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Invalid GPA entries'),
+        content: const Text('GPA or CGPA above 4.0 is not possible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submitCalculation() async {
+    final hasInvalidSemesterGpa = semesters.any(
+      (semester) =>
+          semester.sgpa != null &&
+          (!semester.sgpa!.isFinite || semester.sgpa! > 4.0),
+    );
+    final sgpa = semesters.isNotEmpty
+        ? _calculateSGPA(semesters[0].courses)
+        : 0.0;
+    final cgpa = _calculateCGPA();
+
+    if (hasInvalidSemesterGpa || sgpa > 4.0 || cgpa > 4.0) {
+      await _showInvalidGpaDialog();
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _submittedSGPA = sgpa;
+      _submittedCGPA = cgpa;
+    });
+  }
+
   // ───────────────────────────────────────────────────────────────────
   // BUILD METHOD
   // ───────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final currentCGPA = _calculateCGPA();
-    final currentSGPA = semesters.isNotEmpty ? _calculateSGPA(semesters[0].courses) : 0.0;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('LGU GPA Calculator'),
@@ -196,14 +257,24 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    const Text('SGPA', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      'SGPA',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     Expanded(
                       child: Switch(
                         value: isCGPAMode,
-                        onChanged: (value) => setState(() => isCGPAMode = value),
+                        onChanged: (value) => setState(() {
+                          isCGPAMode = value;
+                          _submittedSGPA = 0.0;
+                          _submittedCGPA = 0.0;
+                        }),
                       ),
                     ),
-                    const Text('CGPA', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      'CGPA',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ],
                 ),
               ),
@@ -211,7 +282,10 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
             const SizedBox(height: 16),
 
             // Semester List (CGPA Mode) or Single Semester (SGPA Mode)
-            if (isCGPAMode) ..._buildCGPASemesterList() else _buildSingleSemester(0),
+            if (isCGPAMode)
+              ..._buildCGPASemesterList()
+            else
+              _buildSingleSemester(0),
 
             if (isCGPAMode) ...[
               const SizedBox(height: 16),
@@ -224,8 +298,16 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
 
             const SizedBox(height: 24),
 
+            FilledButton.icon(
+              icon: const Icon(Icons.calculate_outlined),
+              label: const Text('Submit'),
+              onPressed: _submitCalculation,
+            ),
+
+            const SizedBox(height: 24),
+
             // Results Card
-            _buildResultsCard(currentSGPA, currentCGPA),
+            _buildResultsCard(_submittedSGPA, _submittedCGPA),
 
             const SizedBox(height: 24),
 
@@ -236,7 +318,9 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
               style: TextStyle(
                 fontSize: 12,
                 fontStyle: FontStyle.italic,
-                color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 16),
@@ -292,14 +376,20 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                   children: [
                     Expanded(
                       child: TextField(
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         decoration: const InputDecoration(
                           labelText: 'Semester GPA',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.grade),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                         ),
-                        onChanged: (value) => _updateSemesterSGPA(index, double.tryParse(value)),
+                        onChanged: (value) =>
+                            _updateSemesterSGPA(index, double.tryParse(value)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -310,9 +400,15 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                           labelText: 'Credit Hours',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.school),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                         ),
-                        onChanged: (value) => _updateSemesterCredits(index, int.tryParse(value) ?? 0),
+                        onChanged: (value) => _updateSemesterCredits(
+                          index,
+                          int.tryParse(value) ?? 0,
+                        ),
                       ),
                     ),
                   ],
@@ -374,9 +470,13 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Course Name (Optional)',
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
-                    onChanged: (value) => _updateCourseName(semesterIndex, courseIndex, value),
+                    onChanged: (value) =>
+                        _updateCourseName(semesterIndex, courseIndex, value),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -386,11 +486,20 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Credits',
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
                     ),
-                    items: _creditOptions.map((c) => DropdownMenuItem(value: c, child: Text('$c'))).toList(),
+                    items: _creditOptions
+                        .map(
+                          (c) => DropdownMenuItem(value: c, child: Text('$c')),
+                        )
+                        .toList(),
                     onChanged: (value) {
-                      if (value != null) _updateCourseCredits(semesterIndex, courseIndex, value);
+                      if (value != null) {
+                        _updateCourseCredits(semesterIndex, courseIndex, value);
+                      }
                     },
                   ),
                 ),
@@ -405,11 +514,18 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Grade',
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
-                    items: _lguGrades.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+                    items: _lguGrades
+                        .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                        .toList(),
                     onChanged: (value) {
-                      if (value != null) _updateCourseGrade(semesterIndex, courseIndex, value);
+                      if (value != null) {
+                        _updateCourseGrade(semesterIndex, courseIndex, value);
+                      }
                     },
                   ),
                 ),
@@ -433,7 +549,7 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
 
   Widget _buildResultsCard(double sgpa, double cgpa) {
     final displayGPA = isCGPAMode ? cgpa : sgpa;
-    final standing = _getAcademicStanding(cgpa);
+    final standing = _getAcademicStanding(displayGPA);
 
     return Card(
       color: Theme.of(context).brightness == Brightness.dark
@@ -445,9 +561,9 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
           children: [
             Text(
               isCGPAMode ? 'Cumulative GPA' : 'Semester GPA',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
 
@@ -467,9 +583,9 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
             Text(
               'This result is an estimate, not an absolute value.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontStyle: FontStyle.italic,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
             ),
 
             const SizedBox(height: 8),
@@ -477,9 +593,9 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                color: cgpa >= 3.0
+                color: displayGPA >= 3.0
                     ? Colors.green.withValues(alpha: 0.2)
-                    : cgpa >= 2.0
+                    : displayGPA >= 2.0
                     ? Colors.orange.withValues(alpha: 0.2)
                     : Colors.red.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(20),
@@ -488,9 +604,9 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                 standing,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: cgpa >= 3.0
+                  color: displayGPA >= 3.0
                       ? Colors.green[700]
-                      : cgpa >= 2.0
+                      : displayGPA >= 2.0
                       ? Colors.orange[700]
                       : Colors.red[700],
                 ),

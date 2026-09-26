@@ -57,18 +57,13 @@ String canonicalPakistaniPhone(String value) {
 
 String displayPakistaniPhone(String value) {
   final digits = value.replaceAll(RegExp(r'\D'), '');
-  if (digits.startsWith('92') && digits.length == 12) {
-    return PakistaniPhoneFormatter()
-        .formatEditUpdate(
-          const TextEditingValue(),
-          TextEditingValue(text: '0${digits.substring(2)}'),
-        )
-        .text;
-  }
+  final localDigits = digits.startsWith('92') && digits.length == 12
+      ? '0${digits.substring(2)}'
+      : digits;
   return PakistaniPhoneFormatter()
       .formatEditUpdate(
         const TextEditingValue(),
-        TextEditingValue(text: digits),
+        TextEditingValue(text: localDigits),
       )
       .text;
 }

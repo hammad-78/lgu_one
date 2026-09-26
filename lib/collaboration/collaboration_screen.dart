@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lgu_one/notification/notification_service.dart';
+import 'package:lgu_one/utils/pakistani_phone_formatter.dart';
 import 'join_collaboration.dart';
 
 class CollaborationScreen extends StatefulWidget {
@@ -13,9 +14,14 @@ class CollaborationScreen extends StatefulWidget {
 class _CollaborationScreenState extends State<CollaborationScreen> {
   final _notificationService = NotificationService();
 
-  InputDecoration _fieldDecoration(BuildContext context, {required String label}) {
+  InputDecoration _fieldDecoration(
+    BuildContext context, {
+    required String label,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final highlight = isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50);
+    final highlight = isDark
+        ? const Color(0xFFB0BEC5)
+        : const Color(0xFF4CAF50);
     final cardColor = isDark ? const Color(0xFF0B3D2E) : Colors.white;
     final borderColor = highlight.withValues(alpha: isDark ? 0.4 : 0.5);
 
@@ -23,9 +29,7 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
       labelText: label,
       filled: true,
       fillColor: cardColor,
-      labelStyle: TextStyle(
-        color: isDark ? Colors.white70 : Colors.black87,
-      ),
+      labelStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: borderColor),
@@ -49,7 +53,9 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final highlight = isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50);
+    final highlight = isDark
+        ? const Color(0xFFB0BEC5)
+        : const Color(0xFF4CAF50);
     final cardColor = isDark ? const Color(0xFF0B3D2E) : Colors.white;
 
     return Scaffold(
@@ -68,7 +74,6 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-
                 // ── HEADER ────────────────────────────────────────────────
                 Text(
                   'Connect & Collaborate',
@@ -92,14 +97,19 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                 Expanded(
                   child: Column(
                     children: [
-
                       // CREATE card
                       Expanded(
                         child: _HeroCard(
                           gradientColors: isDark
-                              ? [const Color(0xFF1C5A4D), const Color(0xFF0B3D2E)]
-                              : [const Color(0xFF4CAF50), const Color(0xFF66BB6A)],
-                            shadowColor: isDark
+                              ? [
+                                  const Color(0xFF1C5A4D),
+                                  const Color(0xFF0B3D2E),
+                                ]
+                              : [
+                                  const Color(0xFF4CAF50),
+                                  const Color(0xFF66BB6A),
+                                ],
+                          shadowColor: isDark
                               ? const Color(0xFF2E8B76)
                               : highlight,
                           icon: Icons.add_circle_outline,
@@ -118,8 +128,14 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                       Expanded(
                         child: _HeroCard(
                           gradientColors: isDark
-                              ? [const Color(0xFF1C5A4D), const Color(0xFF0B3D2E)]
-                              : [const Color(0xFF43A047), const Color(0xFF2E7D32)],
+                              ? [
+                                  const Color(0xFF1C5A4D),
+                                  const Color(0xFF0B3D2E),
+                                ]
+                              : [
+                                  const Color(0xFF43A047),
+                                  const Color(0xFF2E7D32),
+                                ],
                           shadowColor: isDark
                               ? const Color(0xFF2E8B76)
                               : const Color(0xFF43A047),
@@ -169,7 +185,9 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
-          final highlight = isDark ? const Color(0xFFB0BEC5) : const Color(0xFF4CAF50);
+          final highlight = isDark
+              ? const Color(0xFFB0BEC5)
+              : const Color(0xFF4CAF50);
           final dialogBg = isDark ? const Color(0xFF0B3D2E) : Colors.white;
           final textColor = isDark ? Colors.white : Colors.black87;
           final subTextColor = isDark ? Colors.white60 : Colors.black54;
@@ -183,17 +201,13 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
             ),
             title: Text(
               'Create Collaboration',
-              style: TextStyle(
-                color: textColor,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
             ),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   // ── TITLE ─────────────────────────────────────────────
                   TextField(
                     controller: titleController,
@@ -217,10 +231,20 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                     dropdownColor: dialogBg,
                     style: TextStyle(color: textColor),
                     decoration: _fieldDecoration(context, label: 'Category'),
-                    items: [
-                      'Tech Project', 'Startup', 'Assignment',
-                      'Research', 'Debate/MUN', 'Event', 'Other',
-                    ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                    items:
+                        [
+                              'Tech Project',
+                              'Startup',
+                              'Assignment',
+                              'Research',
+                              'Debate/MUN',
+                              'Event',
+                              'Other',
+                            ]
+                            .map(
+                              (e) => DropdownMenuItem(value: e, child: Text(e)),
+                            )
+                            .toList(),
                     onChanged: (v) => setDialogState(() {
                       selectedCategory = v!;
                       isOtherCategory = v == 'Other';
@@ -232,7 +256,10 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                     TextField(
                       controller: customCategoryController,
                       style: TextStyle(color: textColor),
-                      decoration: _fieldDecoration(context, label: 'Custom Category'),
+                      decoration: _fieldDecoration(
+                        context,
+                        label: 'Custom Category',
+                      ),
                     ),
                   ],
 
@@ -243,7 +270,10 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                     controller: membersController,
                     keyboardType: TextInputType.number,
                     style: TextStyle(color: textColor),
-                    decoration: _fieldDecoration(context, label: 'Required Members'),
+                    decoration: _fieldDecoration(
+                      context,
+                      label: 'Required Members',
+                    ),
                   ),
                   const SizedBox(height: 12),
 
@@ -251,7 +281,10 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                     controller: existingMembersController,
                     keyboardType: TextInputType.number,
                     style: TextStyle(color: textColor),
-                    decoration: _fieldDecoration(context, label: 'Existing Members'),
+                    decoration: _fieldDecoration(
+                      context,
+                      label: 'Existing Members',
+                    ),
                   ),
                   const SizedBox(height: 12),
 
@@ -264,11 +297,26 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                           initialValue: selectedPost,
                           dropdownColor: dialogBg,
                           style: TextStyle(color: textColor),
-                          decoration: _fieldDecoration(context, label: 'Required Post'),
-                          items: [
-                            'React Developer', 'Flutter Developer', 'UI Designer',
-                            'Content Writer', 'Video Editor', 'Other',
-                          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                          decoration: _fieldDecoration(
+                            context,
+                            label: 'Required Post',
+                          ),
+                          items:
+                              [
+                                    'React Developer',
+                                    'Flutter Developer',
+                                    'UI Designer',
+                                    'Content Writer',
+                                    'Video Editor',
+                                    'Other',
+                                  ]
+                                  .map(
+                                    (e) => DropdownMenuItem(
+                                      value: e,
+                                      child: Text(e),
+                                    ),
+                                  )
+                                  .toList(),
                           onChanged: (v) => setDialogState(() {
                             selectedPost = v!;
                             isOtherPost = v == 'Other';
@@ -322,29 +370,36 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: requiredPosts.map((post) => Chip(
-                        label: Text(
-                          post,
-                          style: TextStyle(color: textColor, fontSize: 13),
-                        ),
-                        backgroundColor: highlight.withValues(
-                          alpha: isDark ? 0.16 : 0.1,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(
-                            color: highlight.withValues(alpha: 0.45),
-                          ),
-                        ),
-                        deleteIcon: Icon(
-                          Icons.close,
-                          size: 16,
-                          color: isDark ? Colors.white54 : Colors.black45,
-                        ),
-                        onDeleted: () => setDialogState(
-                              () => requiredPosts.remove(post),
-                        ),
-                      )).toList(),
+                      children: requiredPosts
+                          .map(
+                            (post) => Chip(
+                              label: Text(
+                                post,
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              backgroundColor: highlight.withValues(
+                                alpha: isDark ? 0.16 : 0.1,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                side: BorderSide(
+                                  color: highlight.withValues(alpha: 0.45),
+                                ),
+                              ),
+                              deleteIcon: Icon(
+                                Icons.close,
+                                size: 16,
+                                color: isDark ? Colors.white54 : Colors.black45,
+                              ),
+                              onDeleted: () => setDialogState(
+                                () => requiredPosts.remove(post),
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
                   ],
 
@@ -354,8 +409,12 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                   TextField(
                     controller: whatsappController,
                     keyboardType: TextInputType.phone,
+                    inputFormatters: [PakistaniPhoneFormatter()],
                     style: TextStyle(color: textColor),
-                    decoration: _fieldDecoration(context, label: 'WhatsApp Number'),
+                    decoration: _fieldDecoration(
+                      context,
+                      label: 'WhatsApp Number',
+                    ),
                   ),
                   const SizedBox(height: 12),
 
@@ -414,29 +473,35 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                   }
 
                   try {
-                    final authorToken = await _notificationService.getDeviceToken();
+                    final authorToken = await _notificationService
+                        .getDeviceToken();
 
                     await FirebaseFirestore.instance
                         .collection('collaborations')
                         .doc(title)
                         .set({
-                      'info': {
-                        'title': title,
-                        'description': descriptionController.text.trim(),
-                        'category': finalCategory,
-                        'requiredMembers':
-                        int.tryParse(membersController.text.trim()) ?? 0,
-                        'requiredPosts': requiredPosts,
-                        'status': 'pending',
-                        'whatsappNumber': whatsappController.text.trim(),
-                        'existingMembers': int.tryParse(
-                          existingMembersController.text.trim(),
-                        ) ?? 0,
-                        'createdAt': FieldValue.serverTimestamp(),
-                        'secretKey': secretKey,
-                        'authorToken': authorToken,
-                      },
-                    });
+                          'info': {
+                            'title': title,
+                            'description': descriptionController.text.trim(),
+                            'category': finalCategory,
+                            'requiredMembers':
+                                int.tryParse(membersController.text.trim()) ??
+                                0,
+                            'requiredPosts': requiredPosts,
+                            'status': 'pending',
+                            'whatsappNumber': canonicalPakistaniPhone(
+                              whatsappController.text.trim(),
+                            ),
+                            'existingMembers':
+                                int.tryParse(
+                                  existingMembersController.text.trim(),
+                                ) ??
+                                0,
+                            'createdAt': FieldValue.serverTimestamp(),
+                            'secretKey': secretKey,
+                            'authorToken': authorToken,
+                          },
+                        });
 
                     titleController.clear();
                     descriptionController.clear();
@@ -452,15 +517,17 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Collaboration submitted! Waiting for admin approval.'),
+                          content: Text(
+                            'Collaboration submitted! Waiting for admin approval.',
+                          ),
                         ),
                       );
                     }
                   } catch (e) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('Error: $e')));
                     }
                   }
                 },

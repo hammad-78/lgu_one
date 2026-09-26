@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'package:lgu_one/utils/pakistani_phone_formatter.dart';
 
 class JoinCollaborationScreen extends StatelessWidget {
   const JoinCollaborationScreen({super.key});
 
-
   /// VERIFY SECRET KEY, THEN RUN ACTION
   void verifySecretKey(
-      BuildContext context,
-      String storedKey,
-      VoidCallback onVerified,
-      ) {
-
+    BuildContext context,
+    String storedKey,
+    VoidCallback onVerified,
+  ) {
     final keyController = TextEditingController();
 
     showDialog(
@@ -44,9 +43,7 @@ class JoinCollaborationScreen extends StatelessWidget {
                   onVerified();
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Incorrect Secret Key"),
-                    ),
+                    const SnackBar(content: Text("Incorrect Secret Key")),
                   );
                 }
               },
@@ -60,86 +57,62 @@ class JoinCollaborationScreen extends StatelessWidget {
 
   /// OPEN WHATSAPP
   Future<void> openWhatsApp(String number) async {
+    String formattedNumber = number.replaceAll('+', '').replaceAll(' ', '');
 
-    String formattedNumber = number
-        .replaceAll('+', '')
-        .replaceAll(' ', '');
-
-    final Uri whatsappUrl = Uri.parse(
-      "https://wa.me/$formattedNumber",
-    );
+    final Uri whatsappUrl = Uri.parse("https://wa.me/$formattedNumber");
 
     try {
-
-      await launchUrl(
-        whatsappUrl,
-        mode: LaunchMode.externalApplication,
-      );
-
+      await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
     } catch (e) {
-
       debugPrint("Could not launch WhatsApp: $e");
     }
   }
 
   /// EDIT DIALOG
   void showEditDialog(
-      BuildContext context,
-      String docId,
-      Map<String, dynamic> info,
-      ) {
+    BuildContext context,
+    String docId,
+    Map<String, dynamic> info,
+  ) {
+    final titleController = TextEditingController(text: info['title']);
 
-    final titleController =
-    TextEditingController(text: info['title']);
+    final descController = TextEditingController(text: info['description']);
 
-    final descController =
-    TextEditingController(text: info['description']);
+    final categoryController = TextEditingController(text: info['category']);
 
-    final categoryController =
-    TextEditingController(text: info['category']);
+    final whatsappController = TextEditingController(
+      text: info['whatsappNumber'],
+    );
 
-    final whatsappController =
-    TextEditingController(text: info['whatsappNumber']);
-
-    final requiredMembersController =
-    TextEditingController(
+    final requiredMembersController = TextEditingController(
       text: info['requiredMembers'].toString(),
     );
 
-    final existingMembersController =
-    TextEditingController(
+    final existingMembersController = TextEditingController(
       text: info['existingMembers'].toString(),
     );
 
-    final statusController =
-    TextEditingController(text: info['status']);
+    final statusController = TextEditingController(text: info['status']);
 
-    final postsController =
-    TextEditingController(
-      text: (info['requiredPosts'] as List<dynamic>)
-          .join(', '),
+    final postsController = TextEditingController(
+      text: (info['requiredPosts'] as List<dynamic>).join(', '),
     );
 
     showDialog(
       context: context,
       builder: (context) {
-
         return AlertDialog(
-
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
 
-          title: const Text(
-            "Edit Collaboration",
-          ),
+          title: const Text("Edit Collaboration"),
 
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
 
               children: [
-
                 /// TITLE
                 TextField(
                   controller: titleController,
@@ -203,8 +176,7 @@ class JoinCollaborationScreen extends StatelessWidget {
                   controller: postsController,
                   maxLines: 2,
                   decoration: const InputDecoration(
-                    labelText:
-                    "Required Posts (comma separated)",
+                    labelText: "Required Posts (comma separated)",
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -226,6 +198,7 @@ class JoinCollaborationScreen extends StatelessWidget {
                 TextField(
                   controller: whatsappController,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [PakistaniPhoneFormatter()],
                   decoration: const InputDecoration(
                     labelText: "WhatsApp Number",
                     border: OutlineInputBorder(),
@@ -236,7 +209,6 @@ class JoinCollaborationScreen extends StatelessWidget {
           ),
 
           actions: [
-
             /// CANCEL
             TextButton(
               onPressed: () {
@@ -248,63 +220,42 @@ class JoinCollaborationScreen extends StatelessWidget {
             /// UPDATE
             ElevatedButton(
               onPressed: () async {
-
-                List<String> updatedPosts =
-                postsController.text
+                List<String> updatedPosts = postsController.text
                     .split(',')
-                    .map(
-                      (e) => e.trim(),
-                )
-                    .where(
-                      (e) => e.isNotEmpty,
-                )
+                    .map((e) => e.trim())
+                    .where((e) => e.isNotEmpty)
                     .toList();
 
                 await FirebaseFirestore.instance
                     .collection('collaborations')
                     .doc(docId)
                     .update({
+                      'info.title': titleController.text.trim(),
 
-                  'info.title':
-                  titleController.text.trim(),
+                      'info.description': descController.text.trim(),
 
-                  'info.description':
-                  descController.text.trim(),
+                      'info.category': categoryController.text.trim(),
 
-                  'info.category':
-                  categoryController.text.trim(),
+                      'info.requiredMembers':
+                          int.tryParse(requiredMembersController.text.trim()) ??
+                          0,
 
-                  'info.requiredMembers':
-                  int.tryParse(
-                    requiredMembersController.text.trim(),
-                  ) ??
-                      0,
+                      'info.existingMembers':
+                          int.tryParse(existingMembersController.text.trim()) ??
+                          0,
 
-                  'info.existingMembers':
-                  int.tryParse(
-                    existingMembersController.text.trim(),
-                  ) ??
-                      0,
+                      'info.requiredPosts': updatedPosts,
 
-                  'info.requiredPosts':
-                  updatedPosts,
+                      'info.status': statusController.text.trim(),
 
-                  'info.status':
-                  statusController.text.trim(),
-
-                  'info.whatsappNumber':
-                  whatsappController.text.trim(),
-                });
+                      'info.whatsappNumber': whatsappController.text.trim(),
+                    });
 
                 if (context.mounted) {
                   Navigator.pop(context);
 
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        "Collaboration Updated",
-                      ),
-                    ),
+                    const SnackBar(content: Text("Collaboration Updated")),
                   );
                 }
               },
@@ -318,54 +269,36 @@ class JoinCollaborationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
       appBar: AppBar(
-        title: const Text(
-          "Join Collaboration",
-        ),
+        title: const Text("Join Collaboration"),
         centerTitle: true,
       ),
 
       body: StreamBuilder<QuerySnapshot>(
-
         stream: FirebaseFirestore.instance
             .collection('collaborations')
-            .orderBy(
-          'info.createdAt',
-          descending: true,
-        )
+            .orderBy('info.createdAt', descending: true)
             .snapshots(),
 
         builder: (context, snapshot) {
-
-          if (snapshot.connectionState ==
-              ConnectionState.waiting) {
-
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return ListView.builder(
-
               padding: const EdgeInsets.all(12),
 
               itemCount: 6,
 
               itemBuilder: (context, index) {
-
                 return Card(
-
                   elevation: 4,
 
-                  margin: const EdgeInsets.only(
-                    bottom: 15,
-                  ),
+                  margin: const EdgeInsets.only(bottom: 15),
 
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                    BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(16),
                   ),
 
                   child: Skeletonizer(
-
                     enabled: true,
 
                     effect: ShimmerEffect(
@@ -375,15 +308,12 @@ class JoinCollaborationScreen extends StatelessWidget {
                     ),
 
                     child: Padding(
-
                       padding: const EdgeInsets.all(16),
 
                       child: Column(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
 
                         children: [
-
                           /// TITLE
                           const Text(
                             "Collaboration Project Title",
@@ -398,9 +328,7 @@ class JoinCollaborationScreen extends StatelessWidget {
                           /// DESCRIPTION
                           const Text(
                             "This is a fake description for loading skeleton effect in the collaboration card section.",
-                            style: TextStyle(
-                              fontSize: 15,
-                            ),
+                            style: TextStyle(fontSize: 15),
                           ),
 
                           const SizedBox(height: 15),
@@ -408,16 +336,11 @@ class JoinCollaborationScreen extends StatelessWidget {
                           /// CATEGORY
                           const Row(
                             children: [
-
-                              Skeleton.ignore(
-                                child: Icon(Icons.category),
-                              ),
+                              Skeleton.ignore(child: Icon(Icons.category)),
 
                               SizedBox(width: 8),
 
-                              Text(
-                                "Category: Tech Project",
-                              ),
+                              Text("Category: Tech Project"),
                             ],
                           ),
 
@@ -426,16 +349,11 @@ class JoinCollaborationScreen extends StatelessWidget {
                           /// MEMBERS
                           const Row(
                             children: [
-
-                              Skeleton.ignore(
-                                child: Icon(Icons.people),
-                              ),
+                              Skeleton.ignore(child: Icon(Icons.people)),
 
                               SizedBox(width: 8),
 
-                              Text(
-                                "Members: 2/5",
-                              ),
+                              Text("Members: 2/5"),
                             ],
                           ),
 
@@ -444,16 +362,11 @@ class JoinCollaborationScreen extends StatelessWidget {
                           /// STATUS
                           const Row(
                             children: [
-
-                              Skeleton.ignore(
-                                child: Icon(Icons.info),
-                              ),
+                              Skeleton.ignore(child: Icon(Icons.info)),
 
                               SizedBox(width: 8),
 
-                              Text(
-                                "Status: Open",
-                              ),
+                              Text("Status: Open"),
                             ],
                           ),
 
@@ -462,9 +375,7 @@ class JoinCollaborationScreen extends StatelessWidget {
                           /// POSTS TITLE
                           const Text(
                             "Required Posts:",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
 
                           const SizedBox(height: 8),
@@ -476,11 +387,8 @@ class JoinCollaborationScreen extends StatelessWidget {
 
                             children: List.generate(
                               3,
-                                  (index) => const Chip(
-                                label: Text(
-                                  "Flutter Developer",
-                                ),
-                              ),
+                              (index) =>
+                                  const Chip(label: Text("Flutter Developer")),
                             ),
                           ),
 
@@ -491,14 +399,11 @@ class JoinCollaborationScreen extends StatelessWidget {
                             width: double.infinity,
 
                             child: ElevatedButton.icon(
-
                               onPressed: null,
 
                               icon: const Icon(Icons.chat),
 
-                              label: const Text(
-                                "Contact on WhatsApp",
-                              ),
+                              label: const Text("Contact on WhatsApp"),
                             ),
                           ),
 
@@ -507,10 +412,8 @@ class JoinCollaborationScreen extends StatelessWidget {
                           /// OWNER CONTROLS
                           Row(
                             children: [
-
                               Expanded(
                                 child: OutlinedButton.icon(
-
                                   onPressed: null,
 
                                   icon: const Icon(Icons.edit),
@@ -523,7 +426,6 @@ class JoinCollaborationScreen extends StatelessWidget {
 
                               Expanded(
                                 child: ElevatedButton.icon(
-
                                   onPressed: null,
 
                                   icon: const Icon(Icons.delete),
@@ -552,56 +454,93 @@ class JoinCollaborationScreen extends StatelessWidget {
           }).toList();
 
           if (collaborations.isEmpty) {
-            return const Center(
-              child: Text(
-                "No Collaborations Found",
-              ),
-            );
+            return const Center(child: Text("No Collaborations Found"));
           }
 
           return ListView.builder(
-
             padding: const EdgeInsets.all(12),
 
             itemCount: collaborations.length,
 
             itemBuilder: (context, index) {
-
               final doc = collaborations[index];
 
-              final info =
-              doc['info'] as Map<String, dynamic>;
+              final info = doc['info'] as Map<String, dynamic>;
 
               return Card(
-
                 elevation: 4,
 
-                margin: const EdgeInsets.only(
-                  bottom: 15,
-                ),
+                margin: const EdgeInsets.only(bottom: 15),
 
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                  BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(16),
                 ),
 
                 child: Padding(
                   padding: const EdgeInsets.all(16),
 
                   child: Column(
-                    crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
 
                     children: [
-
                       /// TITLE
-                      Text(
-                        info['title'] ?? '',
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight:
-                          FontWeight.bold,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              info['title'] ?? '',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          PopupMenuButton<String>(
+                            padding: EdgeInsets.zero,
+                            tooltip: 'Collaboration actions',
+                            onSelected: (action) {
+                              if (action == 'edit') {
+                                verifySecretKey(
+                                  context,
+                                  info['secretKey'] ?? '',
+                                  () {
+                                    showEditDialog(context, doc.id, info);
+                                  },
+                                );
+                              } else if (action == 'delete') {
+                                verifySecretKey(
+                                  context,
+                                  info['secretKey'] ?? '',
+                                  () async {
+                                    await FirebaseFirestore.instance
+                                        .collection('collaborations')
+                                        .doc(doc.id)
+                                        .delete();
+                                  },
+                                );
+                              }
+                            },
+                            itemBuilder: (context) => const [
+                              PopupMenuItem<String>(
+                                value: 'edit',
+                                child: ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: Icon(Icons.edit),
+                                  title: Text('Edit'),
+                                ),
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'delete',
+                                child: ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: Icon(Icons.delete),
+                                  title: Text('Delete'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 10),
@@ -609,9 +548,7 @@ class JoinCollaborationScreen extends StatelessWidget {
                       /// DESCRIPTION
                       Text(
                         info['description'] ?? '',
-                        style: const TextStyle(
-                          fontSize: 15,
-                        ),
+                        style: const TextStyle(fontSize: 15),
                       ),
 
                       const SizedBox(height: 15),
@@ -619,14 +556,11 @@ class JoinCollaborationScreen extends StatelessWidget {
                       /// CATEGORY
                       Row(
                         children: [
-
                           const Icon(Icons.category),
 
                           const SizedBox(width: 8),
 
-                          Text(
-                            "Category: ${info['category']}",
-                          ),
+                          Text("Category: ${info['category']}"),
                         ],
                       ),
 
@@ -635,16 +569,15 @@ class JoinCollaborationScreen extends StatelessWidget {
                       /// MEMBERS
                       Row(
                         children: [
-
                           const Icon(Icons.people),
 
                           const SizedBox(width: 8),
 
                           Text(
                             "Members: "
-                                "${info['existingMembers']}"
-                                "/"
-                                "${info['requiredMembers']}",
+                            "${info['existingMembers']}"
+                            "/"
+                            "${info['requiredMembers']}",
                           ),
                         ],
                       ),
@@ -654,14 +587,11 @@ class JoinCollaborationScreen extends StatelessWidget {
                       /// STATUS
                       Row(
                         children: [
-
                           const Icon(Icons.info),
 
                           const SizedBox(width: 8),
 
-                          Text(
-                            "Status: ${info['status']}",
-                          ),
+                          Text("Status: ${info['status']}"),
                         ],
                       ),
 
@@ -670,9 +600,7 @@ class JoinCollaborationScreen extends StatelessWidget {
                       /// REQUIRED POSTS TITLE
                       const Text(
                         "Required Posts:",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
 
                       const SizedBox(height: 8),
@@ -682,16 +610,8 @@ class JoinCollaborationScreen extends StatelessWidget {
                         spacing: 8,
                         runSpacing: 8,
 
-                        children:
-                        (info['requiredPosts']
-                        as List<dynamic>)
-                            .map(
-                              (post) => Chip(
-                            label: Text(
-                              post.toString(),
-                            ),
-                          ),
-                        )
+                        children: (info['requiredPosts'] as List<dynamic>)
+                            .map((post) => Chip(label: Text(post.toString())))
                             .toList(),
                       ),
 
@@ -702,85 +622,17 @@ class JoinCollaborationScreen extends StatelessWidget {
                         width: double.infinity,
 
                         child: ElevatedButton.icon(
-
                           onPressed: () {
-
-                            openWhatsApp(
-                              info['whatsappNumber'],
-                            );
+                            openWhatsApp(info['whatsappNumber']);
                           },
 
                           icon: const Icon(Icons.chat),
 
-                          label: const Text(
-                            "Contact on WhatsApp",
-                          ),
+                          label: const Text("Contact on WhatsApp"),
                         ),
                       ),
 
                       const SizedBox(height: 10),
-
-                      /// OWNER CONTROLS
-                      const SizedBox(height: 10),
-
-                      /// EDIT / DELETE CONTROLS
-                      Row(
-                        children: [
-
-                          /// EDIT
-                          Expanded(
-                            child: OutlinedButton.icon(
-
-                              onPressed: () {
-                                verifySecretKey(
-                                  context,
-                                  info['secretKey'] ?? '',
-                                      () {
-                                    showEditDialog(
-                                      context,
-                                      doc.id,
-                                      info,
-                                    );
-                                  },
-                                );
-                              },
-
-                              icon: const Icon(Icons.edit),
-
-                              label: const Text("Edit"),
-                            ),
-                          ),
-
-                          const SizedBox(width: 10),
-
-                          /// DELETE
-                          Expanded(
-                            child: ElevatedButton.icon(
-
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                              ),
-
-                              onPressed: () {
-                                verifySecretKey(
-                                  context,
-                                  info['secretKey'] ?? '',
-                                      () async {
-                                    await FirebaseFirestore.instance
-                                        .collection('collaborations')
-                                        .doc(doc.id)
-                                        .delete();
-                                  },
-                                );
-                              },
-
-                              icon: const Icon(Icons.delete),
-
-                              label: const Text("Delete"),
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),

@@ -7,7 +7,7 @@ import '../utils/app_cached_image.dart';
 
 import 'lost_found_item.dart';
 import 'lost_found_service.dart';
-import 'pakistani_phone_formatter.dart';
+import '../utils/pakistani_phone_formatter.dart';
 
 class EditItemScreen extends StatefulWidget {
   final LostFoundItem item;
@@ -134,13 +134,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
-    if (_existingImageUrl == null && _newImage == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please add an image.')));
-      return;
-    }
 
     setState(() => _isSubmitting = true);
     try {
