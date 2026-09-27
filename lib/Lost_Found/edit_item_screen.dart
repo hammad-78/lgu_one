@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:lgu_one/utils/flushbar.dart';
 import '../utils/app_cached_image.dart';
 
 import 'lost_found_item.dart';
@@ -161,15 +162,18 @@ class _EditItemScreenState extends State<EditItemScreen> {
         newImages: _newImage != null ? [_newImage!] : [],
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(
+      await showFlushbar(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Listing updated.')));
-      Navigator.of(context).pop();
+        'Item updated successfully',
+        color: Colors.green.shade900,
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
+      await showFlushbar(
         context,
-      ).showSnackBar(SnackBar(content: Text('Could not update item: $e')));
+        'Could not update item: $e',
+        color: Colors.red.shade900,
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lgu_one/utils/flushbar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:lgu_one/utils/pakistani_phone_formatter.dart';
@@ -74,6 +75,7 @@ class JoinCollaborationScreen extends StatelessWidget {
     String docId,
     Map<String, dynamic> info,
   ) {
+    final pageContext = context;
     final titleController = TextEditingController(text: info['title']);
 
     final descController = TextEditingController(text: info['description']);
@@ -253,9 +255,10 @@ class JoinCollaborationScreen extends StatelessWidget {
 
                 if (context.mounted) {
                   Navigator.pop(context);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Collaboration Updated")),
+                  await showFlushbar(
+                    pageContext,
+                    'Collaboration updated successfully',
+                    color: Colors.green.shade900,
                   );
                 }
               },

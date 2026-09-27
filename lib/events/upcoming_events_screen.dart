@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../admin/add_edit_event_screen.dart';
 import '../utils/app_cached_image.dart';
+import '../utils/flushbar.dart';
 
 class UpcomingEventsScreen extends StatefulWidget {
   const UpcomingEventsScreen({super.key});
@@ -344,14 +345,21 @@ class _UpcomingEventsScreenState extends State<UpcomingEventsScreen> {
           IconButton(
             tooltip: 'Submit an event',
             icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final message = await Navigator.push<String>(
                 context,
                 MaterialPageRoute(
                   builder: (_) =>
                       const AddEditEventScreen(studentSubmission: true),
                 ),
               );
+              if (mounted && message != null) {
+                await showFlushbar(
+                  context,
+                  message,
+                  color: Colors.green.shade900,
+                );
+              }
             },
           ),
         ],

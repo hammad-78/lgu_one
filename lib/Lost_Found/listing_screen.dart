@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../utils/app_cached_image.dart';
+import '../utils/flushbar.dart';
 import 'edit_item_screen.dart';
 import 'lost_found_item.dart';
 import 'lost_found_service.dart';
@@ -69,11 +70,14 @@ class _ListingsScreenState extends State<ListingsScreen> {
     if (key == null || !mounted) return;
 
     Navigator.of(sheetContext).pop();
-    Navigator.of(context).push(
+    final message = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => EditItemScreen(item: item, secretKey: key),
       ),
     );
+    if (mounted && message != null) {
+      await showFlushbar(context, message, color: Colors.green.shade900);
+    }
   }
 
   Future<void> _handleDelete(
@@ -552,9 +556,14 @@ class _ListingsScreenState extends State<ListingsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: highlight,
         foregroundColor: isDark ? Colors.black : Colors.white,
-        onPressed: () => Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const PostItemScreen())),
+        onPressed: () async {
+          final message = await Navigator.of(context).push<String>(
+            MaterialPageRoute(builder: (_) => const PostItemScreen()),
+          );
+          if (mounted && message != null) {
+            await showFlushbar(context, message, color: Colors.green.shade900);
+          }
+        },
         icon: const Icon(Icons.add),
         label: const Text('Report item'),
       ),

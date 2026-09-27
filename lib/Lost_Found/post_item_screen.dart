@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:lgu_one/notification/notification_service.dart';
+import 'package:lgu_one/utils/flushbar.dart';
 
 import 'lost_found_item.dart';
 import 'lost_found_service.dart';
@@ -207,21 +208,14 @@ class _PostItemScreenState extends State<PostItemScreen> {
       await _showSecretKeyDialog(secretKey);
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Item reported successfully. Waiting for admin approval.',
-          ),
-          duration: Duration(seconds: 4),
-        ),
-      );
-
-      Navigator.of(context).pop();
+      Navigator.of(context).pop('Item posted successfully');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
+      await showFlushbar(
         context,
-      ).showSnackBar(SnackBar(content: Text('Could not post item: $e')));
+        'Could not post item: $e',
+        color: Colors.red.shade900,
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

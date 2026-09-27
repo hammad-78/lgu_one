@@ -34,6 +34,7 @@ dependencies:
   shared_preferences: ^2.3.5
   timezone: ^0.11.0
   flutter_launcher_icons: ^0.14.4
+  another_flushbar: ^2.2.4
 
 
 

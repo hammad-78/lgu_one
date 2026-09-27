@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lgu_one/admin/add_edit_event_screen.dart';
 import '../utils/app_cached_image.dart';
+import '../utils/flushbar.dart';
 
 class AdminEventsScreen extends StatefulWidget {
   const AdminEventsScreen({super.key});
@@ -54,11 +55,14 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text("Manage Events")),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          final message = await Navigator.push<String>(
             context,
             MaterialPageRoute(builder: (_) => const AddEditEventScreen()),
           );
+          if (mounted && message != null) {
+            await showFlushbar(context, message, color: Colors.green.shade900);
+          }
         },
         icon: const Icon(Icons.add),
         label: const Text(
@@ -537,8 +541,8 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                         const SizedBox(width: 12),
                       ],
                       TextButton.icon(
-                        onPressed: () {
-                          Navigator.push(
+                        onPressed: () async {
+                          final message = await Navigator.push<String>(
                             context,
                             MaterialPageRoute(
                               builder: (_) => AddEditEventScreen(
@@ -547,6 +551,13 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                               ),
                             ),
                           );
+                          if (mounted && message != null) {
+                            await showFlushbar(
+                              context,
+                              message,
+                              color: Colors.green.shade900,
+                            );
+                          }
                         },
                         icon: const Icon(Icons.edit, size: 18),
                         label: const Text("Edit"),

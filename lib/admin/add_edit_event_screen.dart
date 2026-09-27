@@ -268,19 +268,14 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isEditing
-                  ? "Event updated successfully"
-                  : widget.studentSubmission
-                  ? "Event submitted for admin approval"
-                  : "Event created successfully",
-            ),
-            backgroundColor: Colors.green,
-          ),
+        Navigator.pop(
+          context,
+          _isEditing
+              ? 'Event updated successfully'
+              : widget.studentSubmission
+              ? 'Event submitted for approval'
+              : 'Event published successfully',
         );
-        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {

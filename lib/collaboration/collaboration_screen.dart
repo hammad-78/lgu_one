@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lgu_one/notification/notification_service.dart';
+import 'package:lgu_one/utils/flushbar.dart';
 import 'package:lgu_one/utils/pakistani_phone_formatter.dart';
 import 'join_collaboration.dart';
 
@@ -164,7 +165,7 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
     );
   }
 
-  void _showCreateDialog(BuildContext context) {
+  void _showCreateDialog(BuildContext pageContext) {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     final whatsappController = TextEditingController();
@@ -181,7 +182,7 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
     bool isOtherPost = false;
 
     showDialog(
-      context: context,
+      context: pageContext,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -306,6 +307,8 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
                                     'React Developer',
                                     'Flutter Developer',
                                     'UI Designer',
+                                    'Business Developer',
+                                    'Data Analyst',
                                     'Content Writer',
                                     'Video Editor',
                                     'Other',
@@ -515,19 +518,19 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
 
                     if (context.mounted) {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Collaboration submitted! Waiting for admin approval.',
-                          ),
-                        ),
+                      await showFlushbar(
+                        pageContext,
+                        'Collaboration created successfully',
+                        color: Colors.green.shade900,
                       );
                     }
                   } catch (e) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      await showFlushbar(
+                        pageContext,
+                        'Could not create collaboration: $e',
+                        color: Colors.red.shade900,
+                      );
                     }
                   }
                 },
