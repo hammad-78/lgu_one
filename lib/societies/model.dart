@@ -7,6 +7,7 @@ class Society {
   final String imageUrl;
   final int memberCount;
   final String presidentPhone;
+  final String email;
 
   Society({
     required this.id,
@@ -15,9 +16,12 @@ class Society {
     required this.imageUrl,
     required this.memberCount,
     required this.presidentPhone,
+    required this.email,
   });
 
-  factory Society.fromDocument(DocumentSnapshot<Map<String, dynamic>> document) {
+  factory Society.fromDocument(
+    DocumentSnapshot<Map<String, dynamic>> document,
+  ) {
     final data = document.data() ?? {};
     return Society(
       id: document.id,
@@ -26,6 +30,7 @@ class Society {
       imageUrl: (data['imageUrl'] ?? '').toString(),
       memberCount: (data['memberCount'] as num?)?.toInt() ?? 0,
       presidentPhone: (data['presidentPhone'] ?? '').toString(),
+      email: (data['email'] ?? '').toString(),
     );
   }
 }

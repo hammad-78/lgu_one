@@ -6,6 +6,7 @@ class Job {
   final String title;
   final String description;
   final String link;
+  final DateTime? expiryDate;
   final dynamic createdAt;
 
   Job({
@@ -14,6 +15,7 @@ class Job {
     required this.title,
     required this.description,
     required this.link,
+    this.expiryDate,
     this.createdAt,
   });
 
@@ -24,6 +26,9 @@ class Job {
       title: data['title'] as String? ?? '',
       description: data['description'] as String? ?? '',
       link: data['link'] as String? ?? '',
+      expiryDate: data['expiryDate'] is Timestamp
+          ? (data['expiryDate'] as Timestamp).toDate()
+          : null,
       createdAt: data['createdAt'],
     );
   }
@@ -39,7 +44,8 @@ class Job {
       'title': title,
       'description': description,
       'link': link,
+      if (expiryDate != null) 'expiryDate': Timestamp.fromDate(expiryDate!),
       if (createdAt != null) 'createdAt': createdAt,
     };
   }
-}
+}

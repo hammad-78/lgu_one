@@ -7,6 +7,7 @@ class NewsModel {
   final String image;
   final String type; // Event, Admission, Notice
   final String date;
+  final DateTime? expiryDate;
   final dynamic createdAt;
 
   NewsModel({
@@ -16,6 +17,7 @@ class NewsModel {
     required this.image,
     required this.type,
     required this.date,
+    this.expiryDate,
     this.createdAt,
   });
 
@@ -27,6 +29,9 @@ class NewsModel {
       image: data['image'] as String? ?? '',
       type: data['type'] as String? ?? 'General',
       date: data['date'] as String? ?? '',
+      expiryDate: data['expiryDate'] is Timestamp
+          ? (data['expiryDate'] as Timestamp).toDate()
+          : null,
       createdAt: data['createdAt'],
     );
   }
@@ -43,7 +48,8 @@ class NewsModel {
       'image': image,
       'type': type,
       'date': date,
+      if (expiryDate != null) 'expiryDate': Timestamp.fromDate(expiryDate!),
       if (createdAt != null) 'createdAt': createdAt,
     };
   }
-}
+}

@@ -34,6 +34,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
 
   String _category = 'University'; // 'University' or 'Lahore'
   DateTime? _selectedDateTime;
+  DateTime? _selectedExpiryDate;
   File? _pickedImageFile;
   String? _existingImageUrl;
   bool _isSaving = false;
@@ -57,6 +58,9 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
 
       if (data['eventDate'] != null && data['eventDate'] is Timestamp) {
         _selectedDateTime = (data['eventDate'] as Timestamp).toDate();
+      }
+      if (data['expiryDate'] != null && data['expiryDate'] is Timestamp) {
+        _selectedExpiryDate = (data['expiryDate'] as Timestamp).toDate();
       }
     }
   }
@@ -221,6 +225,13 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
       return;
     }
 
+    if (_selectedExpiryDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select an expiry date")),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
@@ -245,6 +256,7 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
         'description': _descriptionController.text.trim(),
         'category': _category,
         'eventDate': Timestamp.fromDate(_selectedDateTime!),
+        'expiryDate': Timestamp.fromDate(_selectedExpiryDate!),
         'location': _locationController.text.trim(),
         'imageUrl': imageUrl,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -568,6 +580,60 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
 
                     const SizedBox(height: 16),
 
+                    InkWell(
+                      onTap: _selectExpiryDate,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: theme.dividerColor.withValues(alpha: 0.5),
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.event_busy,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _selectedExpiryDate == null
+                                    ? 'Select Expiry Date *'
+                                    : DateFormat(
+                                        'EEE, dd MMM yyyy',
+                                      ).format(_selectedExpiryDate!),
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: _selectedExpiryDate == null
+                                      ? FontWeight.normal
+                                      : FontWeight.w600,
+                                  color: _selectedExpiryDate == null
+                                      ? theme.colorScheme.onSurface.withValues(
+                                          alpha: 0.6,
+                                        )
+                                      : theme.colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_drop_down,
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
                     // Location
                     TextFormField(
                       controller: _locationController,
@@ -672,5 +738,28 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
               ),
             ),
     );
+  }
+
+  Future<void> _selectExpiryDate() async {
+    final now = DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedExpiryDate ?? now,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(2035),
+    );
+
+    if (pickedDate != null && mounted) {
+      setState(() {
+        _selectedExpiryDate = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          23,
+          59,
+          59,
+        );
+      });
+    }
   }
 }

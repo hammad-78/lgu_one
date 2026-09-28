@@ -5,11 +5,7 @@ class AddEditSocietyScreen extends StatefulWidget {
   final String? societyId;
   final Map<String, dynamic>? societyData;
 
-  const AddEditSocietyScreen({
-    super.key,
-    this.societyId,
-    this.societyData,
-  });
+  const AddEditSocietyScreen({super.key, this.societyId, this.societyData});
 
   @override
   State<AddEditSocietyScreen> createState() => _AddEditSocietyScreenState();
@@ -22,6 +18,7 @@ class _AddEditSocietyScreenState extends State<AddEditSocietyScreen> {
   final _imageUrlController = TextEditingController();
   final _memberCountController = TextEditingController();
   final _presidentPhoneController = TextEditingController();
+  final _emailController = TextEditingController();
   bool _isSaving = false;
 
   bool get _isEditing => widget.societyId != null;
@@ -35,7 +32,9 @@ class _AddEditSocietyScreenState extends State<AddEditSocietyScreen> {
       _descriptionController.text = (data['description'] ?? '').toString();
       _imageUrlController.text = (data['imageUrl'] ?? '').toString();
       _memberCountController.text = (data['memberCount'] ?? 0).toString();
-      _presidentPhoneController.text = (data['presidentPhone'] ?? '').toString();
+      _presidentPhoneController.text = (data['presidentPhone'] ?? '')
+          .toString();
+      _emailController.text = (data['email'] ?? '').toString();
     }
   }
 
@@ -46,6 +45,7 @@ class _AddEditSocietyScreenState extends State<AddEditSocietyScreen> {
     _imageUrlController.dispose();
     _memberCountController.dispose();
     _presidentPhoneController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -60,6 +60,7 @@ class _AddEditSocietyScreenState extends State<AddEditSocietyScreen> {
         'imageUrl': _imageUrlController.text.trim(),
         'memberCount': int.parse(_memberCountController.text.trim()),
         'presidentPhone': _presidentPhoneController.text.trim(),
+        'email': _emailController.text.trim(),
         'updatedAt': FieldValue.serverTimestamp(),
       };
       final societies = FirebaseFirestore.instance.collection('societies');
@@ -72,14 +73,16 @@ class _AddEditSocietyScreenState extends State<AddEditSocietyScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isEditing ? 'Society updated' : 'Society added')),
+        SnackBar(
+          content: Text(_isEditing ? 'Society updated' : 'Society added'),
+        ),
       );
       Navigator.pop(context);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save society: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save society: $error')));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -102,29 +105,38 @@ class _AddEditSocietyScreenState extends State<AddEditSocietyScreen> {
                   children: [
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'Society name'),
+                      decoration: const InputDecoration(
+                        labelText: 'Society name',
+                      ),
                       validator: _required,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _descriptionController,
                       maxLines: 3,
-                      decoration: const InputDecoration(labelText: 'Description'),
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                      ),
                       validator: _required,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _imageUrlController,
-                      decoration: const InputDecoration(labelText: 'Image URL (optional)'),
+                      decoration: const InputDecoration(
+                        labelText: 'Image URL (optional)',
+                      ),
                       keyboardType: TextInputType.url,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _memberCountController,
-                      decoration: const InputDecoration(labelText: 'Member count'),
+                      decoration: const InputDecoration(
+                        labelText: 'Member count',
+                      ),
                       keyboardType: TextInputType.number,
                       validator: (value) {
-                        if (value == null || int.tryParse(value.trim()) == null) {
+                        if (value == null ||
+                            int.tryParse(value.trim()) == null) {
                           return 'Enter a whole number';
                         }
                         return null;
@@ -133,9 +145,25 @@ class _AddEditSocietyScreenState extends State<AddEditSocietyScreen> {
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _presidentPhoneController,
-                      decoration: const InputDecoration(labelText: 'President WhatsApp number'),
+                      decoration: const InputDecoration(
+                        labelText: 'WhatsApp number (optional)',
+                      ),
                       keyboardType: TextInputType.phone,
-                      validator: _required,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Email (optional)',
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        final email = value?.trim() ?? '';
+                        if (email.isNotEmpty && !email.contains('@')) {
+                          return 'Enter a valid email address';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
@@ -143,7 +171,9 @@ class _AddEditSocietyScreenState extends State<AddEditSocietyScreen> {
                       child: FilledButton.icon(
                         onPressed: _saveSociety,
                         icon: const Icon(Icons.save),
-                        label: Text(_isEditing ? 'Save Changes' : 'Add Society'),
+                        label: Text(
+                          _isEditing ? 'Save Changes' : 'Add Society',
+                        ),
                       ),
                     ),
                   ],

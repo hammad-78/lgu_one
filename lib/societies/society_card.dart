@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lgu_one/utils/whatsApp_support.dart';
+import 'package:lgu_one/utils/email_support.dart';
 import '../utils/app_cached_image.dart';
 import 'model.dart';
 
@@ -15,7 +16,9 @@ class SocietyCard extends StatelessWidget {
     // ✅ FIX: colorScheme.primary is identical to scaffoldBackgroundColor in
     // dark mode (both 0xFF021E16) — using it for text made the society name
     // invisible. highlight resolves correctly in both modes instead.
-    final highlight = isDark ? theme.colorScheme.secondary : const Color(0xFF4CAF50);
+    final highlight = isDark
+        ? theme.colorScheme.secondary
+        : const Color(0xFF4CAF50);
     final subTextColor = isDark ? Colors.white70 : Colors.grey.shade700;
 
     return Card(
@@ -98,16 +101,21 @@ class SocietyCard extends StatelessWidget {
 
             const SizedBox(width: 10),
 
-            // BUTTON — already correctly themed via elevatedButtonTheme, untouched
-            ElevatedButton(
-              onPressed: () {
-                openWhatsApp(
+            if (society.presidentPhone.trim().isNotEmpty)
+              IconButton(
+                tooltip: 'Contact on WhatsApp',
+                onPressed: () => openWhatsApp(
                   society.presidentPhone,
-                  "Hi, I want to join ${society.name}!",
-                );
-              },
-              child: const Text("Join"),
-            ),
+                  'Refered by LGU-Connect:\n\nHi, I want to join ${society.name}!',
+                ),
+                icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
+              ),
+            if (society.email.trim().isNotEmpty)
+              IconButton(
+                tooltip: 'Send email',
+                onPressed: () => openSocietyEmail(society.email, society.name),
+                icon: const Icon(Icons.email_outlined),
+              ),
           ],
         ),
       ),

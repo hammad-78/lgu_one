@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:lgu_one/admin/add_edit_event_screen.dart';
 import '../utils/app_cached_image.dart';
 import '../utils/flushbar.dart';
+import '../utils/expiry_tag.dart';
 
 class AdminEventsScreen extends StatefulWidget {
   const AdminEventsScreen({super.key});
@@ -227,10 +228,14 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
         .toString()
         .toLowerCase();
     final String? imageUrl = data['imageUrl'] as String?;
+    DateTime? expiryDate;
 
     DateTime? eventDate;
     if (data['eventDate'] != null && data['eventDate'] is Timestamp) {
       eventDate = (data['eventDate'] as Timestamp).toDate();
+    }
+    if (data['expiryDate'] != null && data['expiryDate'] is Timestamp) {
+      expiryDate = (data['expiryDate'] as Timestamp).toDate();
     }
 
     final bool isPast = eventDate != null && eventDate.isBefore(DateTime.now());
@@ -352,6 +357,8 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 6),
+                      ExpiryTag(expiryDate: expiryDate),
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(

@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:lgu_one/news_section/news_model.dart';
 import '../utils/app_cached_image.dart';
+import '../utils/expiry_tag.dart';
 
 class AdminNewsScreen extends StatefulWidget {
   const AdminNewsScreen({super.key});
@@ -17,16 +18,24 @@ class AdminNewsScreen extends StatefulWidget {
 
 class _AdminNewsScreenState extends State<AdminNewsScreen> {
   final _formKey = GlobalKey<FormState>();
-  final CollectionReference _newsRef =
-      FirebaseFirestore.instance.collection('news');
+  final CollectionReference _newsRef = FirebaseFirestore.instance.collection(
+    'news',
+  );
 
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _imageUrlController = TextEditingController();
   final _dateController = TextEditingController();
+  DateTime? _selectedExpiryDate;
 
   String _selectedType = 'Admission';
-  final List<String> _typeOptions = ['Admission', 'Event', 'Notice', 'Drive', 'General'];
+  final List<String> _typeOptions = [
+    'Admission',
+    'Event',
+    'Notice',
+    'Drive',
+    'General',
+  ];
 
   File? _pickedImageFile;
   bool _isPublishing = false;
@@ -47,6 +56,28 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
     super.dispose();
   }
 
+  Future<void> _selectExpiryDate() async {
+    final now = DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedExpiryDate ?? now,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(2035),
+    );
+    if (pickedDate != null && mounted) {
+      setState(() {
+        _selectedExpiryDate = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          23,
+          59,
+          59,
+        );
+      });
+    }
+  }
+
   Future<void> _pickImage(ImageSource source) async {
     try {
       final picker = ImagePicker();
@@ -59,9 +90,9 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to pick image: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Failed to pick image: $e")));
       }
     }
   }
@@ -111,6 +142,13 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
   Future<void> _publishNews() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_selectedExpiryDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select an expiry date")),
+      );
+      return;
+    }
+
     // Check if an image is provided (either file picked or URL entered)
     String imageUrl = _imageUrlController.text.trim();
 
@@ -153,6 +191,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
         'image': imageUrl,
         'type': _selectedType,
         'date': _dateController.text.trim(),
+        'expiryDate': Timestamp.fromDate(_selectedExpiryDate!),
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -192,6 +231,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
     setState(() {
       _pickedImageFile = null;
       _selectedType = 'Admission';
+      _selectedExpiryDate = null;
       _dateController.text = DateFormat('dd MMM yyyy').format(DateTime.now());
     });
     _formKey.currentState?.reset();
@@ -203,9 +243,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("News Management"),
-      ),
+      appBar: AppBar(title: const Text("News Management")),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -222,18 +260,26 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.add_location_alt_outlined, color: theme.colorScheme.primary),
+                          Icon(
+                            Icons.add_location_alt_outlined,
+                            color: theme.colorScheme.primary,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               "Publish New Announcement",
-                              style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontSize: 18,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                      Divider(height: 24, color: theme.dividerColor.withValues(alpha: 0.5)),
+                      Divider(
+                        height: 24,
+                        color: theme.dividerColor.withValues(alpha: 0.5),
+                      ),
 
                       // Title Field
                       TextFormField(
@@ -250,6 +296,26 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 14),
+
+                      InkWell(
+                        onTap: _selectExpiryDate,
+                        borderRadius: BorderRadius.circular(12),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Expiry Date *',
+                            prefixIcon: Icon(Icons.event_busy),
+                            border: OutlineInputBorder(),
+                          ),
+                          child: Text(
+                            _selectedExpiryDate == null
+                                ? 'Select expiry date'
+                                : DateFormat(
+                                    'dd MMM yyyy',
+                                  ).format(_selectedExpiryDate!),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 14),
 
@@ -285,16 +351,20 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                               prefixIcon: Icon(Icons.label_outlined),
                               border: OutlineInputBorder(),
                               contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 12),
+                                horizontal: 10,
+                                vertical: 12,
+                              ),
                             ),
                             items: _typeOptions
-                                .map((type) => DropdownMenuItem(
-                                      value: type,
-                                      child: Text(
-                                        type,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ))
+                                .map(
+                                  (type) => DropdownMenuItem(
+                                    value: type,
+                                    child: Text(
+                                      type,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                )
                                 .toList(),
                             onChanged: (val) {
                               if (val != null) {
@@ -307,13 +377,17 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                             controller: _dateController,
                             readOnly: true,
                             onTap: _selectDate,
-                            style: TextStyle(color: theme.colorScheme.onSurface),
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface,
+                            ),
                             decoration: const InputDecoration(
                               labelText: "Date *",
                               prefixIcon: Icon(Icons.calendar_today),
                               border: OutlineInputBorder(),
                               contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 12),
+                                horizontal: 10,
+                                vertical: 12,
+                              ),
                             ),
                             validator: (val) {
                               if (val == null || val.trim().isEmpty) {
@@ -347,18 +421,27 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                       // Image Input Section
                       Text(
                         "News Banner Image *",
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 8),
 
                       // Image Preview or Picker Buttons
                       Container(
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 12,
+                        ),
                         constraints: const BoxConstraints(minHeight: 120),
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
+                          border: Border.all(
+                            color: theme.dividerColor.withValues(alpha: 0.5),
+                          ),
                         ),
                         child: _pickedImageFile != null
                             ? Stack(
@@ -382,10 +465,15 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                                       radius: 16,
                                       child: IconButton(
                                         padding: EdgeInsets.zero,
-                                        icon: const Icon(Icons.close,
-                                            size: 18, color: Colors.white),
+                                        icon: const Icon(
+                                          Icons.close,
+                                          size: 18,
+                                          color: Colors.white,
+                                        ),
                                         onPressed: () {
-                                          setState(() => _pickedImageFile = null);
+                                          setState(
+                                            () => _pickedImageFile = null,
+                                          );
                                         },
                                       ),
                                     ),
@@ -403,15 +491,19 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                                       ElevatedButton.icon(
                                         onPressed: () =>
                                             _pickImage(ImageSource.gallery),
-                                        icon: const Icon(Icons.photo_library,
-                                            size: 18),
+                                        icon: const Icon(
+                                          Icons.photo_library,
+                                          size: 18,
+                                        ),
                                         label: const Text("Gallery"),
                                       ),
                                       ElevatedButton.icon(
                                         onPressed: () =>
                                             _pickImage(ImageSource.camera),
-                                        icon: const Icon(Icons.camera_alt,
-                                            size: 18),
+                                        icon: const Icon(
+                                          Icons.camera_alt,
+                                          size: 18,
+                                        ),
                                         label: const Text("Camera"),
                                       ),
                                     ],
@@ -420,7 +512,10 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                                   Text(
                                     "OR enter Image URL below",
                                     style: TextStyle(
-                                        fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                                      fontSize: 12,
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.5),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -486,7 +581,9 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(child: Text("Error loading news: ${snapshot.error}"));
+                  return Center(
+                    child: Text("Error loading news: ${snapshot.error}"),
+                  );
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -506,7 +603,11 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                       padding: const EdgeInsets.all(20.0),
                       child: Text(
                         "No published news yet",
-                        style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
                       ),
                     ),
                   );
@@ -539,7 +640,11 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(14),
-        border: isDark ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)) : null,
+        border: isDark
+            ? Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.2),
+              )
+            : null,
         boxShadow: [
           if (!isDark)
             BoxShadow(
@@ -569,7 +674,10 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                         width: 70,
                         height: 70,
                         color: isDark ? Colors.white10 : Colors.grey.shade200,
-                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                        child: const Icon(
+                          Icons.broken_image,
+                          color: Colors.grey,
+                        ),
                       ),
                     )
                   : Container(
@@ -592,7 +700,9 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                       Flexible(
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.primary,
                             borderRadius: BorderRadius.circular(20),
@@ -614,11 +724,15 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                           news.date,
                           style: TextStyle(
                             fontSize: 11,
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.5,
+                            ),
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      ExpiryTag(expiryDate: news.expiryDate),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -635,7 +749,10 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     news.description,
-                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.8)),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -683,6 +800,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
     final descEditController = TextEditingController(text: news.description);
     final imageEditController = TextEditingController(text: news.image);
     final dateEditController = TextEditingController(text: news.date);
+    DateTime? expiryDate = news.expiryDate;
     String typeValue = news.type;
 
     showDialog(
@@ -690,7 +808,14 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final options = {'Admission', 'Event', 'Notice', 'Drive', 'General', typeValue}.toList();
+            final options = {
+              'Admission',
+              'Event',
+              'Notice',
+              'Drive',
+              'General',
+              typeValue,
+            }.toList();
 
             return AlertDialog(
               title: const Text("Edit News"),
@@ -704,17 +829,21 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                     ),
                     TextField(
                       controller: descEditController,
-                      decoration: const InputDecoration(labelText: "Description"),
+                      decoration: const InputDecoration(
+                        labelText: "Description",
+                      ),
                       maxLines: 3,
                     ),
                     DropdownButtonFormField<String>(
                       initialValue: typeValue,
-                      decoration: const InputDecoration(labelText: "Category / Type"),
+                      decoration: const InputDecoration(
+                        labelText: "Category / Type",
+                      ),
                       items: options
-                          .map((opt) => DropdownMenuItem(
-                                value: opt,
-                                child: Text(opt),
-                              ))
+                          .map(
+                            (opt) =>
+                                DropdownMenuItem(value: opt, child: Text(opt)),
+                          )
                           .toList(),
                       onChanged: (val) {
                         if (val != null) {
@@ -725,6 +854,38 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                     TextField(
                       controller: dateEditController,
                       decoration: const InputDecoration(labelText: "Date"),
+                    ),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: expiryDate ?? DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime(2035),
+                        );
+                        if (picked != null) {
+                          setDialogState(() {
+                            expiryDate = DateTime(
+                              picked.year,
+                              picked.month,
+                              picked.day,
+                              23,
+                              59,
+                              59,
+                            );
+                          });
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Expiry Date',
+                        ),
+                        child: Text(
+                          expiryDate == null
+                              ? 'Select expiry date'
+                              : DateFormat('dd MMM yyyy').format(expiryDate!),
+                        ),
+                      ),
                     ),
                     TextField(
                       controller: imageEditController,
@@ -747,6 +908,8 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                         'type': typeValue,
                         'date': dateEditController.text.trim(),
                         'image': imageEditController.text.trim(),
+                        if (expiryDate != null)
+                          'expiryDate': Timestamp.fromDate(expiryDate!),
                       });
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -775,14 +938,18 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
         return AlertDialog(
           title: const Text("Delete News"),
           content: const Text(
-              "Are you sure you want to delete this news item? This cannot be undone."),
+            "Are you sure you want to delete this news item? This cannot be undone.",
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text("Cancel"),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () async {
                 final messenger = ScaffoldMessenger.of(context);
                 Navigator.pop(context);
