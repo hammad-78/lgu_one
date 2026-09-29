@@ -26,6 +26,7 @@ firestore.rules
 .swiftpm/
 migrate_working_dir/
 node_modules/
+.firebase/
 # IntelliJ related
 *.iml
 *.ipr
