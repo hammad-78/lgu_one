@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/about.dart';
 import 'package:lgu_one/admin/admin_signin.dart';
-import 'package:lgu_one/auth/lgu_email_auth_dialog.dart';
 import 'package:lgu_one/collaboration/collaboration_screen.dart';
 import 'package:lgu_one/events/upcoming_events_screen.dart';
 import 'package:lgu_one/dashboard_grid.dart';
@@ -274,10 +273,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               icon: Icons.diversity_3,
               imageAsset: "assets/images/group_icon.png",
               onTap: () async {
-                if (!await showLguEmailAuthDialog(context) ||
-                    !context.mounted) {
-                  return;
-                }
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -667,7 +662,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               Navigator.pop(context);
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
-              await clearRememberedLguStudentEmail();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
