@@ -705,10 +705,16 @@ class _ListingsScreenState extends State<ListingsScreen> {
                 }).toList();
                 if (items.isEmpty) {
                   return Center(
-                    child: Text(
-                      'No items match your filters yet.',
-                      style: TextStyle(
-                        color: isDark ? Colors.white60 : Colors.grey.shade700,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'Nothing found, nothing lost. Just you and this empty screen.\n Report Now!!!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: isDark
+                              ? Colors.white60
+                              : Colors.grey.shade700,
+                        ),
                       ),
                     ),
                   );
