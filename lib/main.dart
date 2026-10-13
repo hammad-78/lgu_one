@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker_android/image_picker_android.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:lgu_one/auth/splash_screen.dart';
 import 'theme.dart';
 import 'firebase_options.dart';
@@ -10,6 +12,11 @@ import 'package:timezone/timezone.dart' as tzlib;
 void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  final imagePickerPlatform = ImagePickerPlatform.instance;
+  if (imagePickerPlatform is ImagePickerAndroid) {
+    imagePickerPlatform.useAndroidPhotoPicker = true;
+  }
 
   // Initialize timezone database for scheduled notifications
   tz.initializeTimeZones();

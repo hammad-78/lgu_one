@@ -93,7 +93,7 @@ LGU Connect brings students, societies, and campus resources together in one pla
               context,
               icon: Icons.system_update,
               title: "App Version",
-              text: "Version 1.5.5",
+              text: "alpha",
             ),
 
             const SizedBox(height: 20),
