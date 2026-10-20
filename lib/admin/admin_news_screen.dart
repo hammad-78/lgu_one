@@ -39,6 +39,7 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
 
   File? _pickedImageFile;
   bool _isPublishing = false;
+  String _listingFilter = 'Active';
 
   @override
   void initState() {
@@ -573,6 +574,20 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
               style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
             ),
             const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 8,
+                children: ['Active', 'Expired'].map((filter) {
+                  return ChoiceChip(
+                    label: Text(filter),
+                    selected: _listingFilter == filter,
+                    onSelected: (_) => setState(() => _listingFilter = filter),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 10),
 
             // Real-time List of Firestore news docs
             StreamBuilder<QuerySnapshot>(
@@ -597,12 +612,20 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
 
                 final docs = snapshot.data?.docs ?? [];
 
-                if (docs.isEmpty) {
+                final filteredDocs = docs.where((doc) {
+                  final news = NewsModel.fromDocument(doc);
+                  final isExpired =
+                      news.expiryDate != null &&
+                      news.expiryDate!.isBefore(DateTime.now());
+                  return _listingFilter == 'Expired' ? isExpired : !isExpired;
+                }).toList();
+
+                if (filteredDocs.isEmpty) {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(20.0),
                       child: Text(
-                        "No published news yet",
+                        "No $_listingFilter news yet",
                         style: TextStyle(
                           color: theme.colorScheme.onSurface.withValues(
                             alpha: 0.5,
@@ -616,9 +639,9 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
                 return ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: docs.length,
+                  itemCount: filteredDocs.length,
                   itemBuilder: (context, index) {
-                    final doc = docs[index];
+                    final doc = filteredDocs[index];
                     final news = NewsModel.fromDocument(doc);
                     return _buildNewsItemCard(context, news);
                   },

@@ -20,6 +20,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
 
   String _categoryFilter = 'All'; // 'All', 'Within University', 'Within Lahore'
   String _statusFilter = 'All';
+  String _dateFilter = 'Active';
   final List<String> _filterOptions = [
     'All',
     'Within University',
@@ -130,6 +131,33 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
               ),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: 2,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final option = index == 0 ? 'Active' : 'Expired';
+                  final isSelected = _dateFilter == option;
+                  return ChoiceChip(
+                    label: Text(option),
+                    selected: isSelected,
+                    selectedColor: theme.colorScheme.primary,
+                    labelStyle: TextStyle(
+                      color: isSelected
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onSelected: (_) => setState(() => _dateFilter = option),
+                  );
+                },
+              ),
+            ),
+          ),
 
           // Events Stream
           Expanded(
@@ -151,8 +179,16 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                   final data = d.data() as Map<String, dynamic>;
                   final cat = (data['category'] ?? '').toString();
                   final status = (data['status'] ?? 'Approved').toString();
+                  final expiryDate = data['expiryDate'] is Timestamp
+                      ? (data['expiryDate'] as Timestamp).toDate()
+                      : null;
+                  final isExpired =
+                      expiryDate != null && expiryDate.isBefore(DateTime.now());
                   if (_statusFilter != 'All' &&
                       status.toLowerCase() != _statusFilter.toLowerCase()) {
+                    return false;
+                  }
+                  if (_dateFilter == 'Expired' ? !isExpired : isExpired) {
                     return false;
                   }
                   if (_categoryFilter == 'Within University') {
