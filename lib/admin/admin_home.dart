@@ -46,7 +46,7 @@ class _AdminHomeState extends State<AdminHome> {
           .collection('admins')
           .doc(user.uid)
           .get();
-        if (!mounted) return;
+      if (!mounted) return;
 
       if (doc.exists) {
         final data = doc.data();
@@ -69,10 +69,11 @@ class _AdminHomeState extends State<AdminHome> {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    Stream<QuerySnapshot>? pendingStream,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
@@ -80,7 +81,11 @@ class _AdminHomeState extends State<AdminHome> {
         decoration: BoxDecoration(
           color: theme.cardTheme.color,
           borderRadius: BorderRadius.circular(14),
-          border: isDark ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)) : null,
+          border: isDark
+              ? Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                )
+              : null,
           boxShadow: [
             if (!isDark)
               BoxShadow(
@@ -94,10 +99,56 @@ class _AdminHomeState extends State<AdminHome> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
-              child: Icon(icon, color: theme.colorScheme.primary, size: 22),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: theme.colorScheme.primary.withValues(
+                    alpha: 0.12,
+                  ),
+                  child: Icon(icon, color: theme.colorScheme.primary, size: 22),
+                ),
+                if (pendingStream != null)
+                  Positioned(
+                    right: -12,
+                    top: -10,
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: pendingStream,
+                      builder: (context, snapshot) {
+                        final count = snapshot.data?.docs.length ?? 0;
+                        if (count == 0) return const SizedBox.shrink();
+
+                        return Container(
+                          constraints: const BoxConstraints(minWidth: 20),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color:
+                                  theme.cardTheme.color ??
+                                  theme.scaffoldBackgroundColor,
+                              width: 2,
+                            ),
+                          ),
+                          child: Text(
+                            '$count',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 10),
             Text(
@@ -133,7 +184,10 @@ class _AdminHomeState extends State<AdminHome> {
       canPop: false,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text("Admin Dashboard", style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text(
+            "Admin Dashboard",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           automaticallyImplyLeading: false,
           actions: [
             IconButton(
@@ -151,7 +205,11 @@ class _AdminHomeState extends State<AdminHome> {
           ],
         ),
         body: _isLoading
-            ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: theme.colorScheme.primary,
+                ),
+              )
             : Scrollbar(
                 controller: _scrollController,
                 child: ListView(
@@ -164,7 +222,13 @@ class _AdminHomeState extends State<AdminHome> {
                       decoration: BoxDecoration(
                         color: theme.cardTheme.color,
                         borderRadius: BorderRadius.circular(16),
-                        border: isDark ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)) : null,
+                        border: isDark
+                            ? Border.all(
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.2,
+                                ),
+                              )
+                            : null,
                         boxShadow: [
                           if (!isDark)
                             BoxShadow(
@@ -195,13 +259,19 @@ class _AdminHomeState extends State<AdminHome> {
                               children: [
                                 Text(
                                   _name ?? "Administrator",
-                                  style: theme.textTheme.headlineMedium?.copyWith(fontSize: 20),
+                                  style: theme.textTheme.headlineMedium
+                                      ?.copyWith(fontSize: 20),
                                 ),
                                 const SizedBox(height: 4),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                    color: theme.colorScheme.primary.withValues(
+                                      alpha: 0.1,
+                                    ),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
@@ -223,7 +293,9 @@ class _AdminHomeState extends State<AdminHome> {
                     const SizedBox(height: 24),
                     Text(
                       "Management Console",
-                      style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontSize: 18,
+                      ),
                     ),
                     const SizedBox(height: 16),
 
@@ -242,13 +314,22 @@ class _AdminHomeState extends State<AdminHome> {
                               context: context,
                               icon: Icons.search,
                               label: "Lost & Found",
+                              pendingStream: FirebaseFirestore.instance
+                                  .collection('lost_found_items')
+                                  .where('status', isEqualTo: 'pending')
+                                  .snapshots(),
                               onTap: () => _navigate(const AdminLostFound()),
                             ),
                             _buildActionButton(
                               context: context,
                               icon: Icons.groups_outlined,
                               label: "Collaborations",
-                              onTap: () => _navigate(const AdminCollaboration()),
+                              pendingStream: FirebaseFirestore.instance
+                                  .collection('collaborations')
+                                  .where('info.status', isEqualTo: 'pending')
+                                  .snapshots(),
+                              onTap: () =>
+                                  _navigate(const AdminCollaboration()),
                             ),
                             _buildActionButton(
                               context: context,
@@ -272,7 +353,8 @@ class _AdminHomeState extends State<AdminHome> {
                               context: context,
                               icon: Icons.groups_outlined,
                               label: "Societies",
-                              onTap: () => _navigate(const AdminSocietiesScreen()),
+                              onTap: () =>
+                                  _navigate(const AdminSocietiesScreen()),
                             ),
                           ],
                         );
@@ -281,7 +363,9 @@ class _AdminHomeState extends State<AdminHome> {
                             ? Align(
                                 alignment: Alignment.center,
                                 child: ConstrainedBox(
-                                  constraints: const BoxConstraints(maxWidth: 820),
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 820,
+                                  ),
                                   child: grid,
                                 ),
                               )

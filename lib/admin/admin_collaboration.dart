@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class AdminCollaboration extends StatefulWidget {
   const AdminCollaboration({super.key});
@@ -9,44 +10,54 @@ class AdminCollaboration extends StatefulWidget {
 }
 
 class _AdminCollaborationState extends State<AdminCollaboration> {
-  final CollectionReference _collabRef =
-      FirebaseFirestore.instance.collection('collaborations');
+  final CollectionReference _collabRef = FirebaseFirestore.instance.collection(
+    'collaborations',
+  );
+
+  String _reportedDate(dynamic value) {
+    final date = value is Timestamp
+        ? value.toDate()
+        : value is DateTime
+        ? value
+        : null;
+    return date == null
+        ? 'Date unavailable'
+        : DateFormat('dd MMM yyyy, hh:mm a').format(date);
+  }
 
   Future<void> _approveCollaboration(String docId) async {
     try {
-      await _collabRef.doc(docId).update({
-        'info.status': 'open',
-      });
+      await _collabRef.doc(docId).update({'info.status': 'open'});
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Collaboration approved and notification sent")),
+          const SnackBar(
+            content: Text("Collaboration approved and notification sent"),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Approval failed: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Approval failed: $e")));
       }
     }
   }
 
   Future<void> _rejectCollaboration(String docId) async {
     try {
-      await _collabRef.doc(docId).update({
-        'info.status': 'rejected',
-      });
+      await _collabRef.doc(docId).update({'info.status': 'rejected'});
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Collaboration rejected")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Collaboration rejected")));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Rejection failed: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Rejection failed: $e")));
       }
     }
   }
@@ -57,7 +68,7 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
     'Open',
     'Closed',
     'Rejected',
-    'All'
+    'All',
   ];
 
   @override
@@ -65,9 +76,7 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Collaboration Listings"),
-      ),
+      appBar: AppBar(title: const Text("Collaboration Listings")),
       body: Column(
         children: [
           Padding(
@@ -86,8 +95,8 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                     selected: isSelected,
                     selectedColor: theme.colorScheme.primary,
                     labelStyle: TextStyle(
-                      color: isSelected 
-                          ? theme.colorScheme.onPrimary 
+                      color: isSelected
+                          ? theme.colorScheme.onPrimary
                           : theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
@@ -121,7 +130,9 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                         final info = data['info'] is Map<String, dynamic>
                             ? data['info'] as Map<String, dynamic>
                             : data;
-                        final status = (info['status'] ?? '').toString().toLowerCase();
+                        final status = (info['status'] ?? '')
+                            .toString()
+                            .toLowerCase();
                         return status == _statusFilter.toLowerCase();
                       }).toList();
 
@@ -129,7 +140,11 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                   return Center(
                     child: Text(
                       "No collaborations found",
-                      style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.5,
+                        ),
+                      ),
                     ),
                   );
                 }
@@ -154,10 +169,14 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
     );
   }
 
-  Widget _buildListingCard(BuildContext context, String docId, Map<String, dynamic> info) {
+  Widget _buildListingCard(
+    BuildContext context,
+    String docId,
+    Map<String, dynamic> info,
+  ) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final String title = info['title'] ?? 'Untitled';
     final String description = info['description'] ?? '';
     final String category = info['category'] ?? '';
@@ -172,6 +191,7 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
         ? info['requiredPosts'] as List<dynamic>
         : [];
     final String whatsappNumber = info['whatsappNumber'] ?? '';
+    final String reportedDate = _reportedDate(info['createdAt']);
 
     Color statusColor;
     switch (status.toLowerCase()) {
@@ -196,7 +216,11 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(14),
-        border: isDark ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)) : null,
+        border: isDark
+            ? Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.2),
+              )
+            : null,
         boxShadow: [
           if (!isDark)
             BoxShadow(
@@ -226,8 +250,10 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor,
                     borderRadius: BorderRadius.circular(20),
@@ -249,17 +275,28 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                 description,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.8)),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                ),
               ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 10,
               runSpacing: 6,
               children: [
+                _tag(
+                  context,
+                  Icons.calendar_today_outlined,
+                  "Reported: $reportedDate",
+                ),
                 if (category.isNotEmpty)
                   _tag(context, Icons.category_outlined, "Category: $category"),
-                _tag(context, Icons.people_outline,
-                    "Members: $existingMembers/$requiredMembers"),
+                _tag(
+                  context,
+                  Icons.people_outline,
+                  "Members: $existingMembers/$requiredMembers",
+                ),
                 if (whatsappNumber.isNotEmpty)
                   _tag(context, Icons.phone_outlined, whatsappNumber),
               ],
@@ -273,13 +310,17 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                   return Chip(
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
-                    labelPadding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                    labelPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 0,
+                    ),
                     label: Text(
                       post.toString(),
                       style: const TextStyle(fontSize: 11),
                     ),
-                    backgroundColor: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade100,
+                    backgroundColor: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.grey.shade100,
                   );
                 }).toList(),
               ),
@@ -306,7 +347,10 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -317,7 +361,10 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -330,7 +377,10 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -358,11 +408,18 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+        Icon(
+          icon,
+          size: 14,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+        ),
         const SizedBox(width: 4),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+          style: TextStyle(
+            fontSize: 12,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
       ],
     );
@@ -370,15 +427,21 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
 
   void _showEditDialog(String docId, Map<String, dynamic> info) {
     final titleController = TextEditingController(text: info['title'] ?? '');
-    final descController = TextEditingController(text: info['description'] ?? '');
-    final categoryController =
-        TextEditingController(text: info['category'] ?? '');
+    final descController = TextEditingController(
+      text: info['description'] ?? '',
+    );
+    final categoryController = TextEditingController(
+      text: info['category'] ?? '',
+    );
     final reqMembersController = TextEditingController(
-        text: (info['requiredMembers'] ?? 0).toString());
+      text: (info['requiredMembers'] ?? 0).toString(),
+    );
     final existMembersController = TextEditingController(
-        text: (info['existingMembers'] ?? 0).toString());
-    final whatsappController =
-        TextEditingController(text: info['whatsappNumber'] ?? '');
+      text: (info['existingMembers'] ?? 0).toString(),
+    );
+    final whatsappController = TextEditingController(
+      text: info['whatsappNumber'] ?? '',
+    );
     final postsController = TextEditingController(
       text: (info['requiredPosts'] is List)
           ? (info['requiredPosts'] as List).join(', ')
@@ -403,7 +466,9 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                     ),
                     TextField(
                       controller: descController,
-                      decoration: const InputDecoration(labelText: "Description"),
+                      decoration: const InputDecoration(
+                        labelText: "Description",
+                      ),
                       maxLines: 3,
                     ),
                     TextField(
@@ -417,7 +482,8 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                             controller: existMembersController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
-                                labelText: "Existing Members"),
+                              labelText: "Existing Members",
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -426,7 +492,8 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                             controller: reqMembersController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
-                                labelText: "Required Members"),
+                              labelText: "Required Members",
+                            ),
                           ),
                         ),
                       ],
@@ -439,20 +506,36 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                     ),
                     TextField(
                       controller: whatsappController,
-                      decoration:
-                          const InputDecoration(labelText: "WhatsApp Number"),
+                      decoration: const InputDecoration(
+                        labelText: "WhatsApp Number",
+                      ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      initialValue: ['pending', 'open', 'closed', 'rejected'].contains(status.toLowerCase())
+                      initialValue:
+                          [
+                            'pending',
+                            'open',
+                            'closed',
+                            'rejected',
+                          ].contains(status.toLowerCase())
                           ? status.toLowerCase()
                           : 'open',
                       decoration: const InputDecoration(labelText: "Status"),
                       items: const [
-                        DropdownMenuItem(value: 'pending', child: Text("Pending")),
+                        DropdownMenuItem(
+                          value: 'pending',
+                          child: Text("Pending"),
+                        ),
                         DropdownMenuItem(value: 'open', child: Text("Open")),
-                        DropdownMenuItem(value: 'closed', child: Text("Closed")),
-                        DropdownMenuItem(value: 'rejected', child: Text("Rejected")),
+                        DropdownMenuItem(
+                          value: 'closed',
+                          child: Text("Closed"),
+                        ),
+                        DropdownMenuItem(
+                          value: 'rejected',
+                          child: Text("Rejected"),
+                        ),
                       ],
                       onChanged: (value) {
                         setDialogState(() => status = value ?? status);
@@ -499,19 +582,21 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
   }
 
   Future<void> _updateCollaboration(
-      String docId, Map<String, dynamic> updates) async {
+    String docId,
+    Map<String, dynamic> updates,
+  ) async {
     try {
       await _collabRef.doc(docId).update(updates);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Collaboration updated")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Collaboration updated")));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Update failed: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Update failed: $e")));
       }
     }
   }
@@ -523,14 +608,18 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
         return AlertDialog(
           title: const Text("Delete Collaboration"),
           content: const Text(
-              "Are you sure you want to delete this collaboration? This cannot be undone."),
+            "Are you sure you want to delete this collaboration? This cannot be undone.",
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text("Cancel"),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () async {
                 Navigator.pop(context);
                 await _deleteCollaboration(docId);
@@ -547,15 +636,15 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
     try {
       await _collabRef.doc(docId).delete();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Collaboration deleted")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Collaboration deleted")));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Delete failed: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Delete failed: $e")));
       }
     }
   }

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../Lost_Found/lost_found_item.dart';
 import '../Lost_Found/lost_found_service.dart';
 import '../utils/app_cached_image.dart';
@@ -12,8 +13,8 @@ class AdminLostFound extends StatefulWidget {
 }
 
 class _AdminLostFoundState extends State<AdminLostFound> {
-  final CollectionReference _lostFoundRef =
-      FirebaseFirestore.instance.collection('lost_found_items');
+  final CollectionReference _lostFoundRef = FirebaseFirestore.instance
+      .collection('lost_found_items');
   final _service = LostFoundService();
 
   String _statusFilter = 'Pending';
@@ -23,17 +24,26 @@ class _AdminLostFoundState extends State<AdminLostFound> {
     'Active',
     'Resolved',
     'Rejected',
-    'All'
+    'All',
   ];
+
+  String _reportedDate(dynamic value) {
+    final date = value is Timestamp
+        ? value.toDate()
+        : value is DateTime
+        ? value
+        : null;
+    return date == null
+        ? 'Date unavailable'
+        : DateFormat('dd MMM yyyy, hh:mm a').format(date);
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Admin: Lost & Found"),
-      ),
+      appBar: AppBar(title: const Text("Admin: Lost & Found")),
       body: Column(
         children: [
           Padding(
@@ -52,8 +62,8 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                     selected: isSelected,
                     selectedColor: theme.colorScheme.primary,
                     labelStyle: TextStyle(
-                      color: isSelected 
-                          ? theme.colorScheme.onPrimary 
+                      color: isSelected
+                          ? theme.colorScheme.onPrimary
                           : theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
@@ -84,7 +94,9 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                     ? docs
                     : docs.where((d) {
                         final data = d.data() as Map<String, dynamic>;
-                        final status = (data['status'] ?? 'pending').toString().toLowerCase();
+                        final status = (data['status'] ?? 'pending')
+                            .toString()
+                            .toLowerCase();
                         return status == _statusFilter.toLowerCase();
                       }).toList();
 
@@ -92,7 +104,11 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                   return Center(
                     child: Text(
                       "No $_statusFilter listings found",
-                      style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.6,
+                        ),
+                      ),
                     ),
                   );
                 }
@@ -114,7 +130,11 @@ class _AdminLostFoundState extends State<AdminLostFound> {
     );
   }
 
-  Widget _buildListingCard(BuildContext context, String docId, Map<String, dynamic> data) {
+  Widget _buildListingCard(
+    BuildContext context,
+    String docId,
+    Map<String, dynamic> data,
+  ) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final String title = data['title'] ?? 'Untitled';
@@ -123,6 +143,7 @@ class _AdminLostFoundState extends State<AdminLostFound> {
     final String status = data['status'] ?? 'pending';
     final String category = data['category'] ?? '';
     final String location = data['location'] ?? '';
+    final String reportedDate = _reportedDate(data['createdAt']);
     final List<dynamic> imageUrls = data['imageUrls'] ?? [];
     final String imageUrl = imageUrls.isNotEmpty ? imageUrls.first : '';
 
@@ -133,7 +154,11 @@ class _AdminLostFoundState extends State<AdminLostFound> {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(14),
-        border: isDark ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)) : null,
+        border: isDark
+            ? Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.2),
+              )
+            : null,
         boxShadow: [
           if (!isDark)
             BoxShadow(
@@ -163,9 +188,13 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                           errorWidget: Container(
                             width: 72,
                             height: 72,
-                            color: isDark ? Colors.white10 : Colors.grey.shade200,
-                            child: const Icon(Icons.image_not_supported,
-                                color: Colors.grey),
+                            color: isDark
+                                ? Colors.white10
+                                : Colors.grey.shade200,
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              color: Colors.grey,
+                            ),
                           ),
                         )
                       : Container(
@@ -196,7 +225,9 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: typeColor,
                               borderRadius: BorderRadius.circular(20),
@@ -219,13 +250,22 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.8)),
+                            fontSize: 13,
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.8,
+                            ),
+                          ),
                         ),
                       const SizedBox(height: 6),
                       Wrap(
                         spacing: 8,
                         runSpacing: 4,
                         children: [
+                          _tag(
+                            context,
+                            Icons.calendar_today_outlined,
+                            'Reported: $reportedDate',
+                          ),
                           if (category.isNotEmpty)
                             _tag(context, Icons.category_outlined, category),
                           if (location.isNotEmpty)
@@ -237,7 +277,10 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                 ),
               ],
             ),
-            Divider(height: 20, color: theme.dividerColor.withValues(alpha: 0.5)),
+            Divider(
+              height: 20,
+              color: theme.dividerColor.withValues(alpha: 0.5),
+            ),
             Wrap(
               alignment: WrapAlignment.end,
               spacing: 8,
@@ -247,7 +290,9 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                   onPressed: () => _showEditDialog(docId, data),
                   icon: const Icon(Icons.edit, size: 18),
                   label: const Text("Edit"),
-                  style: TextButton.styleFrom(foregroundColor: theme.colorScheme.primary),
+                  style: TextButton.styleFrom(
+                    foregroundColor: theme.colorScheme.primary,
+                  ),
                 ),
                 if (status == 'pending') ...[
                   ElevatedButton.icon(
@@ -255,7 +300,11 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                       await _service.updateItemStatus(docId, 'active');
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Listing approved and notification sent")),
+                          const SnackBar(
+                            content: Text(
+                              "Listing approved and notification sent",
+                            ),
+                          ),
                         );
                       }
                     },
@@ -289,7 +338,11 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                       await _service.updateItemStatus(docId, 'active');
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Listing restored and notification sent")),
+                          const SnackBar(
+                            content: Text(
+                              "Listing restored and notification sent",
+                            ),
+                          ),
                         );
                       }
                     },
@@ -317,11 +370,18 @@ class _AdminLostFoundState extends State<AdminLostFound> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+        Icon(
+          icon,
+          size: 13,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+        ),
         const SizedBox(width: 3),
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+          style: TextStyle(
+            fontSize: 11,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
       ],
     );
@@ -329,10 +389,18 @@ class _AdminLostFoundState extends State<AdminLostFound> {
 
   void _showEditDialog(String docId, Map<String, dynamic> data) {
     final titleController = TextEditingController(text: data['title'] ?? '');
-    final descController = TextEditingController(text: data['description'] ?? '');
-    final categoryController = TextEditingController(text: data['category'] ?? '');
-    final locationController = TextEditingController(text: data['location'] ?? '');
-    final whatsappController = TextEditingController(text: data['whatsappNumber'] ?? '');
+    final descController = TextEditingController(
+      text: data['description'] ?? '',
+    );
+    final categoryController = TextEditingController(
+      text: data['category'] ?? '',
+    );
+    final locationController = TextEditingController(
+      text: data['location'] ?? '',
+    );
+    final whatsappController = TextEditingController(
+      text: data['whatsappNumber'] ?? '',
+    );
     String type = data['type'] ?? 'lost';
     String status = data['status'] ?? 'pending';
 
@@ -353,16 +421,24 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                     ),
                     TextField(
                       controller: descController,
-                      decoration: const InputDecoration(labelText: "Description"),
+                      decoration: const InputDecoration(
+                        labelText: "Description",
+                      ),
                       maxLines: 3,
                     ),
                     DropdownButtonFormField<String>(
-                      initialValue: lostFoundCategories.contains(categoryController.text) 
-                          ? categoryController.text 
+                      initialValue:
+                          lostFoundCategories.contains(categoryController.text)
+                          ? categoryController.text
                           : lostFoundCategories.first,
                       decoration: const InputDecoration(labelText: "Category"),
-                      items: lostFoundCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                      onChanged: (v) => categoryController.text = v ?? categoryController.text,
+                      items: lostFoundCategories
+                          .map(
+                            (c) => DropdownMenuItem(value: c, child: Text(c)),
+                          )
+                          .toList(),
+                      onChanged: (v) => categoryController.text =
+                          v ?? categoryController.text,
                     ),
                     TextField(
                       controller: locationController,
@@ -370,7 +446,9 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                     ),
                     TextField(
                       controller: whatsappController,
-                      decoration: const InputDecoration(labelText: "WhatsApp Number"),
+                      decoration: const InputDecoration(
+                        labelText: "WhatsApp Number",
+                      ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
@@ -380,18 +458,32 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                         DropdownMenuItem(value: 'lost', child: Text("Lost")),
                         DropdownMenuItem(value: 'found', child: Text("Found")),
                       ],
-                      onChanged: (value) => setDialogState(() => type = value ?? type),
+                      onChanged: (value) =>
+                          setDialogState(() => type = value ?? type),
                     ),
                     DropdownButtonFormField<String>(
                       initialValue: status.toLowerCase(),
                       decoration: const InputDecoration(labelText: "Status"),
                       items: const [
-                        DropdownMenuItem(value: 'pending', child: Text("Pending")),
-                        DropdownMenuItem(value: 'active', child: Text("Active")),
-                        DropdownMenuItem(value: 'resolved', child: Text("Resolved")),
-                        DropdownMenuItem(value: 'rejected', child: Text("Rejected")),
+                        DropdownMenuItem(
+                          value: 'pending',
+                          child: Text("Pending"),
+                        ),
+                        DropdownMenuItem(
+                          value: 'active',
+                          child: Text("Active"),
+                        ),
+                        DropdownMenuItem(
+                          value: 'resolved',
+                          child: Text("Resolved"),
+                        ),
+                        DropdownMenuItem(
+                          value: 'rejected',
+                          child: Text("Rejected"),
+                        ),
                       ],
-                      onChanged: (value) => setDialogState(() => status = value ?? status),
+                      onChanged: (value) =>
+                          setDialogState(() => status = value ?? status),
                     ),
                   ],
                 ),
@@ -415,7 +507,9 @@ class _AdminLostFoundState extends State<AdminLostFound> {
                     if (context.mounted) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Listing updated successfully")),
+                        const SnackBar(
+                          content: Text("Listing updated successfully"),
+                        ),
                       );
                     }
                   },
@@ -436,14 +530,18 @@ class _AdminLostFoundState extends State<AdminLostFound> {
         return AlertDialog(
           title: const Text("Delete Listing"),
           content: const Text(
-              "Are you sure you want to delete this listing from the database? This cannot be undone."),
+            "Are you sure you want to delete this listing from the database? This cannot be undone.",
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text("Cancel"),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () async {
                 Navigator.pop(context);
                 await _deleteListing(docId);
@@ -466,9 +564,9 @@ class _AdminLostFoundState extends State<AdminLostFound> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Delete failed: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Delete failed: $e")));
       }
     }
   }
