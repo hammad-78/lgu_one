@@ -10,12 +10,12 @@ import 'package:lgu_one/news_section/news_carousel.dart';
 import 'package:lgu_one/notification/notification_service.dart';
 import 'package:lgu_one/notification/notification_screen.dart';
 import 'package:lgu_one/recommendation_page.dart';
+import 'package:lgu_one/settings.dart';
 import 'package:lgu_one/societies/society_screen.dart';
 import 'package:lgu_one/utils/whatsApp_support.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:lgu_one/theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -576,7 +576,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildDrawer() {
     final theme = Theme.of(context);
-    final themeController = ThemeController.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final highlight = theme.colorScheme.primary;
 
@@ -665,38 +664,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onTap: () => contactUsOnWhatsApp(context),
           ),
           ListTile(
-            leading: _drawerIcon("assets/images/cache_icon.png"),
-            title: const Text("Clear Cache"),
-            onTap: () async {
+            leading: const Icon(Icons.settings),
+            title: const Text("Settings"),
+            onTap: () {
               Navigator.pop(context);
-              final prefs = await SharedPreferences.getInstance();
-              final selectedTheme = prefs.getString('theme_mode');
-              await prefs.clear();
-              if (selectedTheme != null) {
-                await prefs.setString('theme_mode', selectedTheme);
-              }
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Cache history cleared successfully."),
-                  ),
-                );
-              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
             },
-          ),
-          ListTile(
-            leading: Icon(
-              themeController.themeMode == ThemeMode.dark
-                  ? Icons.dark_mode
-                  : themeController.themeMode == ThemeMode.system
-                  ? Icons.brightness_auto
-                  : Icons.light_mode,
-              color: highlight,
-            ),
-            title: const Text("Theme"),
-            subtitle: Text(_themeModeLabel(themeController.themeMode)),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-            onTap: () => _showThemePicker(themeController),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -716,73 +692,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ],
       ),
     );
-  }
-
-  String _themeModeLabel(ThemeMode mode) {
-    return switch (mode) {
-      ThemeMode.dark => 'Dark mode',
-      ThemeMode.system => 'System',
-      ThemeMode.light => 'Light mode',
-    };
-  }
-
-  Future<void> _showThemePicker(ThemeController themeController) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _themeOption(
-              mode: ThemeMode.light,
-              title: 'Light mode',
-              icon: Icons.light_mode,
-              selectedMode: themeController.themeMode,
-              onSelected: () =>
-                  _selectThemeMode(ThemeMode.light, themeController),
-            ),
-            _themeOption(
-              mode: ThemeMode.dark,
-              title: 'Dark mode',
-              icon: Icons.dark_mode,
-              selectedMode: themeController.themeMode,
-              onSelected: () =>
-                  _selectThemeMode(ThemeMode.dark, themeController),
-            ),
-            _themeOption(
-              mode: ThemeMode.system,
-              title: 'System',
-              icon: Icons.brightness_auto,
-              selectedMode: themeController.themeMode,
-              onSelected: () =>
-                  _selectThemeMode(ThemeMode.system, themeController),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _themeOption({
-    required ThemeMode mode,
-    required String title,
-    required IconData icon,
-    required ThemeMode selectedMode,
-    required VoidCallback onSelected,
-  }) {
-    final selected = mode == selectedMode;
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      trailing: selected ? const Icon(Icons.check) : null,
-      selected: selected,
-      onTap: onSelected,
-    );
-  }
-
-  void _selectThemeMode(ThemeMode mode, ThemeController themeController) {
-    themeController.setThemeMode(mode);
-    Navigator.pop(context);
   }
 }
 

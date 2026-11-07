@@ -37,6 +37,7 @@ dependencies:
   timezone: ^0.11.0
   flutter_launcher_icons: ^0.14.4
   another_flushbar: ^2.2.4
+  share_plus: ^10.1.4
 
 
 
@@ -69,4 +70,3 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
-
