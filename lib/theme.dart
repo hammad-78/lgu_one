@@ -1,4 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class ThemeController extends ChangeNotifier {
+  static const _preferenceKey = 'theme_mode';
+
+  ThemeMode _themeMode = ThemeMode.light;
+
+  ThemeMode get themeMode => _themeMode;
+
+  Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedMode = prefs.getString(_preferenceKey);
+    if (savedMode == null) return;
+
+    _themeMode = switch (savedMode) {
+      'dark' => ThemeMode.dark,
+      'system' => ThemeMode.system,
+      _ => ThemeMode.light,
+    };
+    notifyListeners();
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    _themeMode = mode;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_preferenceKey, mode.name);
+  }
+
+  static ThemeController of(BuildContext context) {
+    final inherited = context
+        .dependOnInheritedWidgetOfExactType<InheritedThemeController>();
+    assert(
+      inherited != null,
+      'ThemeController is not available in this context',
+    );
+    return inherited!.controller;
+  }
+}
+
+class InheritedThemeController extends InheritedNotifier<ThemeController> {
+  const InheritedThemeController({
+    required ThemeController controller,
+    required super.child,
+    super.key,
+  }) : super(notifier: controller);
+
+  ThemeController get controller => notifier!;
+}
 
 class AppTheme {
   // ☀️ LIGHT THEME
@@ -29,37 +79,25 @@ class AppTheme {
     cardTheme: CardThemeData(
       color: Colors.white,
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF4CAF50),
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
       ),
     ),
-    iconTheme: const IconThemeData(
-      color: Color(0xFF4CAF50),
-    ),
+    iconTheme: const IconThemeData(color: Color(0xFF4CAF50)),
     textTheme: const TextTheme(
       headlineMedium: TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.bold,
         color: Color(0xFF2E7D32),
       ),
-      bodyMedium: TextStyle(
-        fontSize: 16,
-        color: Colors.black87,
-      ),
-      bodySmall: TextStyle(
-        fontSize: 12,
-        color: Colors.black54,
-      ),
+      bodyMedium: TextStyle(fontSize: 16, color: Colors.black87),
+      bodySmall: TextStyle(fontSize: 12, color: Colors.black54),
     ),
   );
 
@@ -93,37 +131,25 @@ class AppTheme {
     cardTheme: CardThemeData(
       color: const Color(0xFF0B3D2E),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFFB0BEC5),
         foregroundColor: Colors.black,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
       ),
     ),
-    iconTheme: const IconThemeData(
-      color: Color(0xFFB0BEC5),
-    ),
+    iconTheme: const IconThemeData(color: Color(0xFFB0BEC5)),
     textTheme: const TextTheme(
       headlineMedium: TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.bold,
         color: Colors.white,
       ),
-      bodyMedium: TextStyle(
-        fontSize: 16,
-        color: Colors.white70,
-      ),
-      bodySmall: TextStyle(
-        fontSize: 12,
-        color: Colors.white60,
-      ),
+      bodyMedium: TextStyle(fontSize: 16, color: Colors.white70),
+      bodySmall: TextStyle(fontSize: 12, color: Colors.white60),
     ),
   );
 }

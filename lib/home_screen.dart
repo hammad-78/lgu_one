@@ -15,6 +15,7 @@ import 'package:lgu_one/utils/whatsApp_support.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:lgu_one/theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -98,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!granted && stopwatch.elapsedMilliseconds < 400) {
       await AppSettings.openAppSettings(type: AppSettingsType.notification);
     }
-}
+  }
 
   Future<void> _refreshNotificationPermissionStatus() async {
     final permissionStatus = await Permission.notification.status;
@@ -215,135 +216,146 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: ListView(
               controller: _scrollController,
               children: [
-            const SizedBox(height: 5),
-            if (_showNotificationBanner) _buildNotificationBanner(theme),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.campaign_outlined,
-                    size: 25,
-                    color: theme.colorScheme.primary,
+                const SizedBox(height: 5),
+                if (_showNotificationBanner) _buildNotificationBanner(theme),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 12,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      "Latest News & Updates",
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.campaign_outlined,
+                        size: 25,
+                        color: theme.colorScheme.primary,
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const NewsCarousel(),
-            const SizedBox(height: 10),
-            const DashboardGrid(),
-            const SizedBox(height: 10),
-
-            // Quick Action Cards
-            _buildQuickActionCard(
-              context,
-              title: "Upcoming Events",
-              icon: Icons.event,
-              imageAsset: "assets/images/calender_icon.png",
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const UpcomingEventsScreen()),
-              ),
-              isEvent: true,
-            ),
-            _buildQuickActionCard(
-              context,
-              title: "Join LGU Societies",
-              icon: Icons.handshake,
-              imageAsset: "assets/images/handshake_icon.png",
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SocietiesScreen()),
-              ),
-            ),
-            _buildQuickActionCard(
-              context,
-              title: "Student Collaboration",
-              icon: Icons.diversity_3,
-              imageAsset: "assets/images/group_icon.png",
-              onTap: () async {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const CollaborationScreen(),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 10),
-            Padding(
-              key: _jobsKey,
-              padding: const EdgeInsets.fromLTRB(20, 10, 0, 0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: theme.brightness == Brightness.dark
-                          ? Colors.white.withValues(alpha: 0.16)
-                          : theme.colorScheme.primary.withValues(alpha: 0.12),
-                      border: Border.all(
-                        color: theme.colorScheme.primary.withValues(
-                          alpha: 0.35,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "Latest News & Updates",
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                    child: Image.asset(
-                      'assets/images/suitecase_icon.png',
-                      width: 27,
-                      height: 27,
-                      fit: BoxFit.contain,
+                    ],
+                  ),
+                ),
+                const NewsCarousel(),
+                const SizedBox(height: 10),
+                const DashboardGrid(),
+                const SizedBox(height: 10),
+
+                // Quick Action Cards
+                _buildQuickActionCard(
+                  context,
+                  title: "Upcoming Events",
+                  icon: Icons.event,
+                  imageAsset: "assets/images/calender_icon.png",
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const UpcomingEventsScreen(),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      "Jobs and Internship Opportunities",
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
+                  isEvent: true,
+                ),
+                _buildQuickActionCard(
+                  context,
+                  title: "Join LGU Societies",
+                  icon: Icons.handshake,
+                  imageAsset: "assets/images/handshake_icon.png",
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SocietiesScreen()),
+                  ),
+                ),
+                _buildQuickActionCard(
+                  context,
+                  title: "Student Collaboration",
+                  icon: Icons.diversity_3,
+                  imageAsset: "assets/images/group_icon.png",
+                  onTap: () async {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CollaborationScreen(),
                       ),
-                    ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 10),
+                Padding(
+                  key: _jobsKey,
+                  padding: const EdgeInsets.fromLTRB(20, 10, 0, 0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: theme.brightness == Brightness.dark
+                              ? Colors.white.withValues(alpha: 0.16)
+                              : theme.colorScheme.primary.withValues(
+                                  alpha: 0.12,
+                                ),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.35,
+                            ),
+                          ),
+                        ),
+                        child: Image.asset(
+                          'assets/images/suitecase_icon.png',
+                          width: 27,
+                          height: 27,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "Jobs and Internship Opportunities",
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(0, 4, 20, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Icon(
-                    Icons.swipe,
-                    size: 14,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 4, 20, 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(
+                        Icons.swipe,
+                        size: 14,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        "Swipe",
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    "Swipe",
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const JobsSwiper(),
+                ),
+                const JobsSwiper(),
               ],
             ),
           ),
@@ -511,15 +523,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               eventDate.day,
             ).difference(startOfToday).inDays;
             String countdown;
-            if (diff == 0)
-            {
+            if (diff == 0) {
               countdown = "Today";
-            }
-            else if (diff == 1)
-             {
+            } else if (diff == 1) {
               countdown = "Tomorrow";
-             }
-            else {
+            } else {
               countdown = "in $diff days";
             }
             eventSubtitle = "$eventTitle — $countdown";
@@ -568,6 +576,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildDrawer() {
     final theme = Theme.of(context);
+    final themeController = ThemeController.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final highlight = theme.colorScheme.primary;
 
@@ -651,7 +660,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             },
           ),
           ListTile(
-           leading: _drawerIcon("assets/images/message_icon.png"),
+            leading: _drawerIcon("assets/images/message_icon.png"),
             title: const Text("Contact us"),
             onTap: () => contactUsOnWhatsApp(context),
           ),
@@ -661,7 +670,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onTap: () async {
               Navigator.pop(context);
               final prefs = await SharedPreferences.getInstance();
+              final selectedTheme = prefs.getString('theme_mode');
               await prefs.clear();
+              if (selectedTheme != null) {
+                await prefs.setString('theme_mode', selectedTheme);
+              }
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -670,6 +683,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 );
               }
             },
+          ),
+          ListTile(
+            leading: Icon(
+              themeController.themeMode == ThemeMode.dark
+                  ? Icons.dark_mode
+                  : themeController.themeMode == ThemeMode.system
+                  ? Icons.brightness_auto
+                  : Icons.light_mode,
+              color: highlight,
+            ),
+            title: const Text("Theme"),
+            subtitle: Text(_themeModeLabel(themeController.themeMode)),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+            onTap: () => _showThemePicker(themeController),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -689,6 +716,73 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ],
       ),
     );
+  }
+
+  String _themeModeLabel(ThemeMode mode) {
+    return switch (mode) {
+      ThemeMode.dark => 'Dark mode',
+      ThemeMode.system => 'System',
+      ThemeMode.light => 'Light mode',
+    };
+  }
+
+  Future<void> _showThemePicker(ThemeController themeController) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _themeOption(
+              mode: ThemeMode.light,
+              title: 'Light mode',
+              icon: Icons.light_mode,
+              selectedMode: themeController.themeMode,
+              onSelected: () =>
+                  _selectThemeMode(ThemeMode.light, themeController),
+            ),
+            _themeOption(
+              mode: ThemeMode.dark,
+              title: 'Dark mode',
+              icon: Icons.dark_mode,
+              selectedMode: themeController.themeMode,
+              onSelected: () =>
+                  _selectThemeMode(ThemeMode.dark, themeController),
+            ),
+            _themeOption(
+              mode: ThemeMode.system,
+              title: 'System',
+              icon: Icons.brightness_auto,
+              selectedMode: themeController.themeMode,
+              onSelected: () =>
+                  _selectThemeMode(ThemeMode.system, themeController),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _themeOption({
+    required ThemeMode mode,
+    required String title,
+    required IconData icon,
+    required ThemeMode selectedMode,
+    required VoidCallback onSelected,
+  }) {
+    final selected = mode == selectedMode;
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      trailing: selected ? const Icon(Icons.check) : null,
+      selected: selected,
+      onTap: onSelected,
+    );
+  }
+
+  void _selectThemeMode(ThemeMode mode, ThemeController themeController) {
+    themeController.setThemeMode(mode);
+    Navigator.pop(context);
   }
 }
 
