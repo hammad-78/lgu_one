@@ -163,16 +163,28 @@ exports.onAdminNotificationCreated = onDocumentCreated(
         const data = event.data ? event.data.data() : null;
         if (!data) return null;
 
-        const title = String(data.title || 'LGU Connect');
-        const body = String(data.body || 'You have a new update.');
+        const title = String(data.title || '').trim().slice(0, 100);
+        const body = String(data.body || '').trim().slice(0, 1000);
+        if (!title || !body) {
+            console.error(
+                `Admin notification ${event.params.notificationId} is missing a title or body.`,
+            );
+            return null;
+        }
+
         await saveNotification(title, body, 'announcement', event.params.notificationId);
 
         const tokensSnapshot = await db.collection('device_tokens').get();
-        const tokens = tokensSnapshot.docs
+        const tokens = [...new Set(tokensSnapshot.docs
             .map(doc => doc.data().token)
-            .filter(token => token);
+            .filter(token => typeof token === 'string' && token.length > 0))];
 
-        if (tokens.length === 0) return null;
+        if (tokens.length === 0) {
+            console.log(
+                `Admin notification ${event.params.notificationId} had no registered devices.`,
+            );
+            return null;
+        }
 
         const responses = await Promise.all(
             chunk(tokens, 500).map(tokenBatch => messaging.sendEachForMulticast({
@@ -188,7 +200,20 @@ exports.onAdminNotificationCreated = onDocumentCreated(
                 },
             })),
         );
-        console.log(`Admin notification sent to ${tokens.length} device(s).`, responses);
+        const failedTokens = [];
+        let tokenOffset = 0;
+        responses.forEach(response => {
+            response.responses.forEach((result, index) => {
+                if (!result.success) failedTokens.push(tokens[tokenOffset + index]);
+            });
+            tokenOffset += response.responses.length;
+        });
+        if (failedTokens.length > 0) {
+            console.warn(
+                `Admin notification failed for ${failedTokens.length} device(s).`,
+            );
+        }
+        console.log(`Admin notification sent to ${tokens.length - failedTokens.length} device(s).`);
         return null;
     },
 );
@@ -326,4 +351,3 @@ exports.sendDailyEventReminders = onSchedule(
         return null;
     }
 );
-

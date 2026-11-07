@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class AdminNotificationScreen extends StatefulWidget {
   const AdminNotificationScreen({super.key});
 
   @override
-  State<AdminNotificationScreen> createState() => _AdminNotificationScreenState();
+  State<AdminNotificationScreen> createState() =>
+      _AdminNotificationScreenState();
 }
 
 class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
@@ -14,30 +16,42 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
   final _bodyController = TextEditingController();
   bool _isSending = false;
 
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _bodyController.dispose();
+    super.dispose();
+  }
+
   Future<void> _sendNotification() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSending = true);
 
     try {
-      // We add to 'admin_notifications' which will trigger a Cloud Function
-      // to broadcast to all users and save to 'notifications' history.
+      final user = FirebaseAuth.instance.currentUser;
       await FirebaseFirestore.instance.collection('admin_notifications').add({
         'title': _titleController.text.trim(),
         'body': _bodyController.text.trim(),
+        'createdBy': user?.uid,
         'timestamp': FieldValue.serverTimestamp(),
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Notification sent successfully!")),
+          const SnackBar(
+            content: Text("Notification queued for all registered devices."),
+          ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.redAccent),
+          SnackBar(
+            content: Text("Error: $e"),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     } finally {
@@ -50,11 +64,13 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Send Announcement"),
-      ),
-      body: _isSending 
-          ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
+      appBar: AppBar(title: const Text("Send Announcement")),
+      body: _isSending
+          ? Center(
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
+              ),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Form(
@@ -64,12 +80,19 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
                   children: [
                     Text(
                       "Broadcast Message",
-                      style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontSize: 18,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       "This will send a push notification to every student and add it to the app's notification history.",
-                      style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13),
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.6,
+                        ),
+                        fontSize: 13,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     TextFormField(
@@ -78,23 +101,40 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
                       decoration: InputDecoration(
                         labelText: "Notification Title",
                         hintText: "e.g. Campus Holiday Notice",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: Icon(Icons.title, color: theme.colorScheme.primary),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.title,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
-                      validator: (val) => val == null || val.isEmpty ? "Title is required" : null,
+                      maxLength: 100,
+                      validator: (val) => val == null || val.trim().isEmpty
+                          ? "Title is required"
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _bodyController,
                       style: TextStyle(color: theme.colorScheme.onSurface),
                       maxLines: 5,
+                      maxLength: 1000,
                       decoration: InputDecoration(
                         labelText: "Message Body",
-                        hintText: "Type the details of your announcement here...",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: Icon(Icons.message, color: theme.colorScheme.primary),
+                        hintText:
+                            "Type the details of your announcement here...",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.message,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
-                      validator: (val) => val == null || val.isEmpty ? "Message body is required" : null,
+                      validator: (val) => val == null || val.trim().isEmpty
+                          ? "Message body is required"
+                          : null,
                     ),
                     const SizedBox(height: 30),
                     SizedBox(
@@ -103,7 +143,13 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _sendNotification,
                         icon: const Icon(Icons.send),
-                        label: const Text("Send to All Users", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        label: const Text(
+                          "Send to All Users",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],

@@ -6,6 +6,7 @@ import 'package:lgu_one/admin/admin_events_screen.dart';
 import 'package:lgu_one/admin/admin_jobs_screen.dart';
 import 'package:lgu_one/admin/admin_lost_found.dart';
 import 'package:lgu_one/admin/admin_news_screen.dart';
+import 'package:lgu_one/admin/admin_notification_screen.dart';
 import 'package:lgu_one/admin/admin_societies_screen.dart';
 import 'package:lgu_one/home_screen.dart';
 
@@ -355,6 +356,13 @@ class _AdminHomeState extends State<AdminHome> {
                               label: "Societies",
                               onTap: () =>
                                   _navigate(const AdminSocietiesScreen()),
+                            ),
+                            _buildActionButton(
+                              context: context,
+                              icon: Icons.campaign_outlined,
+                              label: "Send Notification",
+                              onTap: () =>
+                                  _navigate(const AdminNotificationScreen()),
                             ),
                           ],
                         );
