@@ -123,9 +123,6 @@ class SettingsScreen extends StatelessWidget {
         'Download LGU Connect from the Play Store:\n$_appLink',
         subject: 'LGU Connect',
       );
-      if (context.mounted) {
-        Navigator.pop(context);
-      }
       if (result.status == ShareResultStatus.unavailable && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No apps are available to share.')),
@@ -133,7 +130,6 @@ class SettingsScreen extends StatelessWidget {
       }
     } on PlatformException {
       if (!context.mounted) return;
-      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open sharing options.')),
       );
