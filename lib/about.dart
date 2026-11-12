@@ -65,17 +65,7 @@ class About extends StatelessWidget {
               icon: Icons.info_outline,
               title: "About the App",
               text:
-                  "LGU Connect is the official campus companion app for Lahore Garrison University, helping students stay connected through lost & found, societies, job opportunities, and collaboration — all in one place.",
-            ),
-
-            // 🎯 PURPOSE
-            _card(
-              context,
-              icon: Icons.flag,
-              title: "Purpose",
-              text:
-                  """
-LGU Connect brings students, societies, and campus resources together in one place — making everyday campus life simpler and more connected.""",
+                  "Welcome to the unofficial campus companion app for Lahore Garrison University. We help students stay connected through societies, lost & found, and job opportunities.\n\nStudents can even tap into the collaboration tab to share ideas and find groups to work together.",
             ),
 
             // 👨‍💻 DEVELOPERS
@@ -93,7 +83,7 @@ LGU Connect brings students, societies, and campus resources together in one pla
               context,
               icon: Icons.system_update,
               title: "App Version",
-              text: "alpha",
+              text: "Alpha",
             ),
 
             const SizedBox(height: 20),

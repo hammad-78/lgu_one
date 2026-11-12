@@ -119,6 +119,16 @@ class _SplashScreenState extends State<SplashScreen>
                     letterSpacing: 0.5,
                   ),
                 ),
+                const SizedBox(height: 6),
+                Text(
+                  "Unofficial-Student Initiative",
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.75),
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 0.4,
+                  ),
+                ),
                 const SizedBox(height: 40),
 
                 // Loading Indicator

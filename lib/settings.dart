@@ -31,7 +31,7 @@ class SettingsScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     Text(
-                      'Get LGU Connect',
+                      'Don\'t hide it from your friends!',
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -40,7 +40,7 @@ class SettingsScreen extends StatelessWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.asset(
-                        'assets/images/LGU Connect QR Code.png',
+                        'assets/images/lgu_qr_code.png',
                         width: 220,
                         height: 220,
                         fit: BoxFit.contain,
@@ -221,7 +221,7 @@ class SettingsScreen extends StatelessWidget {
   Future<void> _clearCache(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     final selectedTheme = prefs.getString('theme_mode');
-    await prefs.clear();
+    await prefs.clear(); // also removes the remembered LGU student email
     if (selectedTheme != null) {
       await prefs.setString('theme_mode', selectedTheme);
     }

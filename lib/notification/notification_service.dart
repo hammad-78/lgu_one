@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tzlib;
+import 'package:lgu_one/auth/lgu_email_gate.dart';
 import 'package:lgu_one/collaboration/join_collaboration.dart';
 import 'package:lgu_one/Lost_Found/listing_screen.dart';
 
@@ -176,8 +177,13 @@ class NotificationService {
     });
   }
 
-  void handleMessageByPayload(BuildContext context, String? payload) {
+  Future<void> handleMessageByPayload(
+    BuildContext context,
+    String? payload,
+  ) async {
     if (payload == 'collaboration') {
+      if (!await LguEmailGate.ensureVerified(context)) return;
+      if (!context.mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -185,6 +191,8 @@ class NotificationService {
         ),
       );
     } else if (payload == 'lost_found') {
+      if (!await LguEmailGate.ensureVerified(context)) return;
+      if (!context.mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const ListingsScreen()),
@@ -192,9 +200,14 @@ class NotificationService {
     }
   }
 
-  void handleMessage(BuildContext context, RemoteMessage message) {
+  Future<void> handleMessage(
+    BuildContext context,
+    RemoteMessage message,
+  ) async {
     final type = message.data['type'];
     if (type == 'collaboration') {
+      if (!await LguEmailGate.ensureVerified(context)) return;
+      if (!context.mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -202,6 +215,8 @@ class NotificationService {
         ),
       );
     } else if (type == 'lost_found') {
+      if (!await LguEmailGate.ensureVerified(context)) return;
+      if (!context.mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const ListingsScreen()),

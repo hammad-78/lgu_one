@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lgu_one/Lost_Found/listing_screen.dart';
+import 'package:lgu_one/auth/lgu_email_gate.dart';
 import 'package:lgu_one/gpa/gpa_calculator_screen.dart';
 import 'package:lgu_one/student_portal_screen.dart';
 
@@ -30,6 +31,8 @@ class _DashboardGridState extends State<DashboardGrid> {
         icon: Icons.location_on_outlined,
         imageAsset: "assets/images/lostnfound.png",
         onTap: () async {
+          if (!await LguEmailGate.ensureVerified(context)) return;
+          if (!context.mounted) return;
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ListingsScreen()),
