@@ -8,7 +8,17 @@ import 'news_model.dart';
 import 'news_detail_screen.dart';
 
 class NewsCarousel extends StatefulWidget {
-  const NewsCarousel({super.key});
+  /// Carousel height. The defaults keep the original mobile look.
+  final double height;
+  final double viewportFraction;
+  final bool enlargeCenterPage;
+
+  const NewsCarousel({
+    super.key,
+    this.height = 200,
+    this.viewportFraction = 0.9,
+    this.enlargeCenterPage = true,
+  });
 
   @override
   State<NewsCarousel> createState() => _NewsCarouselState();
@@ -18,8 +28,9 @@ class _NewsCarouselState extends State<NewsCarousel> {
   final ValueNotifier<int> _currentIndex = ValueNotifier(0);
   final CarouselSliderController _carouselController =
       CarouselSliderController();
-  late final Stream<QuerySnapshot> _newsStream =
-      FirebaseFirestore.instance.collection('news').snapshots();
+  late final Stream<QuerySnapshot> _newsStream = FirebaseFirestore.instance
+      .collection('news')
+      .snapshots();
 
   @override
   void dispose() {
@@ -34,10 +45,11 @@ class _NewsCarouselState extends State<NewsCarousel> {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           final errorStr = snapshot.error.toString();
-          final isPermission = errorStr.contains('permission-denied') ||
+          final isPermission =
+              errorStr.contains('permission-denied') ||
               errorStr.contains('PERMISSION_DENIED');
           return Container(
-            height: 200,
+            height: widget.height,
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -49,7 +61,11 @@ class _NewsCarouselState extends State<NewsCarousel> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, color: Colors.red.shade400, size: 28),
+                  Icon(
+                    Icons.error_outline,
+                    color: Colors.red.shade400,
+                    size: 28,
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     isPermission
@@ -85,16 +101,14 @@ class _NewsCarouselState extends State<NewsCarousel> {
 
         if (docs.isEmpty) {
           return Container(
-            height: 200,
+            height: widget.height,
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: Theme.of(context).brightness == Brightness.dark
                   ? const Color(0xFF0B3D2E)
                   : Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.green.withValues(alpha: 0.2),
-              ),
+              border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.05),
@@ -107,8 +121,11 @@ class _NewsCarouselState extends State<NewsCarousel> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.newspaper_outlined,
-                      size: 44, color: Colors.grey.shade400),
+                  Icon(
+                    Icons.newspaper_outlined,
+                    size: 44,
+                    color: Colors.grey.shade400,
+                  ),
                   const SizedBox(height: 10),
                   Text(
                     "No news available at the moment",
@@ -124,8 +141,9 @@ class _NewsCarouselState extends State<NewsCarousel> {
           );
         }
 
-        final newsList =
-            docs.map((doc) => NewsModel.fromDocument(doc)).toList();
+        final newsList = docs
+            .map((doc) => NewsModel.fromDocument(doc))
+            .toList();
 
         // Sort by createdAt descending in memory safely
         newsList.sort((a, b) {
@@ -155,12 +173,12 @@ class _NewsCarouselState extends State<NewsCarousel> {
             CarouselSlider(
               carouselController: _carouselController,
               options: CarouselOptions(
-                height: 200,
+                height: widget.height,
                 initialPage: _currentIndex.value,
                 autoPlay: newsList.length > 1,
                 autoPlayInterval: const Duration(seconds: 3),
-                enlargeCenterPage: true,
-                viewportFraction: 0.9,
+                enlargeCenterPage: widget.enlargeCenterPage,
+                viewportFraction: widget.viewportFraction,
                 onPageChanged: (index, reason) {
                   _currentIndex.value = index;
                 },
@@ -307,8 +325,9 @@ class _NewsCarouselState extends State<NewsCarousel> {
   Widget _buildSkeletonCarousel(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseColor = isDark ? const Color(0xFF0F382A) : Colors.grey.shade300;
-    final highlightColor =
-        isDark ? const Color(0xFF1E5240) : Colors.grey.shade100;
+    final highlightColor = isDark
+        ? const Color(0xFF1E5240)
+        : Colors.grey.shade100;
 
     return Skeletonizer(
       enabled: true,
@@ -319,7 +338,7 @@ class _NewsCarouselState extends State<NewsCarousel> {
         duration: const Duration(milliseconds: 1200),
       ),
       child: Container(
-        height: 200,
+        height: widget.height,
         margin: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),

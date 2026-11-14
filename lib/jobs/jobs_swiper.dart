@@ -7,7 +7,10 @@ import 'card.dart';
 import 'model.dart';
 
 class JobsSwiper extends StatefulWidget {
-  const JobsSwiper({super.key});
+  /// When true (wide web layout) jobs render as a grid instead of a swiper.
+  final bool grid;
+
+  const JobsSwiper({super.key, this.grid = false});
 
   @override
   State<JobsSwiper> createState() => _JobsSwiperState();
@@ -15,8 +18,9 @@ class JobsSwiper extends StatefulWidget {
 
 class _JobsSwiperState extends State<JobsSwiper> {
   final CardSwiperController _swiperController = CardSwiperController();
-  late final Stream<QuerySnapshot> _jobsStream =
-      FirebaseFirestore.instance.collection('jobs').snapshots();
+  late final Stream<QuerySnapshot> _jobsStream = FirebaseFirestore.instance
+      .collection('jobs')
+      .snapshots();
   int _currentIndex = 0;
 
   @override
@@ -34,7 +38,8 @@ class _JobsSwiperState extends State<JobsSwiper> {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           final err = snapshot.error.toString();
-          final isPermission = err.contains('permission-denied') ||
+          final isPermission =
+              err.contains('permission-denied') ||
               err.contains('PERMISSION_DENIED');
           return Container(
             height: 220,
@@ -49,8 +54,11 @@ class _JobsSwiperState extends State<JobsSwiper> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline,
-                      color: Colors.red.shade400, size: 36),
+                  Icon(
+                    Icons.error_outline,
+                    color: Colors.red.shade400,
+                    size: 36,
+                  ),
                   const SizedBox(height: 10),
                   Text(
                     isPermission
@@ -82,9 +90,7 @@ class _JobsSwiperState extends State<JobsSwiper> {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF0B3D2E) : Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.green.withValues(alpha: 0.2),
-              ),
+              border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.05),
@@ -97,8 +103,11 @@ class _JobsSwiperState extends State<JobsSwiper> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.work_off_outlined,
-                      size: 44, color: Colors.grey.shade400),
+                  Icon(
+                    Icons.work_off_outlined,
+                    size: 44,
+                    color: Colors.grey.shade400,
+                  ),
                   const SizedBox(height: 10),
                   Text(
                     "No career opportunities available right now",
@@ -134,6 +143,21 @@ class _JobsSwiperState extends State<JobsSwiper> {
           }
         });
 
+        if (widget.grid) {
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 380,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 0.78,
+            ),
+            itemCount: jobsList.length,
+            itemBuilder: (context, index) => JobCard(job: jobsList[index]),
+          );
+        }
+
         return Transform.translate(
           offset: const Offset(0, -12),
           child: SizedBox(
@@ -163,8 +187,9 @@ class _JobsSwiperState extends State<JobsSwiper> {
   Widget _buildSkeletonJobSwiper(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseColor = isDark ? const Color(0xFF0F382A) : Colors.grey.shade300;
-    final highlightColor =
-        isDark ? const Color(0xFF1E5240) : Colors.grey.shade100;
+    final highlightColor = isDark
+        ? const Color(0xFF1E5240)
+        : Colors.grey.shade100;
 
     return Transform.translate(
       offset: const Offset(0, -12),

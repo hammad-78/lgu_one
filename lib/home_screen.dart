@@ -112,256 +112,529 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
+  /// Width at which the web layout switches to sidebar + dashboard.
+  static const double _wideBreakpoint = 900;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              padding: const EdgeInsets.all(3),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: Image.asset(
-                'assets/images/lgu_connect_icon.png',
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text('LGU Connect', style: theme.appBarTheme.titleTextStyle),
-          ],
-        ),
-        actions: [
-          StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('notifications')
-                .orderBy('timestamp', descending: true)
-                .limit(10)
-                .snapshots(),
-            builder: (context, snapshot) {
-              int unreadCount = 0;
-              if (snapshot.hasData) {
-                unreadCount = snapshot.data!.docs
-                    .where((doc) => !_seenIds.contains(doc.id))
-                    .length;
-              }
+    if (MediaQuery.sizeOf(context).width >= _wideBreakpoint) {
+      return _buildDesktop(theme);
+    }
 
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  IconButton(
-                    icon: Image.asset(
-                      'assets/images/bell_icon.png',
-                      width: 32,
-                      height: 32,
-                      fit: BoxFit.contain,
-                    ),
-                    onPressed: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const NotificationScreen(),
-                        ),
-                      );
-                      _loadSeenIds();
-                    },
-                  ),
-                  if (unreadCount > 0)
-                    Positioned(
-                      right: 2,
-                      top: 2,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          '$unreadCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
+    return Scaffold(
+      appBar: _buildAppBar(theme),
+      drawer: _buildDrawer(),
+      body: _buildMobileBody(theme),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(ThemeData theme) {
+    return AppBar(
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+      ),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            padding: const EdgeInsets.all(3),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            child: Image.asset(
+              'assets/images/lgu_connect_icon.png',
+              fit: BoxFit.contain,
+            ),
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: 8),
+          Text('LGU Connect', style: theme.appBarTheme.titleTextStyle),
         ],
       ),
-      drawer: _buildDrawer(),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1180),
-          child: Scrollbar(
-            controller: _scrollController,
-            child: ListView(
-              controller: _scrollController,
-              children: [
-                const SizedBox(height: 5),
-                if (_showNotificationBanner) _buildNotificationBanner(theme),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 30,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.campaign_outlined,
-                        size: 25,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          "Latest News & Updates",
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const NewsCarousel(),
-                const SizedBox(height: 10),
-                const DashboardGrid(),
-                const SizedBox(height: 10),
+      actions: [
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('notifications')
+              .orderBy('timestamp', descending: true)
+              .limit(10)
+              .snapshots(),
+          builder: (context, snapshot) {
+            int unreadCount = 0;
+            if (snapshot.hasData) {
+              unreadCount = snapshot.data!.docs
+                  .where((doc) => !_seenIds.contains(doc.id))
+                  .length;
+            }
 
-                // Quick Action Cards
-                _buildQuickActionCard(
-                  context,
-                  title: "Upcoming Events",
-                  icon: Icons.event,
-                  imageAsset: "assets/images/calender_icon.png",
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const UpcomingEventsScreen(),
-                    ),
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: Image.asset(
+                    'assets/images/bell_icon.png',
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.contain,
                   ),
-                  isEvent: true,
-                ),
-                _buildQuickActionCard(
-                  context,
-                  title: "Join LGU Societies",
-                  icon: Icons.handshake,
-                  imageAsset: "assets/images/handshake_icon.png",
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SocietiesScreen()),
-                  ),
-                ),
-                _buildQuickActionCard(
-                  context,
-                  title: "Student Collaboration",
-                  icon: Icons.diversity_3,
-                  imageAsset: "assets/images/group_icon.png",
-                  onTap: () async {
-                    if (!await LguEmailGate.ensureVerified(context)) return;
-                    if (!context.mounted) return;
-                    Navigator.push(
+                  onPressed: () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const CollaborationScreen(),
+                        builder: (_) => const NotificationScreen(),
                       ),
                     );
+                    _loadSeenIds();
                   },
                 ),
-
-                const SizedBox(height: 10),
-                Padding(
-                  key: _jobsKey,
-                  padding: const EdgeInsets.fromLTRB(20, 10, 0, 0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: theme.brightness == Brightness.dark
-                              ? Colors.white.withValues(alpha: 0.16)
-                              : theme.colorScheme.primary.withValues(
-                                  alpha: 0.12,
-                                ),
-                          border: Border.all(
-                            color: theme.colorScheme.primary.withValues(
-                              alpha: 0.35,
-                            ),
-                          ),
-                        ),
-                        child: Image.asset(
-                          'assets/images/suitecase_icon.png',
-                          width: 27,
-                          height: 27,
-                          fit: BoxFit.contain,
-                        ),
+                if (unreadCount > 0)
+                  Positioned(
+                    right: 2,
+                    top: 2,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          "Jobs and Internship Opportunities",
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
                       ),
-                    ],
+                      child: Text(
+                        '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(width: 15),
+      ],
+    );
+  }
+
+  Widget _buildMobileBody(ThemeData theme) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1180),
+        child: Scrollbar(
+          controller: _scrollController,
+          child: ListView(
+            controller: _scrollController,
+            children: [
+              const SizedBox(height: 5),
+              if (_showNotificationBanner) _buildNotificationBanner(theme),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 12,
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 4, 20, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Icon(
-                        Icons.swipe,
-                        size: 14,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.campaign_outlined,
+                      size: 25,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        "Latest News & Updates",
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const NewsCarousel(),
+              const SizedBox(height: 10),
+              const DashboardGrid(),
+              const SizedBox(height: 10),
+
+              // Quick Action Cards
+              ..._quickActionCards(context),
+
+              const SizedBox(height: 10),
+              Padding(
+                key: _jobsKey,
+                padding: const EdgeInsets.fromLTRB(20, 10, 0, 0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.brightness == Brightness.dark
+                            ? Colors.white.withValues(alpha: 0.16)
+                            : theme.colorScheme.primary.withValues(alpha: 0.12),
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.35,
+                          ),
+                        ),
+                      ),
+                      child: Image.asset(
+                        'assets/images/suitecase_icon.png',
+                        width: 27,
+                        height: 27,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        "Jobs and Internship Opportunities",
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 4, 20, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Icon(
+                      Icons.swipe,
+                      size: 14,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      "Swipe",
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 12,
                         color: theme.colorScheme.onSurface.withValues(
                           alpha: 0.5,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        "Swipe",
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.5,
+                    ),
+                  ],
+                ),
+              ),
+              const JobsSwiper(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _quickActionCards(BuildContext context) {
+    return [
+      _buildQuickActionCard(
+        context,
+        title: "Upcoming Events",
+        icon: Icons.event,
+        imageAsset: "assets/images/calender_icon.png",
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const UpcomingEventsScreen()),
+        ),
+        isEvent: true,
+      ),
+      _buildQuickActionCard(
+        context,
+        title: "Join LGU Societies",
+        icon: Icons.handshake,
+        imageAsset: "assets/images/handshake_icon.png",
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SocietiesScreen()),
+        ),
+      ),
+      _buildQuickActionCard(
+        context,
+        title: "Student Collaboration",
+        icon: Icons.diversity_3,
+        imageAsset: "assets/images/group_icon.png",
+        onTap: () async {
+          if (!await LguEmailGate.ensureVerified(context)) return;
+          if (!context.mounted) return;
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CollaborationScreen()),
+          );
+        },
+      ),
+    ];
+  }
+
+  // ───────────────────────── Wide / web layout ─────────────────────────
+
+  Widget _buildDesktop(ThemeData theme) {
+    return Scaffold(
+      appBar: _buildAppBar(theme),
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildSidebar(theme),
+          Expanded(
+            child: Scrollbar(
+              controller: _scrollController,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1180),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_showNotificationBanner)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _buildNotificationBanner(theme),
+                          ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 7,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _sectionTitle(
+                                    theme,
+                                    Icon(
+                                      Icons.campaign_outlined,
+                                      size: 25,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                    "Latest News & Updates",
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const NewsCarousel(
+                                    height: 330,
+                                    viewportFraction: 1,
+                                    enlargeCenterPage: false,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 4,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _sectionTitle(
+                                    theme,
+                                    Icon(
+                                      Icons.explore_outlined,
+                                      size: 25,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                    "Campus Life",
+                                  ),
+                                  const SizedBox(height: 2),
+                                  ..._quickActionCards(context),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 28),
+                        _sectionTitle(
+                          theme,
+                          Icon(
+                            Icons.dashboard_customize_outlined,
+                            size: 25,
+                            color: theme.colorScheme.primary,
+                          ),
+                          "Student Tools",
+                        ),
+                        const SizedBox(height: 14),
+                        const DashboardGrid(wide: true),
+                        const SizedBox(height: 36),
+                        KeyedSubtree(
+                          key: _jobsKey,
+                          child: _sectionTitle(
+                            theme,
+                            Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: theme.brightness == Brightness.dark
+                                    ? Colors.white.withValues(alpha: 0.16)
+                                    : theme.colorScheme.primary.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                border: Border.all(
+                                  color: theme.colorScheme.primary.withValues(
+                                    alpha: 0.35,
+                                  ),
+                                ),
+                              ),
+                              child: Image.asset(
+                                'assets/images/suitecase_icon.png',
+                                width: 27,
+                                height: 27,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            "Jobs and Internship Opportunities",
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        const JobsSwiper(grid: true),
+                      ],
+                    ),
                   ),
                 ),
-                const JobsSwiper(),
-              ],
+              ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(ThemeData theme, Widget leading, String text) {
+    return Row(
+      children: [
+        leading,
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSidebar(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final highlight = theme.colorScheme.primary;
+
+    Widget item({
+      required Widget leading,
+      required String label,
+      required VoidCallback onTap,
+      bool selected = false,
+    }) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        child: ListTile(
+          selected: selected,
+          selectedTileColor: highlight.withValues(alpha: 0.12),
+          selectedColor: highlight,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          leading: leading,
+          title: Text(
+            label,
+            style: TextStyle(
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+          onTap: onTap,
+        ),
+      );
+    }
+
+    return Container(
+      width: 264,
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: highlight.withValues(alpha: isDark ? 0.3 : 0.25),
+          ),
+        ),
+      ),
+      child: Material(
+        color: theme.cardTheme.color,
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            item(
+              leading: _drawerIcon("assets/images/home_icon.png"),
+              label: "Home",
+              selected: true,
+              onTap: () {},
+            ),
+            item(
+              leading: _drawerIcon("assets/images/abouUs_icon.png"),
+              label: "About Us",
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const About()),
+              ),
+            ),
+            item(
+              leading: _drawerIcon("assets/images/recommendation_icon.png"),
+              label: "Recommendations",
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const RecommendationsPage(),
+                ),
+              ),
+            ),
+            item(
+              leading: _drawerIcon("assets/images/message_icon.png"),
+              label: "Contact us",
+              onTap: () => contactUsOnWhatsApp(context),
+            ),
+            item(
+              leading: const SizedBox.square(
+                dimension: 30,
+                child: Icon(Icons.settings),
+              ),
+              label: "Settings",
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Divider(color: highlight.withValues(alpha: 0.2)),
+            ),
+            item(
+              leading: _drawerIcon("assets/images/group_icon.png"),
+              label: "Admin Signin",
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AdminSignin()),
+              ),
+            ),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                "Unofficial · Student Initiative",
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+          ],
         ),
       ),
     );

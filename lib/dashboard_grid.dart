@@ -5,7 +5,11 @@ import 'package:lgu_one/gpa/gpa_calculator_screen.dart';
 import 'package:lgu_one/student_portal_screen.dart';
 
 class DashboardGrid extends StatefulWidget {
-  const DashboardGrid({super.key});
+  /// When true (wide web layout) tiles share the row equally instead of
+  /// scrolling horizontally.
+  final bool wide;
+
+  const DashboardGrid({super.key, this.wide = false});
 
   @override
   State<DashboardGrid> createState() => _DashboardGridState();
@@ -22,7 +26,9 @@ class _DashboardGridState extends State<DashboardGrid> {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const StudentPortalScreen()),
+            MaterialPageRoute(
+              builder: (context) => const StudentPortalScreen(),
+            ),
           );
         },
       ),
@@ -46,11 +52,33 @@ class _DashboardGridState extends State<DashboardGrid> {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const GpaCalculatorScreen()),
+            MaterialPageRoute(
+              builder: (context) => const GpaCalculatorScreen(),
+            ),
           );
         },
       ),
     ];
+
+    if (widget.wide) {
+      return Row(
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) const SizedBox(width: 16),
+            Expanded(
+              child: GridItem(
+                title: items[i].title,
+                icon: items[i].icon,
+                imageAsset: items[i].imageAsset,
+                onTap: items[i].onTap,
+                width: double.infinity,
+                height: 150,
+              ),
+            ),
+          ],
+        ],
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -76,15 +104,21 @@ class _DashboardGridState extends State<DashboardGrid> {
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                       colors: [
-                        Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.0),
-                        Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.9),
+                        Theme.of(
+                          context,
+                        ).scaffoldBackgroundColor.withValues(alpha: 0.0),
+                        Theme.of(
+                          context,
+                        ).scaffoldBackgroundColor.withValues(alpha: 0.9),
                       ],
                     ),
                   ),
                   alignment: Alignment.center,
                   child: Icon(
                     Icons.chevron_right,
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.7),
                   ),
                 ),
               ),
@@ -101,6 +135,8 @@ class GridItem extends StatelessWidget {
   final IconData icon;
   final String? imageAsset;
   final VoidCallback? onTap;
+  final double width;
+  final double height;
 
   const GridItem({
     super.key,
@@ -108,6 +144,8 @@ class GridItem extends StatelessWidget {
     required this.icon,
     this.imageAsset,
     this.onTap,
+    this.width = 160,
+    this.height = 160,
   });
 
   @override
@@ -116,13 +154,15 @@ class GridItem extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      height: 160,
-      width: 160,
+      height: height,
+      width: width,
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: isDark ? 0.3 : 0.25),
+          color: theme.colorScheme.primary.withValues(
+            alpha: isDark ? 0.3 : 0.25,
+          ),
           width: 1,
         ),
         boxShadow: [
@@ -151,11 +191,7 @@ class GridItem extends StatelessWidget {
                     color: theme.colorScheme.primary.withValues(alpha: 0.12),
                   ),
                   child: imageAsset == null
-                      ? Icon(
-                          icon,
-                          size: 28,
-                          color: theme.colorScheme.primary,
-                        )
+                      ? Icon(icon, size: 28, color: theme.colorScheme.primary)
                       : Image.asset(
                           imageAsset!,
                           width: 44,
