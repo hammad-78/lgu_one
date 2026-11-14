@@ -6,8 +6,13 @@ import 'model.dart';
 
 class SocietyCard extends StatelessWidget {
   final Society society;
+  final EdgeInsetsGeometry margin;
 
-  const SocietyCard({super.key, required this.society});
+  const SocietyCard({
+    super.key,
+    required this.society,
+    this.margin = const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +30,7 @@ class SocietyCard extends StatelessWidget {
       // ✅ cardTheme already supplies color, elevation: 3, borderRadius: 16 —
       // no need to hand-roll a BoxDecoration + boxShadow that duplicates it
       // (and doesn't dim correctly in dark mode like the rest of your app does)
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: margin,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(

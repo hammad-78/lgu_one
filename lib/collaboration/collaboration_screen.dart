@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lgu_one/notification/notification_service.dart';
 import 'package:lgu_one/utils/flushbar.dart';
 import 'package:lgu_one/utils/pakistani_phone_formatter.dart';
+import 'package:lgu_one/utils/web_layout.dart';
 import 'join_collaboration.dart';
 
 class CollaborationScreen extends StatefulWidget {
@@ -58,6 +59,7 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
         ? const Color(0xFFB0BEC5)
         : const Color(0xFF4CAF50);
     final cardColor = isDark ? const Color(0xFF0B3D2E) : Colors.white;
+    final wide = isWideWeb(context);
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -71,96 +73,112 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // ── HEADER ────────────────────────────────────────────────
-                Text(
-                  'Connect & Collaborate',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
+          child: _frame(
+            wide,
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // ── HEADER ────────────────────────────────────────────────
+                  Text(
+                    'Connect & Collaborate',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Create projects or join existing ones',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontSize: 14,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                  const SizedBox(height: 8),
+                  Text(
+                    'Create projects or join existing ones',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 14,
+                      color: isDark ? Colors.white60 : Colors.black54,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 32),
+                  const SizedBox(height: 32),
 
-                // ── HERO CARDS ────────────────────────────────────────────
-                Expanded(
-                  child: Column(
-                    children: [
-                      // CREATE card
-                      Expanded(
-                        child: _HeroCard(
-                          gradientColors: isDark
-                              ? [
-                                  const Color(0xFF1C5A4D),
-                                  const Color(0xFF0B3D2E),
-                                ]
-                              : [
-                                  const Color(0xFF4CAF50),
-                                  const Color(0xFF66BB6A),
-                                ],
-                          shadowColor: isDark
-                              ? const Color(0xFF2E8B76)
-                              : highlight,
-                          icon: Icons.add_circle_outline,
-                          topLabel: 'CREATE',
-                          mainLabel: 'COLLABORATION',
-                          subLabel: 'Start a new project',
-                          buttonIcon: Icons.arrow_forward_ios,
-                          buttonLabel: 'Get Started',
-                          onTap: () => _showCreateDialog(context),
+                  // ── HERO CARDS ────────────────────────────────────────────
+                  Expanded(
+                    child: Flex(
+                      direction: wide ? Axis.horizontal : Axis.vertical,
+                      children: [
+                        // CREATE card
+                        Expanded(
+                          child: _HeroCard(
+                            gradientColors: isDark
+                                ? [
+                                    const Color(0xFF1C5A4D),
+                                    const Color(0xFF0B3D2E),
+                                  ]
+                                : [
+                                    const Color(0xFF4CAF50),
+                                    const Color(0xFF66BB6A),
+                                  ],
+                            shadowColor: isDark
+                                ? const Color(0xFF2E8B76)
+                                : highlight,
+                            icon: Icons.add_circle_outline,
+                            topLabel: 'CREATE',
+                            mainLabel: 'COLLABORATION',
+                            subLabel: 'Start a new project',
+                            buttonIcon: Icons.arrow_forward_ios,
+                            buttonLabel: 'Get Started',
+                            onTap: () => _showCreateDialog(context),
+                          ),
                         ),
-                      ),
 
-                      const SizedBox(height: 20),
+                        SizedBox(width: wide ? 24 : 0, height: wide ? 0 : 20),
 
-                      // JOIN card
-                      Expanded(
-                        child: _HeroCard(
-                          gradientColors: isDark
-                              ? [
-                                  const Color(0xFF1C5A4D),
-                                  const Color(0xFF0B3D2E),
-                                ]
-                              : [
-                                  const Color(0xFF43A047),
-                                  const Color(0xFF2E7D32),
-                                ],
-                          shadowColor: isDark
-                              ? const Color(0xFF2E8B76)
-                              : const Color(0xFF43A047),
-                          icon: Icons.people_outline,
-                          topLabel: 'JOIN',
-                          mainLabel: 'COLLABORATION',
-                          subLabel: 'Find existing projects',
-                          buttonIcon: Icons.search,
-                          buttonLabel: 'Browse Projects',
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const JoinCollaborationScreen(),
+                        // JOIN card
+                        Expanded(
+                          child: _HeroCard(
+                            gradientColors: isDark
+                                ? [
+                                    const Color(0xFF1C5A4D),
+                                    const Color(0xFF0B3D2E),
+                                  ]
+                                : [
+                                    const Color(0xFF43A047),
+                                    const Color(0xFF2E7D32),
+                                  ],
+                            shadowColor: isDark
+                                ? const Color(0xFF2E8B76)
+                                : const Color(0xFF43A047),
+                            icon: Icons.people_outline,
+                            topLabel: 'JOIN',
+                            mainLabel: 'COLLABORATION',
+                            subLabel: 'Find existing projects',
+                            buttonIcon: Icons.search,
+                            buttonLabel: 'Browse Projects',
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const JoinCollaborationScreen(),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// On wide web screens, centers the hub in a capped box instead of letting
+  /// the two hero cards stretch across the whole window.
+  Widget _frame(bool wide, Widget child) {
+    if (!wide) return child;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 960, maxHeight: 600),
+        child: child,
       ),
     );
   }

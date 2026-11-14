@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../utils/app_cached_image.dart';
 import '../utils/flushbar.dart';
+import '../utils/web_layout.dart';
 import 'edit_item_screen.dart';
 import 'lost_found_item.dart';
 import 'lost_found_service.dart';
@@ -550,6 +551,7 @@ class _ListingsScreenState extends State<ListingsScreen> {
     final accent = Theme.of(context).colorScheme.primary;
     final highlight = isDark ? accent : const Color(0xFF4CAF50);
     final cardColor = isDark ? const Color(0xFF0B3D2E) : Colors.white;
+    final isWide = isWideWeb(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Lost & Found')),
@@ -567,349 +569,391 @@ class _ListingsScreenState extends State<ListingsScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Report item'),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-              decoration: InputDecoration(
-                hintText: 'Search by title',
-                hintStyle: TextStyle(
-                  color: isDark ? Colors.white38 : Colors.grey.shade600,
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: isDark ? Colors.white60 : Colors.grey.shade700,
-                ),
-                filled: true,
-                fillColor: cardColor,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: isDark
-                        ? highlight.withValues(alpha: 0.25)
-                        : highlight.withValues(alpha: 0.45),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isWide ? 1040 : double.infinity,
+          ),
+          child: Column(
+            children: [
+              if (isWide)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 28, 12, 8),
+                  child: WebPageHeader(
+                    icon: Icon(Icons.location_on_outlined, color: accent),
+                    title: 'Lost & Found',
+                    subtitle:
+                        'Search what others lost or found, or report your own.',
                   ),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: isDark
-                        ? highlight.withValues(alpha: 0.25)
-                        : highlight.withValues(alpha: 0.45),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: TextField(
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: highlight, width: 1.5),
+                  decoration: InputDecoration(
+                    hintText: 'Search by title',
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.white38 : Colors.grey.shade600,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: isDark ? Colors.white60 : Colors.grey.shade700,
+                    ),
+                    filled: true,
+                    fillColor: cardColor,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: isDark
+                            ? highlight.withValues(alpha: 0.25)
+                            : highlight.withValues(alpha: 0.45),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: isDark
+                            ? highlight.withValues(alpha: 0.25)
+                            : highlight.withValues(alpha: 0.45),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: highlight, width: 1.5),
+                    ),
+                  ),
+                  onChanged: (v) =>
+                      setState(() => _searchText = v.trim().toLowerCase()),
                 ),
               ),
-              onChanged: (v) =>
-                  setState(() => _searchText = v.trim().toLowerCase()),
-            ),
-          ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                _buildChip(
-                  'All',
-                  _typeFilter == 'all',
-                  () => setState(() => _typeFilter = 'all'),
-                  isDark,
-                  highlight,
-                ),
-                const SizedBox(width: 8),
-                _buildChip(
-                  'Lost',
-                  _typeFilter == 'lost',
-                  () => setState(() => _typeFilter = 'lost'),
-                  isDark,
-                  highlight,
-                ),
-                const SizedBox(width: 8),
-                _buildChip(
-                  'Found',
-                  _typeFilter == 'found',
-                  () => setState(() => _typeFilter = 'found'),
-                  isDark,
-                  highlight,
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isDark
-                          ? highlight.withValues(alpha: 0.25)
-                          : highlight.withValues(alpha: 0.45),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    _buildChip(
+                      'All',
+                      _typeFilter == 'all',
+                      () => setState(() => _typeFilter = 'all'),
+                      isDark,
+                      highlight,
                     ),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _categoryFilter,
-                      dropdownColor: cardColor,
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                      icon: Icon(
-                        Icons.arrow_drop_down,
-                        color: isDark ? Colors.white70 : Colors.black54,
-                      ),
-                      items: ['all', ...lostFoundCategories]
-                          .map(
-                            (c) => DropdownMenuItem(
-                              value: c,
-                              child: Text(c == 'all' ? 'All categories' : c),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) =>
-                          setState(() => _categoryFilter = v ?? 'all'),
+                    const SizedBox(width: 8),
+                    _buildChip(
+                      'Lost',
+                      _typeFilter == 'lost',
+                      () => setState(() => _typeFilter = 'lost'),
+                      isDark,
+                      highlight,
                     ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: StreamBuilder<List<LostFoundItem>>(
-              stream: _service.getItems(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text('Something went wrong: ${snapshot.error}'),
-                  );
-                }
-                if (!snapshot.hasData) {
-                  return _buildSkeletonList(context);
-                }
-                var items = snapshot.data!;
-                // Only show active items to regular users
-                items = items.where((i) => i.status == 'active').toList();
-
-                items = items.where((i) {
-                  final matchesType =
-                      _typeFilter == 'all' || i.type == _typeFilter;
-                  final matchesCategory =
-                      _categoryFilter == 'all' || i.category == _categoryFilter;
-                  final matchesSearch =
-                      _searchText.isEmpty ||
-                      i.title.toLowerCase().contains(_searchText);
-                  return matchesType && matchesCategory && matchesSearch;
-                }).toList();
-                if (items.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(
-                        'Nothing found, nothing lost. Just you and this empty screen.\n Report Now!!!',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
+                    const SizedBox(width: 8),
+                    _buildChip(
+                      'Found',
+                      _typeFilter == 'found',
+                      () => setState(() => _typeFilter = 'found'),
+                      isDark,
+                      highlight,
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
                           color: isDark
-                              ? Colors.white60
-                              : Colors.grey.shade700,
+                              ? highlight.withValues(alpha: 0.25)
+                              : highlight.withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _categoryFilter,
+                          dropdownColor: cardColor,
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                          icon: Icon(
+                            Icons.arrow_drop_down,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                          ),
+                          items: ['all', ...lostFoundCategories]
+                              .map(
+                                (c) => DropdownMenuItem(
+                                  value: c,
+                                  child: Text(
+                                    c == 'all' ? 'All categories' : c,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) =>
+                              setState(() => _categoryFilter = v ?? 'all'),
                         ),
                       ),
                     ),
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: items.length,
-                  itemBuilder: (context, i) {
-                    final item = items[i];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () => _showItemDetail(item),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: StreamBuilder<List<LostFoundItem>>(
+                  stream: _service.getItems(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text('Something went wrong: ${snapshot.error}'),
+                      );
+                    }
+                    if (!snapshot.hasData) {
+                      return _buildSkeletonList(context);
+                    }
+                    var items = snapshot.data!;
+                    // Only show active items to regular users
+                    items = items.where((i) => i.status == 'active').toList();
+
+                    items = items.where((i) {
+                      final matchesType =
+                          _typeFilter == 'all' || i.type == _typeFilter;
+                      final matchesCategory =
+                          _categoryFilter == 'all' ||
+                          i.category == _categoryFilter;
+                      final matchesSearch =
+                          _searchText.isEmpty ||
+                          i.title.toLowerCase().contains(_searchText);
+                      return matchesType && matchesCategory && matchesSearch;
+                    }).toList();
+                    if (items.isEmpty) {
+                      return Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: item.imageUrls.isNotEmpty
-                                    ? AppCachedImage(
-                                        imageUrl: item.imageUrls.first,
-                                        width: 80,
-                                        height: 80,
-                                        fit: BoxFit.cover,
-                                        memCacheWidth: 240,
-                                        memCacheHeight: 240,
-                                        errorWidget: Container(
-                                          width: 80,
-                                          height: 80,
-                                          color: isDark
-                                              ? Colors.white10
-                                              : Colors.grey.shade200,
-                                          child: Icon(
-                                            Icons.broken_image_outlined,
-                                            color: isDark
-                                                ? Colors.white30
-                                                : Colors.grey.shade400,
-                                          ),
-                                        ),
-                                      )
-                                    : Container(
-                                        width: 80,
-                                        height: 80,
-                                        color: highlight.withValues(
-                                          alpha: isDark ? 0.12 : 0.1,
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            item.category.isNotEmpty
-                                                ? item.category[0]
-                                                : '?',
-                                            style: TextStyle(
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.bold,
-                                              color: highlight,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                              ),
-
-                              const SizedBox(width: 12),
-
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: item.type == 'lost'
-                                            ? Colors.red.withValues(
-                                                alpha: isDark ? 0.22 : 0.14,
-                                              )
-                                            : Colors.green.withValues(
-                                                alpha: isDark ? 0.22 : 0.14,
-                                              ),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        item.type.toUpperCase(),
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: item.type == 'lost'
-                                              ? (isDark
-                                                    ? Colors.red.shade200
-                                                    : Colors.red.shade700)
-                                              : (isDark
-                                                    ? Colors
-                                                          .greenAccent
-                                                          .shade100
-                                                    : Colors.green.shade800),
-                                        ),
-                                      ),
-                                    ),
-
-                                    const SizedBox(height: 6),
-
-                                    Text(
-                                      item.title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark
-                                            ? Colors.white
-                                            : Colors.black87,
-                                      ),
-                                    ),
-
-                                    const SizedBox(height: 4),
-
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.category,
-                                          size: 14,
-                                          color: isDark
-                                              ? Colors.white54
-                                              : Colors.grey.shade700,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            item.category,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: isDark
-                                                  ? Colors.white60
-                                                  : Colors.grey.shade800,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-
-                                    const SizedBox(height: 2),
-
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.location_on,
-                                          size: 14,
-                                          color: isDark
-                                              ? Colors.white54
-                                              : Colors.grey.shade700,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            item.location,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: isDark
-                                                  ? Colors.white54
-                                                  : Colors.grey.shade700,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              Icon(
-                                Icons.arrow_forward_ios,
-                                size: 16,
-                                color: isDark
-                                    ? Colors.white38
-                                    : Colors.grey.shade600,
-                              ),
-                            ],
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            'Nothing found, nothing lost. Just you and this empty screen.\n Report Now!!!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: isDark
+                                  ? Colors.white60
+                                  : Colors.grey.shade700,
+                            ),
                           ),
                         ),
-                      ),
+                      );
+                    }
+                    Widget buildItem(BuildContext context, int i) {
+                      final item = items[i];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => _showItemDetail(item),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: item.imageUrls.isNotEmpty
+                                      ? AppCachedImage(
+                                          imageUrl: item.imageUrls.first,
+                                          width: 80,
+                                          height: 80,
+                                          fit: BoxFit.cover,
+                                          memCacheWidth: 240,
+                                          memCacheHeight: 240,
+                                          errorWidget: Container(
+                                            width: 80,
+                                            height: 80,
+                                            color: isDark
+                                                ? Colors.white10
+                                                : Colors.grey.shade200,
+                                            child: Icon(
+                                              Icons.broken_image_outlined,
+                                              color: isDark
+                                                  ? Colors.white30
+                                                  : Colors.grey.shade400,
+                                            ),
+                                          ),
+                                        )
+                                      : Container(
+                                          width: 80,
+                                          height: 80,
+                                          color: highlight.withValues(
+                                            alpha: isDark ? 0.12 : 0.1,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              item.category.isNotEmpty
+                                                  ? item.category[0]
+                                                  : '?',
+                                              style: TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                                color: highlight,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                ),
+
+                                const SizedBox(width: 12),
+
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: item.type == 'lost'
+                                              ? Colors.red.withValues(
+                                                  alpha: isDark ? 0.22 : 0.14,
+                                                )
+                                              : Colors.green.withValues(
+                                                  alpha: isDark ? 0.22 : 0.14,
+                                                ),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          item.type.toUpperCase(),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: item.type == 'lost'
+                                                ? (isDark
+                                                      ? Colors.red.shade200
+                                                      : Colors.red.shade700)
+                                                : (isDark
+                                                      ? Colors
+                                                            .greenAccent
+                                                            .shade100
+                                                      : Colors.green.shade800),
+                                          ),
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 6),
+
+                                      Text(
+                                        item.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark
+                                              ? Colors.white
+                                              : Colors.black87,
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 4),
+
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.category,
+                                            size: 14,
+                                            color: isDark
+                                                ? Colors.white54
+                                                : Colors.grey.shade700,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              item.category,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: isDark
+                                                    ? Colors.white60
+                                                    : Colors.grey.shade800,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 2),
+
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.location_on,
+                                            size: 14,
+                                            color: isDark
+                                                ? Colors.white54
+                                                : Colors.grey.shade700,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              item.location,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: isDark
+                                                    ? Colors.white54
+                                                    : Colors.grey.shade700,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 16,
+                                  color: isDark
+                                      ? Colors.white38
+                                      : Colors.grey.shade600,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (isWide) {
+                      return GridView.builder(
+                        padding: const EdgeInsets.all(12),
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 500,
+                              mainAxisExtent: 134,
+                              crossAxisSpacing: 16,
+                            ),
+                        itemCount: items.length,
+                        itemBuilder: buildItem,
+                      );
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: items.length,
+                      itemBuilder: buildItem,
                     );
                   },
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lgu_one/utils/web_layout.dart';
 
 class RecommendationsPage extends StatefulWidget {
   const RecommendationsPage({super.key});
@@ -21,7 +22,7 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
     "New Feature",
     "Bug Report",
     "Career Section",
-    "Other"
+    "Other",
   ];
 
   Future<void> submitRecommendation() async {
@@ -58,9 +59,9 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Failed to submit: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("❌ Failed to submit: $e")));
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -74,6 +75,92 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
     super.dispose();
   }
 
+  Widget _formCard(ThemeData theme, bool isDark) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // CATEGORY
+            DropdownButtonFormField<String>(
+              initialValue: selectedCategory,
+              items: categories.map((String category) {
+                return DropdownMenuItem(value: category, child: Text(category));
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedCategory = value!;
+                });
+              },
+              decoration: const InputDecoration(
+                labelText: "Category",
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 15),
+
+            // TITLE
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: "Title",
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 15),
+
+            // DETAILS
+            TextField(
+              controller: _detailController,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: "Details",
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // SUBMIT BUTTON
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: isDark
+                    ? ElevatedButton.styleFrom(
+                        backgroundColor: theme.cardTheme.color,
+                        foregroundColor: Colors.white,
+                        side: BorderSide(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.3,
+                          ),
+                          width: 1,
+                        ),
+                      )
+                    : null,
+                onPressed: _isSubmitting ? null : submitRecommendation,
+                icon: _isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.send),
+                label: Text(
+                  _isSubmitting ? "Submitting..." : "Submit Recommendation",
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -81,15 +168,69 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
     final secondary = theme.colorScheme.secondary;
     final isDark = theme.brightness == Brightness.dark;
 
+    if (isWideWeb(context)) {
+      return Scaffold(
+        appBar: AppBar(title: const Text("Recommendations")),
+        body: WebScrollPage(
+          maxWidth: 1000,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 4,
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: webHeroDecoration(context),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Image(
+                        image: AssetImage('assets/images/idea_icon.png'),
+                        width: 88,
+                        height: 88,
+                        fit: BoxFit.contain,
+                      ),
+                      SizedBox(height: 20),
+                      Text(
+                        "Share Your Ideas",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        "Help us improve LGU Connect",
+                        style: TextStyle(fontSize: 16, color: Colors.white70),
+                      ),
+                      SizedBox(height: 20),
+                      Text(
+                        "Report a bug, ask for a feature or tell us what the Career section is missing.",
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(flex: 6, child: _formCard(theme, isDark)),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Recommendations"),
-      ),
+      appBar: AppBar(title: const Text("Recommendations")),
 
       body: SingleChildScrollView(
         child: Column(
           children: [
-
             // 🌿 HEADER
             Container(
               width: double.infinity,
@@ -97,10 +238,7 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: isDark
-                      ? [
-                          secondary,
-                          const Color(0xFF145A45),
-                        ]
+                      ? [secondary, const Color(0xFF145A45)]
                       : [primary, secondary],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -141,91 +279,7 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
             // 📦 FORM CARD
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-
-                      // CATEGORY
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedCategory,
-                        items: categories.map((String category) {
-                          return DropdownMenuItem(
-                            value: category,
-                            child: Text(category),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedCategory = value!;
-                          });
-                        },
-                        decoration: const InputDecoration(
-                          labelText: "Category",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      // TITLE
-                      TextField(
-                        controller: _titleController,
-                        decoration: const InputDecoration(
-                          labelText: "Title",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      // DETAILS
-                      TextField(
-                        controller: _detailController,
-                        maxLines: 4,
-                        decoration: const InputDecoration(
-                          labelText: "Details",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // SUBMIT BUTTON
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: isDark
-                              ? ElevatedButton.styleFrom(
-                                  backgroundColor: theme.cardTheme.color,
-                                  foregroundColor: Colors.white,
-                                  side: BorderSide(
-                                    color: theme.colorScheme.primary.withValues(
-                                      alpha: 0.3,
-                                    ),
-                                    width: 1,
-                                  ),
-                                )
-                              : null,
-                          onPressed: _isSubmitting ? null : submitRecommendation,
-                          icon: _isSubmitting
-                              ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                              : const Icon(Icons.send),
-                          label: Text(_isSubmitting ? "Submitting..." : "Submit Recommendation"),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              child: _formCard(theme, isDark),
             ),
 
             const SizedBox(height: 20),
@@ -342,7 +396,6 @@ class _SuccessDialogState extends State<_SuccessDialog>
             ),
 
             const SizedBox(height: 28),
-
           ],
         ),
       ),

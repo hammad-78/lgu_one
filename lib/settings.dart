@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme.dart';
 import 'utils/flushbar.dart';
+import 'utils/web_layout.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -19,63 +20,71 @@ class SettingsScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final themeController = ThemeController.of(context);
 
+    if (isWideWeb(context)) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Settings')),
+        body: WebScrollPage(
+          maxWidth: 960,
+          header: WebPageHeader(
+            icon: Icon(Icons.settings, color: theme.colorScheme.primary),
+            title: 'Settings',
+            subtitle: 'Share the app and choose how it looks.',
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 5, child: _shareCard(context, theme)),
+              const SizedBox(width: 24),
+              Expanded(
+                flex: 4,
+                child: Column(
+                  children: [
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: ListTile(
+                        leading: Icon(
+                          _themeIcon(themeController.themeMode),
+                          color: theme.colorScheme.primary,
+                        ),
+                        title: const Text('Theme'),
+                        subtitle: Text(
+                          _themeModeLabel(themeController.themeMode),
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: () => _showThemePicker(context, themeController),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.cached,
+                          color: theme.colorScheme.primary,
+                        ),
+                        title: const Text('Clear Cache'),
+                        subtitle: const Text(
+                          'Clear saved notification history',
+                        ),
+                        onTap: () => _clearCache(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Text(
-                      'Don\'t hide it from your friends!',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        'assets/images/lgu_qr_code.png',
-                        width: 220,
-                        height: 220,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Scan the QR code to download the app.',
-                      style: theme.textTheme.bodyMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => _copyAppLink(context),
-                            icon: const Icon(Icons.copy),
-                            label: const Text('Copy link'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => _shareApp(context),
-                            icon: const Icon(Icons.share),
-                            label: const Text('Share app'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            child: _shareCard(context, theme),
           ),
           _settingsTile(
             child: ListTile(
@@ -98,6 +107,60 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _shareCard(BuildContext context, ThemeData theme) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text(
+              'Don\'t hide it from your friends!',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                'assets/images/lgu_qr_code.png',
+                width: 220,
+                height: 220,
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Scan the QR code to download the app.',
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _copyAppLink(context),
+                    icon: const Icon(Icons.copy),
+                    label: const Text('Copy link'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _shareApp(context),
+                    icon: const Icon(Icons.share),
+                    label: const Text('Share app'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

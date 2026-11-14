@@ -1,5 +1,6 @@
 // lib/screens/gpa_calculator_screen.dart
 import 'package:flutter/material.dart';
+import 'package:lgu_one/utils/web_layout.dart';
 
 // ─────────────────────────────────────────────────────────────────────
 // MODELS
@@ -239,8 +240,119 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
   // BUILD METHOD
   // ───────────────────────────────────────────────────────────────────
 
+  Widget _buildWide(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return WebScrollPage(
+      maxWidth: 1040,
+      header: WebPageHeader(
+        icon: Icon(Icons.calculate_outlined, color: theme.colorScheme.primary),
+        title: 'GPA / CGPA Calculator',
+        subtitle: 'Estimate your semester or cumulative GPA on the LGU scale.',
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 6,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (isCGPAMode)
+                  ..._buildCGPASemesterList()
+                else
+                  _buildSingleSemester(0),
+                if (isCGPAMode)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Semester'),
+                      onPressed: _addSemester,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 24),
+          Expanded(
+            flex: 4,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Calculate',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SegmentedButton<bool>(
+                          segments: const [
+                            ButtonSegment(value: false, label: Text('SGPA')),
+                            ButtonSegment(value: true, label: Text('CGPA')),
+                          ],
+                          selected: {isCGPAMode},
+                          showSelectedIcon: false,
+                          onSelectionChanged: (value) => setState(() {
+                            isCGPAMode = value.first;
+                            _submittedSGPA = 0.0;
+                            _submittedCGPA = 0.0;
+                          }),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            icon: const Icon(Icons.calculate_outlined),
+                            label: const Text('Submit'),
+                            onPressed: _submitCalculation,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildResultsCard(_submittedSGPA, _submittedCGPA),
+                const SizedBox(height: 16),
+                Text(
+                  'Nurturing the Future of Pakistan in an Excellent Environment',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: theme.textTheme.bodyMedium?.color?.withValues(
+                      alpha: 0.6,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (isWideWeb(context)) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('LGU GPA Calculator'),
+          centerTitle: true,
+        ),
+        body: _buildWide(context),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('LGU GPA Calculator'),
