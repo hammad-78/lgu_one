@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../Lost_Found/lost_found_item.dart';
 import '../Lost_Found/lost_found_service.dart';
 import '../utils/app_cached_image.dart';
+import '../utils/web_layout.dart';
 
 class AdminLostFound extends StatefulWidget {
   const AdminLostFound({super.key});
@@ -44,88 +45,91 @@ class _AdminLostFoundState extends State<AdminLostFound> {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Admin: Lost & Found")),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _statusOptions.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final option = _statusOptions[index];
-                  final isSelected = _statusFilter == option;
-                  return ChoiceChip(
-                    label: Text(option),
-                    selected: isSelected,
-                    selectedColor: theme.colorScheme.primary,
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    onSelected: (_) {
-                      setState(() => _statusFilter = option);
+      body: adminCentered(
+        context,
+        Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _statusOptions.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final option = _statusOptions[index];
+                    final isSelected = _statusFilter == option;
+                    return ChoiceChip(
+                      label: Text(option),
+                      selected: isSelected,
+                      selectedColor: theme.colorScheme.primary,
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? theme.colorScheme.onPrimary
+                            : theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onSelected: (_) {
+                        setState(() => _statusFilter = option);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _lostFoundRef
+                    .orderBy('createdAt', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text("Error: ${snapshot.error}"));
+                  }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+
+                  final filtered = _statusFilter == 'All'
+                      ? docs
+                      : docs.where((d) {
+                          final data = d.data() as Map<String, dynamic>;
+                          final status = (data['status'] ?? 'pending')
+                              .toString()
+                              .toLowerCase();
+                          return status == _statusFilter.toLowerCase();
+                        }).toList();
+
+                  if (filtered.isEmpty) {
+                    return Center(
+                      child: Text(
+                        "No $_statusFilter listings found",
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final doc = filtered[index];
+                      final data = doc.data() as Map<String, dynamic>;
+                      return _buildListingCard(context, doc.id, data);
                     },
                   );
                 },
               ),
             ),
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _lostFoundRef
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(child: Text("Error: ${snapshot.error}"));
-                }
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final docs = snapshot.data?.docs ?? [];
-
-                final filtered = _statusFilter == 'All'
-                    ? docs
-                    : docs.where((d) {
-                        final data = d.data() as Map<String, dynamic>;
-                        final status = (data['status'] ?? 'pending')
-                            .toString()
-                            .toLowerCase();
-                        return status == _statusFilter.toLowerCase();
-                      }).toList();
-
-                if (filtered.isEmpty) {
-                  return Center(
-                    child: Text(
-                      "No $_statusFilter listings found",
-                      style: TextStyle(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.6,
-                        ),
-                      ),
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final doc = filtered[index];
-                    final data = doc.data() as Map<String, dynamic>;
-                    return _buildListingCard(context, doc.id, data);
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

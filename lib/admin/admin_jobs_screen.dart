@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lgu_one/jobs/model.dart';
 import '../utils/app_cached_image.dart';
 import '../utils/expiry_tag.dart';
+import '../utils/web_layout.dart';
 
 class AdminJobsScreen extends StatefulWidget {
   const AdminJobsScreen({super.key});
@@ -196,352 +197,332 @@ class _AdminJobsScreenState extends State<AdminJobsScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text("Jobs & Internships")),
-      body: SingleChildScrollView(
+    final formCard = Card(
+      child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 🔹 FORM CARD
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.work_outline, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Publish Opportunity",
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontSize: 18,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              Divider(
+                height: 24,
+                color: theme.dividerColor.withValues(alpha: 0.5),
+              ),
+
+              // Title Field
+              TextFormField(
+                controller: _titleController,
+                style: TextStyle(color: theme.colorScheme.onSurface),
+                decoration: const InputDecoration(
+                  labelText: "Job / Opportunity Title *",
+                  prefixIcon: Icon(Icons.title),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return "Title is required";
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+
+              InkWell(
+                onTap: _selectExpiryDate,
+                borderRadius: BorderRadius.circular(12),
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Expiry Date *',
+                    prefixIcon: Icon(Icons.event_busy),
+                    border: OutlineInputBorder(),
+                  ),
+                  child: Text(
+                    _selectedExpiryDate == null
+                        ? 'Select expiry date'
+                        : MaterialLocalizations.of(
+                            context,
+                          ).formatMediumDate(_selectedExpiryDate!),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Description Field
+              TextFormField(
+                controller: _descriptionController,
+                maxLines: 3,
+                style: TextStyle(color: theme.colorScheme.onSurface),
+                decoration: const InputDecoration(
+                  labelText: "Job Description *",
+                  prefixIcon: Icon(Icons.description),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return "Description is required";
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+
+              // Apply Link Field
+              TextFormField(
+                controller: _linkController,
+                style: TextStyle(color: theme.colorScheme.onSurface),
+                decoration: const InputDecoration(
+                  labelText: "Apply Link / URL *",
+                  prefixIcon: Icon(Icons.link),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return "Apply link is required";
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+
+              // Image Input Section
+              Text(
+                "Opportunity Banner Image *",
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Image Preview or Picker
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 12,
+                ),
+                constraints: const BoxConstraints(minHeight: 120),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: theme.dividerColor.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: _pickedImageFile != null
+                    ? Stack(
                         children: [
-                          Icon(
-                            Icons.work_outline,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              "Publish Opportunity",
-                              style: theme.textTheme.headlineMedium?.copyWith(
-                                fontSize: 18,
+                          SizedBox(
+                            height: 140,
+                            width: double.infinity,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                _pickedImageFile!,
+                                fit: BoxFit.cover,
                               ),
-                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: CircleAvatar(
+                              backgroundColor: Colors.black54,
+                              radius: 16,
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(
+                                  Icons.close,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () {
+                                  setState(() => _pickedImageFile = null);
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 12,
+                            runSpacing: 8,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () =>
+                                    _pickImage(ImageSource.gallery),
+                                icon: const Icon(Icons.photo_library, size: 18),
+                                label: const Text("Gallery"),
+                              ),
+                              ElevatedButton.icon(
+                                onPressed: () => _pickImage(ImageSource.camera),
+                                icon: const Icon(Icons.camera_alt, size: 18),
+                                label: const Text("Camera"),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "OR enter Image URL below",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.5,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      Divider(
-                        height: 24,
-                        color: theme.dividerColor.withValues(alpha: 0.5),
-                      ),
+              ),
+              const SizedBox(height: 8),
 
-                      // Title Field
-                      TextFormField(
-                        controller: _titleController,
-                        style: TextStyle(color: theme.colorScheme.onSurface),
-                        decoration: const InputDecoration(
-                          labelText: "Job / Opportunity Title *",
-                          prefixIcon: Icon(Icons.title),
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return "Title is required";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-
-                      InkWell(
-                        onTap: _selectExpiryDate,
-                        borderRadius: BorderRadius.circular(12),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Expiry Date *',
-                            prefixIcon: Icon(Icons.event_busy),
-                            border: OutlineInputBorder(),
-                          ),
-                          child: Text(
-                            _selectedExpiryDate == null
-                                ? 'Select expiry date'
-                                : MaterialLocalizations.of(
-                                    context,
-                                  ).formatMediumDate(_selectedExpiryDate!),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Description Field
-                      TextFormField(
-                        controller: _descriptionController,
-                        maxLines: 3,
-                        style: TextStyle(color: theme.colorScheme.onSurface),
-                        decoration: const InputDecoration(
-                          labelText: "Job Description *",
-                          prefixIcon: Icon(Icons.description),
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return "Description is required";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Apply Link Field
-                      TextFormField(
-                        controller: _linkController,
-                        style: TextStyle(color: theme.colorScheme.onSurface),
-                        decoration: const InputDecoration(
-                          labelText: "Apply Link / URL *",
-                          prefixIcon: Icon(Icons.link),
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return "Apply link is required";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Image Input Section
-                      Text(
-                        "Opportunity Banner Image *",
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Image Preview or Picker
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 12,
-                        ),
-                        constraints: const BoxConstraints(minHeight: 120),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.05)
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: theme.dividerColor.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        child: _pickedImageFile != null
-                            ? Stack(
-                                children: [
-                                  SizedBox(
-                                    height: 140,
-                                    width: double.infinity,
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Image.file(
-                                        _pickedImageFile!,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 6,
-                                    right: 6,
-                                    child: CircleAvatar(
-                                      backgroundColor: Colors.black54,
-                                      radius: 16,
-                                      child: IconButton(
-                                        padding: EdgeInsets.zero,
-                                        icon: const Icon(
-                                          Icons.close,
-                                          size: 18,
-                                          color: Colors.white,
-                                        ),
-                                        onPressed: () {
-                                          setState(
-                                            () => _pickedImageFile = null,
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Wrap(
-                                    alignment: WrapAlignment.center,
-                                    spacing: 12,
-                                    runSpacing: 8,
-                                    children: [
-                                      ElevatedButton.icon(
-                                        onPressed: () =>
-                                            _pickImage(ImageSource.gallery),
-                                        icon: const Icon(
-                                          Icons.photo_library,
-                                          size: 18,
-                                        ),
-                                        label: const Text("Gallery"),
-                                      ),
-                                      ElevatedButton.icon(
-                                        onPressed: () =>
-                                            _pickImage(ImageSource.camera),
-                                        icon: const Icon(
-                                          Icons.camera_alt,
-                                          size: 18,
-                                        ),
-                                        label: const Text("Camera"),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    "OR enter Image URL below",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.colorScheme.onSurface
-                                          .withValues(alpha: 0.5),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Direct Image URL Field
-                      TextFormField(
-                        controller: _imageUrlController,
-                        style: TextStyle(color: theme.colorScheme.onSurface),
-                        onChanged: (val) {
-                          if (val.isNotEmpty && _pickedImageFile != null) {
-                            setState(() => _pickedImageFile = null);
-                          }
-                        },
-                        decoration: const InputDecoration(
-                          labelText: "Direct Image URL (Optional fallback)",
-                          prefixIcon: Icon(Icons.image_search),
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Submit Button
-                      ElevatedButton(
-                        onPressed: _isPublishing ? null : _publishJob,
-                        child: _isPublishing
-                            ? SizedBox(
-                                height: 22,
-                                width: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  color: theme.colorScheme.onPrimary,
-                                ),
-                              )
-                            : const Text(
-                                "Publish Opportunity",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
-                    ],
-                  ),
+              // Direct Image URL Field
+              TextFormField(
+                controller: _imageUrlController,
+                style: TextStyle(color: theme.colorScheme.onSurface),
+                onChanged: (val) {
+                  if (val.isNotEmpty && _pickedImageFile != null) {
+                    setState(() => _pickedImageFile = null);
+                  }
+                },
+                decoration: const InputDecoration(
+                  labelText: "Direct Image URL (Optional fallback)",
+                  prefixIcon: Icon(Icons.image_search),
+                  border: OutlineInputBorder(),
                 ),
               ),
-            ),
+              const SizedBox(height: 20),
 
-            const SizedBox(height: 24),
-
-            // 🔹 MANAGED JOBS LIST HEADER
-            Text(
-              "Published Opportunities",
-              style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Wrap(
-                spacing: 8,
-                children: ['Active', 'Expired'].map((filter) {
-                  return ChoiceChip(
-                    label: Text(filter),
-                    selected: _listingFilter == filter,
-                    onSelected: (_) => setState(() => _listingFilter = filter),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Real-time List of Firestore jobs docs
-            StreamBuilder<QuerySnapshot>(
-              stream: _jobsRef
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text("Error loading jobs: ${snapshot.error}"),
-                  );
-                }
-
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(20.0),
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                }
-
-                final docs = snapshot.data?.docs ?? [];
-
-                final filteredDocs = docs.where((doc) {
-                  final job = Job.fromDocument(doc);
-                  final isExpired =
-                      job.expiryDate != null &&
-                      job.expiryDate!.isBefore(DateTime.now());
-                  return _listingFilter == 'Expired' ? isExpired : !isExpired;
-                }).toList();
-
-                if (filteredDocs.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Text(
-                        "No $_listingFilter jobs or internships yet",
+              // Submit Button
+              ElevatedButton(
+                onPressed: _isPublishing ? null : _publishJob,
+                child: _isPublishing
+                    ? SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      )
+                    : const Text(
+                        "Publish Opportunity",
                         style: TextStyle(
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.5,
-                          ),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: filteredDocs.length,
-                  itemBuilder: (context, index) {
-                    final doc = filteredDocs[index];
-                    final job = Job.fromDocument(doc);
-                    return _buildJobItemCard(context, job);
-                  },
-                );
-              },
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
+    );
+
+    final listSection = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Published Opportunities",
+          style: theme.textTheme.headlineMedium?.copyWith(fontSize: 18),
+        ),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Wrap(
+            spacing: 8,
+            children: ['Active', 'Expired'].map((filter) {
+              return ChoiceChip(
+                label: Text(filter),
+                selected: _listingFilter == filter,
+                onSelected: (_) => setState(() => _listingFilter = filter),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        // Real-time List of Firestore jobs docs
+        StreamBuilder<QuerySnapshot>(
+          stream: _jobsRef.orderBy('createdAt', descending: true).snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Center(
+                child: Text("Error loading jobs: ${snapshot.error}"),
+              );
+            }
+
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+
+            final docs = snapshot.data?.docs ?? [];
+
+            final filteredDocs = docs.where((doc) {
+              final job = Job.fromDocument(doc);
+              final isExpired =
+                  job.expiryDate != null &&
+                  job.expiryDate!.isBefore(DateTime.now());
+              return _listingFilter == 'Expired' ? isExpired : !isExpired;
+            }).toList();
+
+            if (filteredDocs.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Text(
+                    "No $_listingFilter jobs or internships yet",
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: filteredDocs.length,
+              itemBuilder: (context, index) {
+                final doc = filteredDocs[index];
+                final job = Job.fromDocument(doc);
+                return _buildJobItemCard(context, job);
+              },
+            );
+          },
+        ),
+      ],
+    );
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Jobs & Internships")),
+      body: AdminSplitPage(form: formCard, list: listSection),
     );
   }
 

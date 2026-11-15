@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../utils/app_cached_image.dart';
 import '../utils/pakistani_phone_formatter.dart';
+import '../utils/web_layout.dart';
 
 class AddEditEventScreen extends StatefulWidget {
   final String? eventId;
@@ -401,342 +402,394 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                 ],
               ),
             )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Cover Image Preview & Upload Container
-                    GestureDetector(
-                      onTap: _showImageSourceDialog,
-                      child: Container(
-                        width: double.infinity,
-                        height: 180,
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.05)
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: theme.dividerColor.withValues(alpha: 0.5),
-                            style: BorderStyle.solid,
-                          ),
-                        ),
-                        child: _buildImagePreview(context),
+          : _formShell(
+              wide: isWideWeb(context),
+              media: [
+                // Cover Image Preview & Upload Container
+                GestureDetector(
+                  onTap: _showImageSourceDialog,
+                  child: Container(
+                    width: double.infinity,
+                    height: 180,
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: theme.dividerColor.withValues(alpha: 0.5),
+                        style: BorderStyle.solid,
                       ),
                     ),
+                    child: _buildImagePreview(context),
+                  ),
+                ),
 
-                    const SizedBox(height: 14),
+                const SizedBox(height: 14),
 
-                    // Image URL Input Field
-                    TextFormField(
-                      controller: _imageUrlController,
-                      style: TextStyle(color: theme.colorScheme.onSurface),
-                      decoration: InputDecoration(
-                        labelText: "Or Paste Image URL (Optional)",
-                        hintText: "https://example.com/image.jpg",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.link,
-                          color: theme.colorScheme.primary,
-                        ),
-                        suffixIcon: _imageUrlController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 20),
-                                onPressed: () {
-                                  setState(() {
-                                    _imageUrlController.clear();
-                                  });
-                                },
-                              )
-                            : null,
-                      ),
-                      onChanged: (val) {
-                        setState(() {
-                          _pickedImageFile =
-                              null; // Clear picked file if URL entered
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Title
-                    TextFormField(
-                      controller: _titleController,
-                      style: TextStyle(color: theme.colorScheme.onSurface),
-                      decoration: InputDecoration(
-                        labelText: "Event Title *",
-                        hintText: "e.g. Annual Sports Gala 2026",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.title,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) {
-                          return "Title is required";
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Category Selector
-                    Text(
-                      "Category *",
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(
-                          value: 'University',
-                          label: Text("Within University"),
-                          icon: Icon(Icons.school_outlined),
-                        ),
-                        ButtonSegment(
-                          value: 'Lahore',
-                          label: Text("Within Lahore"),
-                          icon: Icon(Icons.location_city_outlined),
-                        ),
-                      ],
-                      selected: {_category},
-                      onSelectionChanged: (newSelection) {
-                        setState(() {
-                          _category = newSelection.first;
-                        });
-                      },
-                      style: SegmentedButton.styleFrom(
-                        selectedBackgroundColor: theme.colorScheme.primary,
-                        selectedForegroundColor: theme.colorScheme.onPrimary,
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Date & Time Picker Button
-                    InkWell(
-                      onTap: _selectDateTime,
+                // Image URL Input Field
+                TextFormField(
+                  controller: _imageUrlController,
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    labelText: "Or Paste Image URL (Optional)",
+                    hintText: "https://example.com/image.jpg",
+                    border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: theme.dividerColor.withValues(alpha: 0.5),
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                _selectedDateTime == null
-                                    ? "Select Event Date & Time *"
-                                    : DateFormat(
-                                        'EEE, dd MMM yyyy - hh:mm a',
-                                      ).format(_selectedDateTime!),
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: _selectedDateTime == null
-                                      ? FontWeight.normal
-                                      : FontWeight.w600,
-                                  color: _selectedDateTime == null
-                                      ? theme.colorScheme.onSurface.withValues(
-                                          alpha: 0.6,
-                                        )
-                                      : theme.colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                            Icon(
-                              Icons.arrow_drop_down,
-                              color: theme.colorScheme.onSurface.withValues(
-                                alpha: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
-
-                    const SizedBox(height: 16),
-
-                    InkWell(
-                      onTap: _selectExpiryDate,
+                    prefixIcon: Icon(
+                      Icons.link,
+                      color: theme.colorScheme.primary,
+                    ),
+                    suffixIcon: _imageUrlController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            onPressed: () {
+                              setState(() {
+                                _imageUrlController.clear();
+                              });
+                            },
+                          )
+                        : null,
+                  ),
+                  onChanged: (val) {
+                    setState(() {
+                      _pickedImageFile =
+                          null; // Clear picked file if URL entered
+                    });
+                  },
+                ),
+              ],
+              fields: [
+                // Title
+                TextFormField(
+                  controller: _titleController,
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    labelText: "Event Title *",
+                    hintText: "e.g. Annual Sports Gala 2026",
+                    border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: theme.dividerColor.withValues(alpha: 0.5),
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.event_busy,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                _selectedExpiryDate == null
-                                    ? 'Select Expiry Date *'
-                                    : DateFormat(
-                                        'EEE, dd MMM yyyy',
-                                      ).format(_selectedExpiryDate!),
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: _selectedExpiryDate == null
-                                      ? FontWeight.normal
-                                      : FontWeight.w600,
-                                  color: _selectedExpiryDate == null
-                                      ? theme.colorScheme.onSurface.withValues(
-                                          alpha: 0.6,
-                                        )
-                                      : theme.colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                            Icon(
-                              Icons.arrow_drop_down,
-                              color: theme.colorScheme.onSurface.withValues(
-                                alpha: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
-
-                    const SizedBox(height: 16),
-
-                    // Location
-                    TextFormField(
-                      controller: _locationController,
-                      style: TextStyle(color: theme.colorScheme.onSurface),
-                      decoration: InputDecoration(
-                        labelText: "Location / Venue *",
-                        hintText: "e.g. Main Auditorium, LGU Campus",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.location_on,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) {
-                          return "Location is required";
-                        }
-                        return null;
-                      },
+                    prefixIcon: Icon(
+                      Icons.title,
+                      color: theme.colorScheme.primary,
                     ),
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return "Title is required";
+                    }
+                    return null;
+                  },
+                ),
 
-                    const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-                    // Description
-                    TextFormField(
-                      controller: _descriptionController,
-                      maxLines: 4,
-                      style: TextStyle(color: theme.colorScheme.onSurface),
-                      decoration: InputDecoration(
-                        labelText: "Description (Optional)",
-                        hintText: "Enter event details, schedule, or notes...",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.description,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
+                // Category Selector
+                Text(
+                  "Category *",
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'University',
+                      label: Text("Within University"),
+                      icon: Icon(Icons.school_outlined),
                     ),
-
-                    if (widget.studentSubmission) ...[
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [PakistaniPhoneFormatter()],
-                        style: TextStyle(color: theme.colorScheme.onSurface),
-                        decoration: InputDecoration(
-                          labelText: "Phone Number *",
-                          hintText: "0300 123 4567",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: Icon(
-                            Icons.phone,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return "Phone number is required";
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-
-                    const SizedBox(height: 24),
-
-                    // Submit Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.primary,
-                          foregroundColor: theme.colorScheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: _saveEvent,
-                        icon: Icon(_isEditing ? Icons.check : Icons.add),
-                        label: Text(
-                          _isEditing
-                              ? "Update Event"
-                              : widget.studentSubmission
-                              ? "Submit for Approval"
-                              : "Publish Event",
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                    ButtonSegment(
+                      value: 'Lahore',
+                      label: Text("Within Lahore"),
+                      icon: Icon(Icons.location_city_outlined),
                     ),
                   ],
+                  selected: {_category},
+                  onSelectionChanged: (newSelection) {
+                    setState(() {
+                      _category = newSelection.first;
+                    });
+                  },
+                  style: SegmentedButton.styleFrom(
+                    selectedBackgroundColor: theme.colorScheme.primary,
+                    selectedForegroundColor: theme.colorScheme.onPrimary,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Date & Time Picker Button
+                InkWell(
+                  onTap: _selectDateTime,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: theme.dividerColor.withValues(alpha: 0.5),
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _selectedDateTime == null
+                                ? "Select Event Date & Time *"
+                                : DateFormat(
+                                    'EEE, dd MMM yyyy - hh:mm a',
+                                  ).format(_selectedDateTime!),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: _selectedDateTime == null
+                                  ? FontWeight.normal
+                                  : FontWeight.w600,
+                              color: _selectedDateTime == null
+                                  ? theme.colorScheme.onSurface.withValues(
+                                      alpha: 0.6,
+                                    )
+                                  : theme.colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_drop_down,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                InkWell(
+                  onTap: _selectExpiryDate,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: theme.dividerColor.withValues(alpha: 0.5),
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.event_busy,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _selectedExpiryDate == null
+                                ? 'Select Expiry Date *'
+                                : DateFormat(
+                                    'EEE, dd MMM yyyy',
+                                  ).format(_selectedExpiryDate!),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: _selectedExpiryDate == null
+                                  ? FontWeight.normal
+                                  : FontWeight.w600,
+                              color: _selectedExpiryDate == null
+                                  ? theme.colorScheme.onSurface.withValues(
+                                      alpha: 0.6,
+                                    )
+                                  : theme.colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_drop_down,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Location
+                TextFormField(
+                  controller: _locationController,
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    labelText: "Location / Venue *",
+                    hintText: "e.g. Main Auditorium, LGU Campus",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.location_on,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return "Location is required";
+                    }
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // Description
+                TextFormField(
+                  controller: _descriptionController,
+                  maxLines: 4,
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    labelText: "Description (Optional)",
+                    hintText: "Enter event details, schedule, or notes...",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.description,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+
+                if (widget.studentSubmission) ...[
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [PakistaniPhoneFormatter()],
+                    style: TextStyle(color: theme.colorScheme.onSurface),
+                    decoration: InputDecoration(
+                      labelText: "Phone Number *",
+                      hintText: "0300 123 4567",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: Icon(
+                        Icons.phone,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return "Phone number is required";
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ],
+              submit: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: _saveEvent,
+                  icon: Icon(_isEditing ? Icons.check : Icons.add),
+                  label: Text(
+                    _isEditing
+                        ? "Update Event"
+                        : widget.studentSubmission
+                        ? "Submit for Approval"
+                        : "Publish Event",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ),
+    );
+  }
+
+  /// Narrow windows stack everything. Wide windows put the cover image on the
+  /// left and the event details on the right, with one action button below.
+  Widget _formShell({
+    required bool wide,
+    required List<Widget> media,
+    required List<Widget> fields,
+    required Widget submit,
+  }) {
+    final Widget body = wide
+        ? Column(
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: media,
+                    ),
+                  ),
+                  const SizedBox(width: 32),
+                  Expanded(
+                    flex: 6,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: fields,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+              submit,
+            ],
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ...media,
+              const SizedBox(height: 20),
+              ...fields,
+              const SizedBox(height: 24),
+              submit,
+            ],
+          );
+
+    final form = Form(key: _formKey, child: body);
+
+    return SingleChildScrollView(
+      padding: wide
+          ? const EdgeInsets.symmetric(vertical: 32)
+          : const EdgeInsets.all(16),
+      child: wide
+          ? WebConstrained(
+              maxWidth: 1000,
+              child: Card(
+                child: Padding(padding: const EdgeInsets.all(28), child: form),
+              ),
+            )
+          : form,
     );
   }
 

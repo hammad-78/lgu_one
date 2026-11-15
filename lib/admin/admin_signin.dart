@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/admin/admin_home.dart';
 import '../utils/utils.dart';
+import '../utils/web_layout.dart';
 
 class AdminSignin extends StatefulWidget {
   const AdminSignin({super.key});
@@ -48,8 +49,10 @@ class _AdminSigninState extends State<AdminSignin> {
       if (user == null) throw Exception("Authentication failed");
 
       // Check the 'admins' collection
-      final DocumentSnapshot adminDoc =
-          await _firestore.collection('admins').doc(user.uid).get();
+      final DocumentSnapshot adminDoc = await _firestore
+          .collection('admins')
+          .doc(user.uid)
+          .get();
 
       if (!adminDoc.exists) {
         await _auth.signOut();
@@ -58,11 +61,12 @@ class _AdminSigninState extends State<AdminSignin> {
       }
 
       final data = adminDoc.data() as Map<String, dynamic>?;
-      
+
       // Robust admin check (handles bool, string, and role fields)
-      final bool isAdmin = data?['isAdmin'] == true || 
-                          data?['isAdmin']?.toString().toLowerCase() == 'true' ||
-                          data?['role']?.toString().toLowerCase() == 'admin';
+      final bool isAdmin =
+          data?['isAdmin'] == true ||
+          data?['isAdmin']?.toString().toLowerCase() == 'true' ||
+          data?['role']?.toString().toLowerCase() == 'admin';
 
       if (!isAdmin) {
         await _auth.signOut();
@@ -93,10 +97,14 @@ class _AdminSigninState extends State<AdminSignin> {
   String _mapAuthError(String code) {
     switch (code) {
       case 'user-not-found':
-      case 'invalid-credential': return 'Invalid email or password.';
-      case 'wrong-password': return 'Incorrect password.';
-      case 'too-many-requests': return 'Account temporarily locked. Try again later.';
-      default: return 'Sign-in failed ($code).';
+      case 'invalid-credential':
+        return 'Invalid email or password.';
+      case 'wrong-password':
+        return 'Incorrect password.';
+      case 'too-many-requests':
+        return 'Account temporarily locked. Try again later.';
+      default:
+        return 'Sign-in failed ($code).';
     }
   }
 
@@ -104,18 +112,14 @@ class _AdminSigninState extends State<AdminSignin> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text("Admin Sign In"),
-        backgroundColor: Colors.transparent,
-        foregroundColor: theme.colorScheme.onSurface,
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+    final wide = isWideWeb(context);
+
+    final formBody = SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
             child: Form(
               key: _formKey,
               child: Column(
@@ -138,17 +142,32 @@ class _AdminSigninState extends State<AdminSignin> {
                     style: TextStyle(color: theme.colorScheme.onSurface),
                     decoration: InputDecoration(
                       labelText: "Email",
-                      labelStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
-                      prefixIcon: Icon(Icons.email, color: theme.colorScheme.primary),
+                      labelStyle: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.7,
+                        ),
+                      ),
+                      prefixIcon: Icon(
+                        Icons.email,
+                        color: theme.colorScheme.primary,
+                      ),
                       border: const OutlineInputBorder(),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.2,
+                          ),
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.primary,
+                          width: 2,
+                        ),
                       ),
                     ),
-                    validator: (v) => (v == null || v.isEmpty) ? "Enter email" : null,
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? "Enter email" : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -158,31 +177,55 @@ class _AdminSigninState extends State<AdminSignin> {
                     onFieldSubmitted: (_) => _handleSignIn(),
                     decoration: InputDecoration(
                       labelText: "Password",
-                      labelStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
-                      prefixIcon: Icon(Icons.lock, color: theme.colorScheme.primary),
+                      labelStyle: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.7,
+                        ),
+                      ),
+                      prefixIcon: Icon(
+                        Icons.lock,
+                        color: theme.colorScheme.primary,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                       border: const OutlineInputBorder(),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.2,
+                          ),
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.primary,
+                          width: 2,
+                        ),
                       ),
                     ),
-                    validator: (v) => (v == null || v.isEmpty) ? "Enter password" : null,
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? "Enter password" : null,
                   ),
                   if (_errorMessage != null) ...[
                     const SizedBox(height: 20),
                     Text(
                       _errorMessage!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 30),
@@ -212,6 +255,66 @@ class _AdminSigninState extends State<AdminSignin> {
             ),
           ),
         ),
+      ),
+    );
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        title: const Text("Admin Sign In"),
+        backgroundColor: Colors.transparent,
+        foregroundColor: theme.colorScheme.onSurface,
+        elevation: 0,
+      ),
+      body: wide
+          ? Row(
+              children: [
+                Expanded(flex: 5, child: _brandPanel(context)),
+                Expanded(flex: 4, child: formBody),
+              ],
+            )
+          : formBody,
+    );
+  }
+
+  /// Left half of the wide sign-in screen: what the console is for.
+  Widget _brandPanel(BuildContext context) {
+    final theme = Theme.of(context);
+    const onHero = Colors.white;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 0, 0, 24),
+      padding: const EdgeInsets.all(48),
+      decoration: webHeroDecoration(context),
+      alignment: Alignment.bottomLeft,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.admin_panel_settings, size: 64, color: onHero),
+          const SizedBox(height: 24),
+          Text(
+            'LGU Connect Admin',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontSize: 40,
+              height: 1.1,
+              fontWeight: FontWeight.w800,
+              color: onHero,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Text(
+              'Publish news, jobs, events and societies, and review the '
+              'lost & found and collaboration posts students submit.',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontSize: 17,
+                height: 1.55,
+                color: onHero.withValues(alpha: 0.85),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

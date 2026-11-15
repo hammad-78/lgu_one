@@ -9,6 +9,7 @@ import 'package:lgu_one/admin/admin_news_screen.dart';
 import 'package:lgu_one/admin/admin_notification_screen.dart';
 import 'package:lgu_one/admin/admin_societies_screen.dart';
 import 'package:lgu_one/home_screen.dart';
+import 'package:lgu_one/utils/web_layout.dart';
 
 class AdminHome extends StatefulWidget {
   const AdminHome({super.key});
@@ -211,178 +212,214 @@ class _AdminHomeState extends State<AdminHome> {
                   color: theme.colorScheme.primary,
                 ),
               )
-            : Scrollbar(
-                controller: _scrollController,
-                child: ListView(
-                  controller: _scrollController,
+            : _homeLayout(
+                wide: isWideWeb(context),
+                profile: Container(
                   padding: const EdgeInsets.all(16),
-                  children: [
-                    // Profile Card
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: theme.cardTheme.color,
-                        borderRadius: BorderRadius.circular(16),
-                        border: isDark
-                            ? Border.all(
-                                color: theme.colorScheme.primary.withValues(
-                                  alpha: 0.2,
-                                ),
-                              )
-                            : null,
-                        boxShadow: [
-                          if (!isDark)
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+                  decoration: BoxDecoration(
+                    color: theme.cardTheme.color,
+                    borderRadius: BorderRadius.circular(16),
+                    border: isDark
+                        ? Border.all(
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.2,
                             ),
-                        ],
+                          )
+                        : null,
+                    boxShadow: [
+                      if (!isDark)
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundColor: theme.colorScheme.primary,
+                        child: Text(
+                          avatarChar,
+                          style: TextStyle(
+                            color: theme.colorScheme.onPrimary,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 30,
-                            backgroundColor: theme.colorScheme.primary,
-                            child: Text(
-                              avatarChar,
-                              style: TextStyle(
-                                color: theme.colorScheme.onPrimary,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _name ?? "Administrator",
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontSize: 20,
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _name ?? "Administrator",
-                                  style: theme.textTheme.headlineMedium
-                                      ?.copyWith(fontSize: 20),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.1,
                                 ),
-                                const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    _role ?? "Staff",
-                                    style: TextStyle(
-                                      color: theme.colorScheme.primary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                _role ?? "Staff",
+                                style: TextStyle(
+                                  color: theme.colorScheme.primary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-                    Text(
-                      "Management Console",
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontSize: 18,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isDesktop = constraints.maxWidth >= 700;
-                        final grid = GridView.count(
-                          crossAxisCount: isDesktop ? 3 : 2,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          childAspectRatio: isDesktop ? 1.35 : 1.2,
-                          children: [
-                            _buildActionButton(
-                              context: context,
-                              icon: Icons.search,
-                              label: "Lost & Found",
-                              pendingStream: FirebaseFirestore.instance
-                                  .collection('lost_found_items')
-                                  .where('status', isEqualTo: 'pending')
-                                  .snapshots(),
-                              onTap: () => _navigate(const AdminLostFound()),
-                            ),
-                            _buildActionButton(
-                              context: context,
-                              icon: Icons.groups_outlined,
-                              label: "Collaborations",
-                              pendingStream: FirebaseFirestore.instance
-                                  .collection('collaborations')
-                                  .where('info.status', isEqualTo: 'pending')
-                                  .snapshots(),
-                              onTap: () =>
-                                  _navigate(const AdminCollaboration()),
-                            ),
-                            _buildActionButton(
-                              context: context,
-                              icon: Icons.event_note,
-                              label: "Events",
-                              onTap: () => _navigate(const AdminEventsScreen()),
-                            ),
-                            _buildActionButton(
-                              context: context,
-                              icon: Icons.work_outline,
-                              label: "Jobs",
-                              onTap: () => _navigate(const AdminJobsScreen()),
-                            ),
-                            _buildActionButton(
-                              context: context,
-                              icon: Icons.newspaper,
-                              label: "News Feed",
-                              onTap: () => _navigate(const AdminNewsScreen()),
-                            ),
-                            _buildActionButton(
-                              context: context,
-                              icon: Icons.groups_outlined,
-                              label: "Societies",
-                              onTap: () =>
-                                  _navigate(const AdminSocietiesScreen()),
-                            ),
-                            _buildActionButton(
-                              context: context,
-                              icon: Icons.campaign_outlined,
-                              label: "Send Notification",
-                              onTap: () =>
-                                  _navigate(const AdminNotificationScreen()),
+                              ),
                             ),
                           ],
-                        );
-
-                        return isDesktop
-                            ? Align(
-                                alignment: Alignment.center,
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 820,
-                                  ),
-                                  child: grid,
-                                ),
-                              )
-                            : grid;
-                      },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                console: [
+                  Text(
+                    "Management Console",
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontSize: 18,
                     ),
-                  ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isDesktop = constraints.maxWidth >= 700;
+                      final grid = GridView.count(
+                        crossAxisCount: isDesktop ? 3 : 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        childAspectRatio: isDesktop ? 1.35 : 1.2,
+                        children: [
+                          _buildActionButton(
+                            context: context,
+                            icon: Icons.search,
+                            label: "Lost & Found",
+                            pendingStream: FirebaseFirestore.instance
+                                .collection('lost_found_items')
+                                .where('status', isEqualTo: 'pending')
+                                .snapshots(),
+                            onTap: () => _navigate(const AdminLostFound()),
+                          ),
+                          _buildActionButton(
+                            context: context,
+                            icon: Icons.groups_outlined,
+                            label: "Collaborations",
+                            pendingStream: FirebaseFirestore.instance
+                                .collection('collaborations')
+                                .where('info.status', isEqualTo: 'pending')
+                                .snapshots(),
+                            onTap: () => _navigate(const AdminCollaboration()),
+                          ),
+                          _buildActionButton(
+                            context: context,
+                            icon: Icons.event_note,
+                            label: "Events",
+                            onTap: () => _navigate(const AdminEventsScreen()),
+                          ),
+                          _buildActionButton(
+                            context: context,
+                            icon: Icons.work_outline,
+                            label: "Jobs",
+                            onTap: () => _navigate(const AdminJobsScreen()),
+                          ),
+                          _buildActionButton(
+                            context: context,
+                            icon: Icons.newspaper,
+                            label: "News Feed",
+                            onTap: () => _navigate(const AdminNewsScreen()),
+                          ),
+                          _buildActionButton(
+                            context: context,
+                            icon: Icons.groups_outlined,
+                            label: "Societies",
+                            onTap: () =>
+                                _navigate(const AdminSocietiesScreen()),
+                          ),
+                          _buildActionButton(
+                            context: context,
+                            icon: Icons.campaign_outlined,
+                            label: "Send Notification",
+                            onTap: () =>
+                                _navigate(const AdminNotificationScreen()),
+                          ),
+                        ],
+                      );
+
+                      return isDesktop
+                          ? Align(
+                              alignment: Alignment.center,
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 820,
+                                ),
+                                child: grid,
+                              ),
+                            )
+                          : grid;
+                    },
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  /// Narrow windows stack the profile above the tiles. Wide windows keep the
+  /// profile in a left column and give the tiles the rest of the width.
+  Widget _homeLayout({
+    required bool wide,
+    required Widget profile,
+    required List<Widget> console,
+  }) {
+    if (!wide) {
+      return Scrollbar(
+        controller: _scrollController,
+        child: ListView(
+          controller: _scrollController,
+          padding: const EdgeInsets.all(16),
+          children: [profile, const SizedBox(height: 24), ...console],
+        ),
+      );
+    }
+
+    return Scrollbar(
+      controller: _scrollController,
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: WebConstrained(
+          maxWidth: 1100,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(width: 300, child: profile),
+              const SizedBox(width: 32),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: console,
                 ),
               ),
+            ],
+          ),
+        ),
       ),
     );
   }

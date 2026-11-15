@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../utils/web_layout.dart';
 
 class AddEditSocietyScreen extends StatefulWidget {
   final String? societyId;
@@ -98,88 +99,104 @@ class _AddEditSocietyScreenState extends State<AddEditSocietyScreen> {
       body: _isSaving
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Society name',
+              padding: EdgeInsets.all(isWideWeb(context) ? 32 : 16),
+              child: _wideCard(
+                context,
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Society name',
+                        ),
+                        validator: _required,
                       ),
-                      validator: _required,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _descriptionController,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _descriptionController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Description',
+                        ),
+                        validator: _required,
                       ),
-                      validator: _required,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _imageUrlController,
-                      decoration: const InputDecoration(
-                        labelText: 'Image URL (optional)',
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _imageUrlController,
+                        decoration: const InputDecoration(
+                          labelText: 'Image URL (optional)',
+                        ),
+                        keyboardType: TextInputType.url,
                       ),
-                      keyboardType: TextInputType.url,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _memberCountController,
-                      decoration: const InputDecoration(
-                        labelText: 'Member count',
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _memberCountController,
+                        decoration: const InputDecoration(
+                          labelText: 'Member count',
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null ||
+                              int.tryParse(value.trim()) == null) {
+                            return 'Enter a whole number';
+                          }
+                          return null;
+                        },
                       ),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null ||
-                            int.tryParse(value.trim()) == null) {
-                          return 'Enter a whole number';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _presidentPhoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'WhatsApp number (optional)',
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _presidentPhoneController,
+                        decoration: const InputDecoration(
+                          labelText: 'WhatsApp number (optional)',
+                        ),
+                        keyboardType: TextInputType.phone,
                       ),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email (optional)',
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email (optional)',
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          final email = value?.trim() ?? '';
+                          if (email.isNotEmpty && !email.contains('@')) {
+                            return 'Enter a valid email address';
+                          }
+                          return null;
+                        },
                       ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        final email = value?.trim() ?? '';
-                        if (email.isNotEmpty && !email.contains('@')) {
-                          return 'Enter a valid email address';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _saveSociety,
-                        icon: const Icon(Icons.save),
-                        label: Text(
-                          _isEditing ? 'Save Changes' : 'Add Society',
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _saveSociety,
+                          icon: const Icon(Icons.save),
+                          label: Text(
+                            _isEditing ? 'Save Changes' : 'Add Society',
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
+    );
+  }
+
+  /// On wide windows the form sits in a centered card instead of spanning the
+  /// whole window.
+  Widget _wideCard(BuildContext context, Widget form) {
+    if (!isWideWeb(context)) return form;
+    return WebConstrained(
+      maxWidth: 640,
+      padding: EdgeInsets.zero,
+      child: Card(
+        child: Padding(padding: const EdgeInsets.all(28), child: form),
+      ),
     );
   }
 }

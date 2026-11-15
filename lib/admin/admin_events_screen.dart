@@ -5,6 +5,7 @@ import 'package:lgu_one/admin/add_edit_event_screen.dart';
 import '../utils/app_cached_image.dart';
 import '../utils/flushbar.dart';
 import '../utils/expiry_tag.dart';
+import '../utils/web_layout.dart';
 
 class AdminEventsScreen extends StatefulWidget {
   const AdminEventsScreen({super.key});
@@ -72,174 +73,178 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: Column(
-        children: [
-          // Filter Chips
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _filterOptions.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final option = _filterOptions[index];
-                  final isSelected = _categoryFilter == option;
-                  return ChoiceChip(
-                    label: Text(option),
-                    selected: isSelected,
-                    selectedColor: theme.colorScheme.primary,
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    onSelected: (_) {
-                      setState(() => _categoryFilter = option);
+      body: adminCentered(
+        context,
+        Column(
+          children: [
+            // Filter Chips
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _filterOptions.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final option = _filterOptions[index];
+                    final isSelected = _categoryFilter == option;
+                    return ChoiceChip(
+                      label: Text(option),
+                      selected: isSelected,
+                      selectedColor: theme.colorScheme.primary,
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? theme.colorScheme.onPrimary
+                            : theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onSelected: (_) {
+                        setState(() => _categoryFilter = option);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _statusOptions.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final option = _statusOptions[index];
+                    final isSelected = _statusFilter == option;
+                    return ChoiceChip(
+                      label: Text(option),
+                      selected: isSelected,
+                      selectedColor: theme.colorScheme.primary,
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? theme.colorScheme.onPrimary
+                            : theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onSelected: (_) => setState(() => _statusFilter = option),
+                    );
+                  },
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: 2,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final option = index == 0 ? 'Active' : 'Expired';
+                    final isSelected = _dateFilter == option;
+                    return ChoiceChip(
+                      label: Text(option),
+                      selected: isSelected,
+                      selectedColor: theme.colorScheme.primary,
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? theme.colorScheme.onPrimary
+                            : theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onSelected: (_) => setState(() => _dateFilter = option),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            // Events Stream
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _eventsRef
+                    .orderBy('eventDate', descending: false)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text("Error: ${snapshot.error}"));
+                  }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+
+                  final filtered = docs.where((d) {
+                    final data = d.data() as Map<String, dynamic>;
+                    final cat = (data['category'] ?? '').toString();
+                    final status = (data['status'] ?? 'Approved').toString();
+                    final expiryDate = data['expiryDate'] is Timestamp
+                        ? (data['expiryDate'] as Timestamp).toDate()
+                        : null;
+                    final isExpired =
+                        expiryDate != null &&
+                        expiryDate.isBefore(DateTime.now());
+                    if (_statusFilter != 'All' &&
+                        status.toLowerCase() != _statusFilter.toLowerCase()) {
+                      return false;
+                    }
+                    if (_dateFilter == 'Expired' ? !isExpired : isExpired) {
+                      return false;
+                    }
+                    if (_categoryFilter == 'Within University') {
+                      return cat == 'University';
+                    }
+                    if (_categoryFilter == 'Within Lahore') {
+                      return cat == 'Lahore';
+                    }
+                    return true;
+                  }).toList();
+
+                  if (filtered.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.event_busy,
+                            size: 48,
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.38,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            "No events found",
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.54,
+                              ),
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final doc = filtered[index];
+                      final data = doc.data() as Map<String, dynamic>;
+                      return _buildEventCard(context, doc.id, data);
                     },
                   );
                 },
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _statusOptions.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final option = _statusOptions[index];
-                  final isSelected = _statusFilter == option;
-                  return ChoiceChip(
-                    label: Text(option),
-                    selected: isSelected,
-                    selectedColor: theme.colorScheme.primary,
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    onSelected: (_) => setState(() => _statusFilter = option),
-                  );
-                },
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: 2,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final option = index == 0 ? 'Active' : 'Expired';
-                  final isSelected = _dateFilter == option;
-                  return ChoiceChip(
-                    label: Text(option),
-                    selected: isSelected,
-                    selectedColor: theme.colorScheme.primary,
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    onSelected: (_) => setState(() => _dateFilter = option),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          // Events Stream
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _eventsRef
-                  .orderBy('eventDate', descending: false)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(child: Text("Error: ${snapshot.error}"));
-                }
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final docs = snapshot.data?.docs ?? [];
-
-                final filtered = docs.where((d) {
-                  final data = d.data() as Map<String, dynamic>;
-                  final cat = (data['category'] ?? '').toString();
-                  final status = (data['status'] ?? 'Approved').toString();
-                  final expiryDate = data['expiryDate'] is Timestamp
-                      ? (data['expiryDate'] as Timestamp).toDate()
-                      : null;
-                  final isExpired =
-                      expiryDate != null && expiryDate.isBefore(DateTime.now());
-                  if (_statusFilter != 'All' &&
-                      status.toLowerCase() != _statusFilter.toLowerCase()) {
-                    return false;
-                  }
-                  if (_dateFilter == 'Expired' ? !isExpired : isExpired) {
-                    return false;
-                  }
-                  if (_categoryFilter == 'Within University') {
-                    return cat == 'University';
-                  }
-                  if (_categoryFilter == 'Within Lahore') {
-                    return cat == 'Lahore';
-                  }
-                  return true;
-                }).toList();
-
-                if (filtered.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.event_busy,
-                          size: 48,
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.38,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          "No events found",
-                          style: TextStyle(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.54,
-                            ),
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final doc = filtered[index];
-                    final data = doc.data() as Map<String, dynamic>;
-                    return _buildEventCard(context, doc.id, data);
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

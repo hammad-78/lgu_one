@@ -139,3 +139,97 @@ BoxDecoration webHeroDecoration(BuildContext context) {
     borderRadius: BorderRadius.circular(24),
   );
 }
+
+/// Centers an admin list screen and caps its width on wide windows. On narrow
+/// windows [child] is returned untouched.
+Widget adminCentered(
+  BuildContext context,
+  Widget child, {
+  double maxWidth = 900,
+}) {
+  if (!isWideWeb(context)) return child;
+  return Align(
+    alignment: Alignment.topCenter,
+    child: ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: child,
+    ),
+  );
+}
+
+/// Admin "compose and manage" screen. On wide windows the [form] sits in a
+/// fixed left pane and the [list] fills the right pane, each scrolling on its
+/// own, so publishing never pushes the existing items off screen. On narrow
+/// windows they stack in one scrolling column, as before.
+class AdminSplitPage extends StatefulWidget {
+  final Widget form;
+  final Widget list;
+
+  const AdminSplitPage({super.key, required this.form, required this.list});
+
+  @override
+  State<AdminSplitPage> createState() => _AdminSplitPageState();
+}
+
+class _AdminSplitPageState extends State<AdminSplitPage> {
+  final _formScroll = ScrollController();
+  final _listScroll = ScrollController();
+
+  @override
+  void dispose() {
+    _formScroll.dispose();
+    _listScroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isWideWeb(context)) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [widget.form, const SizedBox(height: 24), widget.list],
+        ),
+      );
+    }
+
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          width: 480,
+          child: Scrollbar(
+            controller: _formScroll,
+            child: SingleChildScrollView(
+              controller: _formScroll,
+              padding: const EdgeInsets.fromLTRB(28, 28, 20, 28),
+              child: widget.form,
+            ),
+          ),
+        ),
+        VerticalDivider(
+          width: 1,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+        ),
+        Expanded(
+          child: Scrollbar(
+            controller: _listScroll,
+            child: SingleChildScrollView(
+              controller: _listScroll,
+              padding: const EdgeInsets.all(28),
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 820),
+                  child: widget.list,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
