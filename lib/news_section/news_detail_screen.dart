@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'news_model.dart';
 import '../utils/app_cached_image.dart';
+import '../utils/web_layout.dart';
 
 class NewsDetailScreen extends StatefulWidget {
   final NewsModel news;
@@ -19,123 +20,141 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final news = widget.news;
+    final wide = isWideWeb(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('News Details'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final image = AnimatedSize(
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOut,
+      alignment: Alignment.topCenter,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
           children: [
-            AnimatedSize(
-              duration: const Duration(milliseconds: 320),
-              curve: Curves.easeInOut,
-              alignment: Alignment.topCenter,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Stack(
-                  children: [
+            _isImageExpanded
+                ? _ExpandedNewsImage(
+                    imageUrl: news.image,
+                    fallbackColor: colorScheme.primary,
+                  )
+                : AspectRatio(
+                    aspectRatio: wide ? 4 / 3 : 16 / 9,
+                    child: _NewsImage(
+                      imageUrl: news.image,
+                      fit: BoxFit.cover,
+                      fallbackColor: colorScheme.primary,
+                    ),
+                  ),
+            Positioned(
+              right: 10,
+              bottom: 10,
+              child: Material(
+                color: colorScheme.surface.withValues(alpha: 0.9),
+                shape: const CircleBorder(),
+                child: IconButton(
+                  tooltip: _isImageExpanded
+                      ? 'Collapse image'
+                      : 'View full image',
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(
                     _isImageExpanded
-                        ? _ExpandedNewsImage(
-                            imageUrl: news.image,
-                            fallbackColor: colorScheme.primary,
-                          )
-                        : AspectRatio(
-                            aspectRatio: 16 / 9,
-                            child: _NewsImage(
-                              imageUrl: news.image,
-                              fit: BoxFit.cover,
-                              fallbackColor: colorScheme.primary,
-                            ),
-                          ),
-                    Positioned(
-                      right: 10,
-                      bottom: 10,
-                      child: Material(
-                        color: colorScheme.surface.withValues(alpha: 0.9),
-                        shape: const CircleBorder(),
-                        child: IconButton(
-                          tooltip: _isImageExpanded
-                              ? 'Collapse image'
-                              : 'View full image',
-                          visualDensity: VisualDensity.compact,
-                          icon: Icon(
-                            _isImageExpanded
-                                ? Icons.keyboard_arrow_up
-                                : Icons.keyboard_arrow_down,
-                            color: colorScheme.onSurface,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _isImageExpanded = !_isImageExpanded;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: colorScheme.onSurface,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isImageExpanded = !_isImageExpanded;
+                    });
+                  },
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    news.type,
-                    style: TextStyle(
-                      color: colorScheme.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                if (news.date.isNotEmpty) ...[
-                  const SizedBox(width: 12),
-                  Icon(
-                    Icons.calendar_today_outlined,
-                    size: 14,
-                    color: colorScheme.onSurface.withValues(alpha: 0.55),
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    news.date,
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              news.title,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontSize: 26,
-                height: 1.2,
-              ),
-            ),
-            const SizedBox(height: 18),
-            Divider(color: colorScheme.onSurface.withValues(alpha: 0.12)),
-            const SizedBox(height: 16),
-            Text(
-              news.description,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                height: 1.65,
-                color: colorScheme.onSurface.withValues(alpha: 0.8),
               ),
             ),
           ],
         ),
       ),
+    );
+
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!wide) const SizedBox(height: 20),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                news.type,
+                style: TextStyle(
+                  color: colorScheme.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (news.date.isNotEmpty) ...[
+              const SizedBox(width: 12),
+              Icon(
+                Icons.calendar_today_outlined,
+                size: 14,
+                color: colorScheme.onSurface.withValues(alpha: 0.55),
+              ),
+              const SizedBox(width: 5),
+              Text(news.date, style: theme.textTheme.bodySmall),
+            ],
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          news.title,
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontSize: wide ? 30 : 26,
+            height: 1.2,
+          ),
+        ),
+        const SizedBox(height: 18),
+        Divider(color: colorScheme.onSurface.withValues(alpha: 0.12)),
+        const SizedBox(height: 16),
+        Text(
+          news.description,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontSize: wide ? 16 : null,
+            height: wide ? 1.75 : 1.65,
+            color: colorScheme.onSurface.withValues(alpha: 0.8),
+          ),
+        ),
+      ],
+    );
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('News Details')),
+      body: wide
+          ? Scrollbar(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                // Picture on the left, story on the right, side by side.
+                child: WebConstrained(
+                  maxWidth: 1040,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 5, child: image),
+                      const SizedBox(width: 40),
+                      Expanded(flex: 6, child: details),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [image, details],
+              ),
+            ),
     );
   }
 }
