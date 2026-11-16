@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/about.dart';
+import 'package:lgu_one/auth/drawer_profile_header.dart';
 import 'package:lgu_one/admin/admin_signin.dart';
 import 'package:lgu_one/auth/lgu_email_gate.dart';
 import 'package:lgu_one/collaboration/collaboration_screen.dart';
@@ -572,60 +573,80 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         color: theme.cardTheme.color,
         child: Column(
           children: [
-            const SizedBox(height: 16),
-            item(
-              leading: _drawerIcon("assets/images/home_icon.png"),
-              label: "Home",
-              selected: true,
-              onTap: () {},
-            ),
-            item(
-              leading: _drawerIcon("assets/images/abouUs_icon.png"),
-              label: "About Us",
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const About()),
-              ),
-            ),
-            item(
-              leading: _drawerIcon("assets/images/recommendation_icon.png"),
-              label: "Recommendations",
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const RecommendationsPage(),
+            // Header and menu scroll when the window is too short for them;
+            // the footer stays pinned to the bottom.
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const DrawerProfileHeader(inDrawer: false),
+                    const SizedBox(height: 12),
+                    item(
+                      leading: _drawerIcon("assets/images/home_icon.png"),
+                      label: "Home",
+                      selected: true,
+                      onTap: () {},
+                    ),
+                    item(
+                      leading: _drawerIcon("assets/images/abouUs_icon.png"),
+                      label: "About Us",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const About()),
+                      ),
+                    ),
+                    item(
+                      leading: _drawerIcon(
+                        "assets/images/recommendation_icon.png",
+                      ),
+                      label: "Recommendations",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RecommendationsPage(),
+                        ),
+                      ),
+                    ),
+                    item(
+                      leading: _drawerIcon("assets/images/message_icon.png"),
+                      label: "Contact us",
+                      onTap: () => contactUsOnWhatsApp(context),
+                    ),
+                    item(
+                      leading: const SizedBox.square(
+                        dimension: 30,
+                        child: Icon(Icons.settings),
+                      ),
+                      label: "Settings",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SettingsScreen(),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 8,
+                      ),
+                      child: Divider(color: highlight.withValues(alpha: 0.2)),
+                    ),
+                    item(
+                      leading: _drawerIcon("assets/images/group_icon.png"),
+                      label: "Admin Signin",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminSignin(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                 ),
               ),
             ),
-            item(
-              leading: _drawerIcon("assets/images/message_icon.png"),
-              label: "Contact us",
-              onTap: () => contactUsOnWhatsApp(context),
-            ),
-            item(
-              leading: const SizedBox.square(
-                dimension: 30,
-                child: Icon(Icons.settings),
-              ),
-              label: "Settings",
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Divider(color: highlight.withValues(alpha: 0.2)),
-            ),
-            item(
-              leading: _drawerIcon("assets/images/group_icon.png"),
-              label: "Admin Signin",
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AdminSignin()),
-              ),
-            ),
-            const Spacer(),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Text(
@@ -852,7 +873,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildDrawer() {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final highlight = theme.colorScheme.primary;
 
     return Drawer(
@@ -862,50 +882,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       child: Column(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              color: theme.cardTheme.color,
-              border: Border(
-                bottom: BorderSide(
-                  color: highlight.withValues(alpha: isDark ? 0.3 : 0.25),
-                  width: 1,
-                ),
-              ),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 20),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: highlight, width: 2),
-                      ),
-                      child: CircleAvatar(
-                        radius: 26,
-                        backgroundColor: Colors.white,
-                        child: Image.asset(
-                          "assets/images/lgu_connect_icon.png",
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        "LGU-Connect",
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          const DrawerProfileHeader(),
           const SizedBox(height: 8),
           ListTile(
             leading: _drawerIcon("assets/images/home_icon.png"),

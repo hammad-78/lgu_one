@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,6 +28,8 @@ class LguEmailGate {
   /// Returns true if the user may enter the feature: either a valid email is
   /// already stored, or the user enters one in the dialog.
   static Future<bool> ensureVerified(BuildContext context) async {
+    final signedIn = FirebaseAuth.instance.currentUser?.email;
+    if (signedIn != null && isValid(signedIn)) return true;
     if (await savedEmail() != null) return true;
     if (!context.mounted) return false;
     final result = await showDialog<bool>(
