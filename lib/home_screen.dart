@@ -7,6 +7,8 @@ import 'package:lgu_one/auth/lgu_email_gate.dart';
 import 'package:lgu_one/collaboration/collaboration_screen.dart';
 import 'package:lgu_one/events/upcoming_events_screen.dart';
 import 'package:lgu_one/dashboard_grid.dart';
+import 'package:lgu_one/esociety/esociety_portal_signin.dart';
+import 'package:lgu_one/esociety/esociety_screen.dart';
 import 'package:lgu_one/jobs/jobs_swiper.dart';
 import 'package:lgu_one/news_section/news_carousel.dart';
 import 'package:lgu_one/notification/notification_service.dart';
@@ -378,6 +380,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           );
         },
       ),
+      _buildQuickActionCard(
+        context,
+        title: "Entrepreneurship Society",
+        icon: Icons.lightbulb_outline,
+        imageAsset: "assets/images/idea_icon.png",
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const EsocietyScreen()),
+        ),
+      ),
     ];
   }
 
@@ -639,6 +651,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const AdminSignin(),
+                        ),
+                      ),
+                    ),
+                    item(
+                      leading: const SizedBox.square(
+                        dimension: 30,
+                        child: Icon(Icons.rocket_launch_outlined),
+                      ),
+                      label: "E-Society Portal",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EsocietyPortalEntry(),
                         ),
                       ),
                     ),
@@ -938,6 +963,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const AdminSignin()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.rocket_launch_outlined),
+            title: const Text("E-Society Portal"),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const EsocietyPortalEntry(),
+                ),
               );
             },
           ),

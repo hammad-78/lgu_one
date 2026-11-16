@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:lgu_one/esociety/esociety_portal_signin.dart';
 import 'package:lgu_one/admin/admin_collaboration.dart';
 import 'package:lgu_one/admin/admin_events_screen.dart';
 import 'package:lgu_one/admin/admin_jobs_screen.dart';
@@ -326,6 +327,16 @@ class _AdminHomeState extends State<AdminHome> {
                                 .where('info.status', isEqualTo: 'pending')
                                 .snapshots(),
                             onTap: () => _navigate(const AdminCollaboration()),
+                          ),
+                          _buildActionButton(
+                            context: context,
+                            icon: Icons.rocket_launch_outlined,
+                            label: "E-Society Portal",
+                            pendingStream: FirebaseFirestore.instance
+                                .collection('esociety_ideas')
+                                .where('unreadForSociety', isEqualTo: true)
+                                .snapshots(),
+                            onTap: () => _navigate(const EsocietyPortalEntry()),
                           ),
                           _buildActionButton(
                             context: context,

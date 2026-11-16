@@ -1,6 +1,7 @@
 import 'package:lgu_one/utils/web_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lgu_one/esociety/collab_reviews.dart';
 import 'package:lgu_one/utils/flushbar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -621,6 +622,9 @@ class JoinCollaborationScreen extends StatelessWidget {
                               .map((post) => Chip(label: Text(post.toString())))
                               .toList(),
                         ),
+
+                        /// E-SOCIETY FEEDBACK
+                        CollabSocietyReviews(collabId: doc.id),
 
                         const SizedBox(height: 20),
 
