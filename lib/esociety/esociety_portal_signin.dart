@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lgu_one/esociety/esociety_models.dart';
 import 'package:lgu_one/esociety/esociety_portal_screen.dart';
 import 'package:lgu_one/esociety/esociety_service.dart';
-import 'package:lgu_one/utils/web_layout.dart';
+import 'package:lgu_one/esociety/esociety_widgets.dart';
 
 /// Entry to the Entrepreneurship Society portal. Opens the portal straight
 /// away when the signed-in account is a society member (or an admin);
@@ -130,8 +130,7 @@ class _PortalSignInState extends State<_PortalSignIn> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final wide = isWideWeb(context);
+    final t = EsTokens.of(context);
 
     final form = SafeArea(
       child: Center(
@@ -142,38 +141,21 @@ class _PortalSignInState extends State<_PortalSignIn> {
             child: Form(
               key: _formKey,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Image.asset(
-                    'assets/images/idea_icon.png',
-                    width: 84,
-                    height: 84,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'E-Society Portal',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontSize: 24,
-                    ),
-                  ),
+                  Text('Sign in to the portal', style: EsType.title(t)),
                   const SizedBox(height: 6),
                   Text(
-                    'For Entrepreneurship Society members',
-                    style: theme.textTheme.bodySmall,
+                    'For Entrepreneurship Society members. Review ideas, '
+                    'reply to students and schedule meetings.',
+                    style: EsType.body(t).copyWith(color: t.muted),
                   ),
                   if (widget.signedInAs != null) ...[
                     const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'You are signed in as ${widget.signedInAs}, which has no '
-                        'portal access. Signing in below switches accounts.',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 13),
-                      ),
+                    Text(
+                      'You are signed in as ${widget.signedInAs}, which has '
+                      'no portal access. Signing in below switches accounts.',
+                      style: EsType.small(t),
                     ),
                   ],
                   const SizedBox(height: 28),
@@ -182,7 +164,6 @@ class _PortalSignInState extends State<_PortalSignIn> {
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
                       labelText: 'Email',
-                      prefixIcon: Icon(Icons.email_outlined),
                       border: OutlineInputBorder(),
                     ),
                     validator: (v) =>
@@ -195,7 +176,6 @@ class _PortalSignInState extends State<_PortalSignIn> {
                     onFieldSubmitted: (_) => _signIn(),
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         tooltip: _obscure ? 'Show password' : 'Hide password',
@@ -210,19 +190,11 @@ class _PortalSignInState extends State<_PortalSignIn> {
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 16),
-                    Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.redAccent,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    Text(_error!, style: TextStyle(color: t.clay)),
                   ],
                   const SizedBox(height: 24),
                   SizedBox(
-                    width: double.infinity,
-                    height: 50,
+                    height: 48,
                     child: FilledButton(
                       onPressed: _loading ? null : _signIn,
                       child: _loading
@@ -244,55 +216,7 @@ class _PortalSignInState extends State<_PortalSignIn> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('E-Society Portal')),
-      body: wide
-          ? Row(
-              children: [
-                Expanded(flex: 5, child: _brandPanel(context)),
-                Expanded(flex: 4, child: form),
-              ],
-            )
-          : form,
-    );
-  }
-
-  Widget _brandPanel(BuildContext context) {
-    final theme = Theme.of(context);
-    const onHero = Colors.white;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(24, 24, 0, 24),
-      padding: const EdgeInsets.all(48),
-      decoration: webHeroDecoration(context),
-      alignment: Alignment.bottomLeft,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.rocket_launch_outlined, size: 60, color: onHero),
-          const SizedBox(height: 24),
-          Text(
-            'LGU Entrepreneurship Society',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontSize: 38,
-              height: 1.1,
-              fontWeight: FontWeight.w800,
-              color: onHero,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
-            child: Text(
-              'Review the ideas students share, reply to them, set meeting '
-              'dates, and give feedback on student collaborations.',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                fontSize: 17,
-                height: 1.55,
-                color: onHero.withValues(alpha: 0.85),
-              ),
-            ),
-          ),
-        ],
-      ),
+      body: form,
     );
   }
 }

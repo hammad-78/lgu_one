@@ -11,8 +11,8 @@ import 'package:lgu_one/utils/flushbar.dart';
 import 'package:lgu_one/utils/web_layout.dart';
 import 'package:lgu_one/utils/whatsApp_support.dart';
 
-/// Home of the Entrepreneurship Society portal: the ideas inbox, every
-/// appointment, and student collaborations to contact and review.
+/// Home of the Entrepreneurship Society portal: ideas by stage, the meeting
+/// agenda, and student collaborations to contact and review.
 class EsocietyPortalScreen extends StatefulWidget {
   final EsocietyMember member;
   const EsocietyPortalScreen({super.key, required this.member});
@@ -45,20 +45,11 @@ class _EsocietyPortalScreenState extends State<EsocietyPortalScreen> {
             appBar: AppBar(
               title: const Text('E-Society Portal'),
               actions: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: Center(
-                    child: Text(
-                      widget.member.name,
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  ),
-                ),
-                // Admins reach the portal from the admin console; signing out
-                // here would also end their admin session.
+                // Admins arrive from the admin console; signing out here
+                // would also end their admin session.
                 if (widget.member.role != 'Admin')
                   IconButton(
-                    tooltip: 'Sign out',
+                    tooltip: 'Sign out ${widget.member.name}',
                     icon: const Icon(Icons.logout),
                     onPressed: _signOut,
                   ),
@@ -68,14 +59,23 @@ class _EsocietyPortalScreenState extends State<EsocietyPortalScreen> {
                 unselectedLabelColor: Colors.white70,
                 indicatorColor: Colors.white,
                 tabs: [
-                  Tab(child: _tabLabel('Ideas', unread)),
-                  Tab(child: _tabLabel('Appointments', upcoming)),
+                  Tab(text: unread > 0 ? 'Ideas ($unread new)' : 'Ideas'),
+                  Tab(text: upcoming > 0 ? 'Meetings ($upcoming)' : 'Meetings'),
                   const Tab(text: 'Collaborations'),
                 ],
               ),
             ),
             body: snapshot.hasError
-                ? Center(child: Text('Could not load ideas: ${snapshot.error}'))
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'Ideas could not be loaded. Check that this account '
+                        'is a society member and try again.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
                 : TabBarView(
                     children: [
                       _IdeasTab(
@@ -83,40 +83,13 @@ class _EsocietyPortalScreenState extends State<EsocietyPortalScreen> {
                         loading: !snapshot.hasData,
                         member: widget.member,
                       ),
-                      _AppointmentsTab(ideas: ideas, member: widget.member),
+                      _MeetingsTab(ideas: ideas, member: widget.member),
                       _CollaborationsTab(member: widget.member),
                     ],
                   ),
           );
         },
       ),
-    );
-  }
-
-  Widget _tabLabel(String text, int count) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(child: Text(text, overflow: TextOverflow.ellipsis)),
-        if (count > 0) ...[
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '$count',
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF2E7D32),
-              ),
-            ),
-          ),
-        ],
-      ],
     );
   }
 }
@@ -131,6 +104,17 @@ void _openIdea(BuildContext context, Idea idea, EsocietyMember member) {
 }
 
 // ─── Ideas ──────────────────────────────────────────────────────────────────
+
+/// Filters for the phone list. `open` hides closed ideas.
+enum _Filter {
+  open,
+  unread,
+  submitted,
+  underReview,
+  shortlisted,
+  accepted,
+  closed,
+}
 
 class _IdeasTab extends StatefulWidget {
   final List<Idea> ideas;
@@ -148,9 +132,10 @@ class _IdeasTab extends StatefulWidget {
 
 class _IdeasTabState extends State<_IdeasTab>
     with AutomaticKeepAliveClientMixin {
-  /// null = all open ideas; 'unread' = needs a reply.
-  String? _filter;
   final _search = TextEditingController();
+  _Filter _filter = _Filter.open;
+  bool _onlyUnread = false;
+  bool _showClosed = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -167,305 +152,492 @@ class _IdeasTabState extends State<_IdeasTab>
     super.dispose();
   }
 
-  bool _matches(Idea i) {
+  bool _matchesSearch(Idea i) {
     final q = _search.text.trim().toLowerCase();
-    if (q.isNotEmpty &&
-        !('${i.title} ${i.studentName} ${i.category} ${i.studentEmail}')
-            .toLowerCase()
-            .contains(q)) {
-      return false;
-    }
-    return switch (_filter) {
-      null => i.status != IdeaStatus.withdrawn,
-      'unread' => i.unreadForSociety,
-      final s => i.status.value == s,
-    };
+    if (q.isEmpty) return true;
+    return '${i.title} ${i.studentName} ${i.category} ${i.studentEmail}'
+        .toLowerCase()
+        .contains(q);
   }
+
+  bool _matchesFilter(Idea i, _Filter f) => switch (f) {
+    _Filter.open => !i.status.isClosed,
+    _Filter.unread => i.unreadForSociety,
+    _Filter.submitted => i.status == IdeaStatus.submitted,
+    _Filter.underReview => i.status == IdeaStatus.underReview,
+    _Filter.shortlisted => i.status == IdeaStatus.shortlisted,
+    _Filter.accepted => i.status == IdeaStatus.accepted,
+    _Filter.closed => i.status.isClosed,
+  };
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final theme = Theme.of(context);
-    final ideas = widget.ideas;
-    int count(IdeaStatus s) => ideas.where((i) => i.status == s).length;
-    final unread = ideas.where((i) => i.unreadForSociety).length;
-    final shown = ideas.where(_matches).toList();
-    final wide = isWideWeb(context);
+    final t = EsTokens.of(context);
+    if (widget.loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final searched = widget.ideas.where(_matchesSearch).toList();
 
-    final stats = [
-      _Stat('Need reply', unread, Icons.mark_chat_unread_outlined, () {
-        setState(() => _filter = 'unread');
-      }),
-      _Stat('New', count(IdeaStatus.submitted), IdeaStatus.submitted.icon, () {
-        setState(() => _filter = IdeaStatus.submitted.value);
-      }),
-      _Stat(
-        'In review',
-        count(IdeaStatus.underReview),
-        IdeaStatus.underReview.icon,
-        () => setState(() => _filter = IdeaStatus.underReview.value),
+    final search = TextField(
+      controller: _search,
+      decoration: InputDecoration(
+        hintText: 'Search ideas, students or categories',
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: _search.text.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Clear search',
+                icon: const Icon(Icons.close),
+                onPressed: _search.clear,
+              ),
+        isDense: true,
+        filled: true,
+        fillColor: t.surface,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
       ),
-      _Stat(
-        'Shortlisted',
-        count(IdeaStatus.shortlisted),
-        IdeaStatus.shortlisted.icon,
-        () => setState(() => _filter = IdeaStatus.shortlisted.value),
-      ),
-      _Stat(
-        'Accepted',
-        count(IdeaStatus.accepted),
-        IdeaStatus.accepted.icon,
-        () => setState(() => _filter = IdeaStatus.accepted.value),
-      ),
-    ];
+    );
 
-    final filters = <(String?, String)>[
-      (null, 'All open'),
-      ('unread', 'Needs reply'),
-      for (final s in IdeaStatus.values) (s.value, s.label),
-    ];
-
-    return adminCentered(
-      context,
-      maxWidth: 980,
-      ListView(
-        padding: EdgeInsets.all(wide ? 28 : 16),
-        children: [
-          // Cards size to their content, so larger text never overflows.
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
+    if (widget.ideas.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (var i = 0; i < stats.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 10),
-                  _StatCard(stat: stats[i]),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _search,
-            decoration: InputDecoration(
-              hintText: 'Search by idea, student or category',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _search.text.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Clear',
-                      icon: const Icon(Icons.close),
-                      onPressed: _search.clear,
-                    ),
-              isDense: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final f in filters)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(f.$2),
-                      selected: _filter == f.$1,
-                      onSelected: (_) => setState(() => _filter = f.$1),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          if (widget.loading)
-            const Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (shown.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(40),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.inbox_outlined,
-                    size: 48,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    ideas.isEmpty
-                        ? 'No ideas shared yet'
-                        : 'No ideas match this filter',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-            )
-          else
-            for (final idea in shown)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: IdeaTile(
-                  idea: idea,
-                  unread: idea.unreadForSociety,
-                  showStudent: true,
-                  onTap: () => _openIdea(context, idea, widget.member),
+                Text('No ideas yet', style: EsType.title(t)),
+                const SizedBox(height: 8),
+                Text(
+                  'When students share an idea from the app it lands here, '
+                  'in the Submitted column.',
+                  style: EsType.body(t).copyWith(color: t.muted),
                 ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (isWideWeb(context)) return _board(searched, search);
+    return _list(searched, search);
+  }
+
+  /// Wide screens: one column per stage, like a pipeline board.
+  Widget _board(List<Idea> ideas, Widget search) {
+    final shown = _onlyUnread
+        ? ideas.where((i) => i.unreadForSociety).toList()
+        : ideas;
+    final columns = <(String, List<Idea>)>[
+      for (final s in IdeaStatus.track)
+        (s.label, shown.where((i) => i.status == s).toList()),
+      if (_showClosed)
+        ('Closed', shown.where((i) => i.status.isClosed).toList()),
+    ];
+    final unread = ideas.where((i) => i.unreadForSociety).length;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              SizedBox(width: 380, child: search),
+              const SizedBox(width: 12),
+              FilterChip(
+                label: Text('Needs a reply ($unread)'),
+                selected: _onlyUnread,
+                onSelected: (v) => setState(() => _onlyUnread = v),
               ),
+              const SizedBox(width: 8),
+              FilterChip(
+                label: const Text('Show closed'),
+                selected: _showClosed,
+                onSelected: (v) => setState(() => _showClosed = v),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < columns.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 28),
+                  Expanded(
+                    child: _BoardColumn(
+                      title: columns[i].$1,
+                      ideas: columns[i].$2,
+                      member: widget.member,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Phones: one list, with stage filters that show their counts.
+  Widget _list(List<Idea> ideas, Widget search) {
+    final t = EsTokens.of(context);
+    int count(_Filter f) => ideas.where((i) => _matchesFilter(i, f)).length;
+    final filters = <(_Filter, String)>[
+      (_Filter.open, 'All open'),
+      (_Filter.unread, 'Needs a reply'),
+      (_Filter.submitted, 'Submitted'),
+      (_Filter.underReview, 'In review'),
+      (_Filter.shortlisted, 'Shortlisted'),
+      (_Filter.accepted, 'Accepted'),
+      (_Filter.closed, 'Closed'),
+    ];
+    final shown = ideas.where((i) => _matchesFilter(i, _filter)).toList();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      children: [
+        search,
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final f in filters)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text('${f.$2} (${count(f.$1)})'),
+                    selected: _filter == f.$1,
+                    onSelected: (_) => setState(() => _filter = f.$1),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (shown.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: Text(
+              _filter == _Filter.unread
+                  ? 'You are up to date. No idea is waiting for a reply.'
+                  : 'No ideas here. Try another filter or clear the search.',
+              textAlign: TextAlign.center,
+              style: EsType.body(t).copyWith(color: t.muted),
+            ),
+          )
+        else
+          for (final idea in shown)
+            IdeaTile(
+              idea: idea,
+              unread: idea.unreadForSociety,
+              showStudent: true,
+              onTap: () => _openIdea(context, idea, widget.member),
+            ),
+      ],
+    );
+  }
+}
+
+class _BoardColumn extends StatelessWidget {
+  final String title;
+  final List<Idea> ideas;
+  final EsocietyMember member;
+  const _BoardColumn({
+    required this.title,
+    required this.ideas,
+    required this.member,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EsTokens.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(title, style: EsType.heading(t)),
+            const SizedBox(width: 8),
+            Text('${ideas.length}', style: EsType.small(t)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Divider(height: 1, color: t.ink.withValues(alpha: 0.5)),
+        Expanded(
+          child: ideas.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: Text('Nothing here', style: EsType.small(t)),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.only(top: 10, bottom: 24),
+                  itemCount: ideas.length,
+                  itemBuilder: (context, i) =>
+                      _BoardCard(idea: ideas[i], member: member),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BoardCard extends StatelessWidget {
+  final Idea idea;
+  final EsocietyMember member;
+  const _BoardCard({required this.idea, required this.member});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EsTokens.of(context);
+    final unread = idea.unreadForSociety;
+    final line = idea.status.isClosed
+        ? idea.status.label
+        : idea.hasUpcomingAppointment
+        ? 'Meeting ${kShortDateFormat.format(idea.appointmentAt!)}'
+        : unread
+        ? 'Student wrote ${relativeTime(idea.lastActivityAt).toLowerCase()}'
+        : 'Updated ${relativeTime(idea.lastActivityAt).toLowerCase()}';
+    return EsPanel(
+      padding: const EdgeInsets.all(12),
+      onTap: () => _openIdea(context, idea, member),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  idea.title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: EsType.heading(t).copyWith(
+                    fontSize: 14.5,
+                    fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  idea.studentName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: EsType.small(t).copyWith(fontSize: 12.5),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  line,
+                  style: EsType.small(t).copyWith(
+                    fontSize: 12,
+                    color: idea.status.isClosed
+                        ? t.statusColor(idea.status)
+                        : unread
+                        ? t.moss
+                        : t.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (unread) ...[
+            const SizedBox(width: 8),
+            const Padding(padding: EdgeInsets.only(top: 6), child: UnreadDot()),
+          ],
         ],
       ),
     );
   }
 }
 
-class _Stat {
-  final String label;
-  final int value;
-  final IconData icon;
-  final VoidCallback onTap;
-  const _Stat(this.label, this.value, this.icon, this.onTap);
-}
+// ─── Meetings ───────────────────────────────────────────────────────────────
 
-class _StatCard extends StatelessWidget {
-  final _Stat stat;
-  const _StatCard({required this.stat});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SizedBox(
-      width: 140,
-      child: EsocietyCard(
-        onTap: stat.onTap,
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(stat.icon, size: 20, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  '${stat.value}',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    height: 1.1,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              stat.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Appointments ───────────────────────────────────────────────────────────
-
-class _AppointmentsTab extends StatelessWidget {
+/// Meetings as an agenda: grouped by day, time on the left.
+class _MeetingsTab extends StatelessWidget {
   final List<Idea> ideas;
   final EsocietyMember member;
-  const _AppointmentsTab({required this.ideas, required this.member});
+  const _MeetingsTab({required this.ideas, required this.member});
+
+  String _dayLabel(DateTime d) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(d.year, d.month, d.day);
+    final diff = day.difference(today).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Tomorrow';
+    if (diff == -1) return 'Yesterday';
+    return kDayFormat.format(d);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final t = EsTokens.of(context);
     final withDate = ideas.where((i) => i.appointmentAt != null).toList();
     final upcoming = withDate.where((i) => i.hasUpcomingAppointment).toList()
       ..sort((a, b) => a.appointmentAt!.compareTo(b.appointmentAt!));
-    final past = withDate.where((i) => !i.hasUpcomingAppointment).toList()
+    final earlier = withDate.where((i) => !i.hasUpcomingAppointment).toList()
       ..sort((a, b) => b.appointmentAt!.compareTo(a.appointmentAt!));
 
     if (withDate.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.event_outlined,
-                size: 48,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(height: 8),
-              const Text('No appointments yet'),
-              const SizedBox(height: 4),
-              Text(
-                'Open an idea and choose Appointment to set one.',
-                style: theme.textTheme.bodySmall,
-              ),
-            ],
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('No meetings scheduled', style: EsType.title(t)),
+                const SizedBox(height: 8),
+                Text(
+                  'Open an idea and choose Schedule meeting. The student is '
+                  'asked to confirm, and the meeting shows up here.',
+                  style: EsType.body(t).copyWith(color: t.muted),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
-    Widget entry(Idea idea) => Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => _openIdea(context, idea, member),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    List<Widget> agenda(List<Idea> list, {required bool faded}) {
+      final out = <Widget>[];
+      String? lastDay;
+      for (final idea in list) {
+        final day = _dayLabel(idea.appointmentAt!);
+        if (day != lastDay) {
+          out.add(
             Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 6),
+              padding: EdgeInsets.only(
+                top: lastDay == null ? 0 : 20,
+                bottom: 8,
+              ),
               child: Text(
-                '${idea.studentName} · ${idea.title}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w700),
+                day,
+                style: EsType.heading(
+                  t,
+                ).copyWith(color: faded ? t.muted : t.ink),
               ),
             ),
-            AppointmentCard(idea: idea),
-          ],
-        ),
-      ),
-    );
+          );
+          lastDay = day;
+        }
+        out.add(_AgendaRow(idea: idea, member: member, faded: faded));
+      }
+      return out;
+    }
 
     return adminCentered(
       context,
-      maxWidth: 760,
+      maxWidth: 720,
       ListView(
-        padding: EdgeInsets.all(isWideWeb(context) ? 28 : 16),
+        padding: EdgeInsets.all(isWideWeb(context) ? 32 : 16),
         children: [
-          if (upcoming.isNotEmpty) ...[
-            _heading(theme, 'Upcoming (${upcoming.length})'),
-            ...upcoming.map(entry),
-            const SizedBox(height: 12),
-          ],
-          if (past.isNotEmpty) ...[
-            _heading(theme, 'Past and cancelled'),
-            ...past.map(entry),
+          if (upcoming.isEmpty)
+            Text(
+              'Nothing coming up.',
+              style: EsType.body(t).copyWith(color: t.muted),
+            )
+          else
+            ...agenda(upcoming, faded: false),
+          if (earlier.isNotEmpty) ...[
+            const SizedBox(height: 36),
+            Text('Earlier and cancelled', style: EsType.small(t)),
+            Divider(color: t.rule),
+            const SizedBox(height: 8),
+            ...agenda(earlier, faded: true),
           ],
         ],
       ),
     );
   }
+}
 
-  Widget _heading(ThemeData theme, String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Text(
-      text,
-      style: theme.textTheme.headlineMedium?.copyWith(fontSize: 17),
-    ),
-  );
+class _AgendaRow extends StatelessWidget {
+  final Idea idea;
+  final EsocietyMember member;
+  final bool faded;
+  const _AgendaRow({
+    required this.idea,
+    required this.member,
+    required this.faded,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EsTokens.of(context);
+    final state = idea.appointmentState ?? AppointmentState.proposed;
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () => _openIdea(context, idea, member),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 76,
+              child: Text(
+                kTimeFormat.format(idea.appointmentAt!),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: faded ? t.muted : t.ink,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    idea.studentName,
+                    style: EsType.body(t).copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: faded ? t.muted : t.ink,
+                    ),
+                  ),
+                  Text(
+                    idea.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: EsType.small(t),
+                  ),
+                  if (idea.appointmentPlace.isNotEmpty)
+                    Text(idea.appointmentPlace, style: EsType.small(t)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              faded && state != AppointmentState.cancelled
+                  ? 'Took place'
+                  : state.label(forSociety: true),
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: faded && state != AppointmentState.cancelled
+                    ? t.muted
+                    : t.appointmentColor(state),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ─── Collaborations ─────────────────────────────────────────────────────────
@@ -489,29 +661,40 @@ class _CollaborationsTabState extends State<_CollaborationsTab>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final t = EsTokens.of(context);
     return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
       stream: _stream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text('Could not load: ${snapshot.error}'));
+          return const Center(
+            child: Text('Collaborations could not be loaded. Try again.'),
+          );
         }
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
         final docs = snapshot.data!;
-        if (docs.isEmpty) {
-          return const Center(child: Text('No approved collaborations yet'));
-        }
         return adminCentered(
           context,
-          maxWidth: 820,
-          ListView.builder(
-            padding: EdgeInsets.all(isWideWeb(context) ? 28 : 16),
-            itemCount: docs.length,
-            itemBuilder: (context, i) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _CollabCard(doc: docs[i], member: widget.member),
-            ),
+          maxWidth: 760,
+          ListView(
+            padding: EdgeInsets.all(isWideWeb(context) ? 32 : 16),
+            children: [
+              Text(
+                'Student projects that are open for members. Contact the team '
+                'or leave feedback; students see your review on the project.',
+                style: EsType.body(t).copyWith(color: t.muted),
+              ),
+              const SizedBox(height: 20),
+              if (docs.isEmpty)
+                Text('No approved collaborations yet.', style: EsType.body(t)),
+              for (final doc in docs)
+                _CollabCard(
+                  key: ValueKey(doc.id),
+                  doc: doc,
+                  member: widget.member,
+                ),
+            ],
           ),
         );
       },
@@ -519,34 +702,42 @@ class _CollaborationsTabState extends State<_CollaborationsTab>
   }
 }
 
-class _CollabCard extends StatelessWidget {
+class _CollabCard extends StatefulWidget {
   final QueryDocumentSnapshot<Map<String, dynamic>> doc;
   final EsocietyMember member;
-  const _CollabCard({required this.doc, required this.member});
+  const _CollabCard({super.key, required this.doc, required this.member});
 
-  Future<void> _review(BuildContext context, CollabReview? mine) async {
+  @override
+  State<_CollabCard> createState() => _CollabCardState();
+}
+
+class _CollabCardState extends State<_CollabCard> {
+  late final Stream<List<CollabReview>> _reviews = EsocietyService.instance
+      .collabReviews(widget.doc.id);
+
+  Future<void> _review(CollabReview? mine) async {
     final result = await showReviewDialog(
       context,
-      title: mine == null ? 'Review collaboration' : 'Edit your review',
+      title: mine == null ? 'Review this project' : 'Edit your review',
       initialRating: mine?.rating ?? 0,
       initialText: mine?.comment ?? '',
     );
-    if (result == null || !context.mounted) return;
+    if (result == null || !mounted) return;
     try {
       await EsocietyService.instance.saveCollabReview(
-        doc.id,
-        member,
+        widget.doc.id,
+        widget.member,
         rating: result.$1,
         comment: result.$2,
       );
-      if (context.mounted) {
+      if (mounted) {
         showFlushbar(context, 'Review saved', color: Colors.green.shade900);
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         showFlushbar(
           context,
-          'Could not save review: $e',
+          'Review not saved. Try again.',
           color: Colors.red.shade900,
         );
       }
@@ -555,110 +746,76 @@ class _CollabCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final info = (doc.data()['info'] as Map?)?.cast<String, dynamic>() ?? {};
+    final t = EsTokens.of(context);
+    final info =
+        (widget.doc.data()['info'] as Map?)?.cast<String, dynamic>() ?? {};
     final posts = ((info['requiredPosts'] as List?) ?? const [])
         .map((e) => e.toString())
         .toList();
     final phone = (info['whatsappNumber'] ?? '').toString();
     final title = (info['title'] ?? '').toString();
+    final category = (info['category'] ?? '').toString();
+    final description = (info['description'] ?? '').toString();
+    final members =
+        '${info['existingMembers'] ?? 0} of ${info['requiredMembers'] ?? 0} '
+        'members';
 
-    return EsocietyCard(
+    return EsPanel(
       padding: const EdgeInsets.all(16),
       child: StreamBuilder<List<CollabReview>>(
-        stream: EsocietyService.instance.collabReviews(doc.id),
+        stream: _reviews,
         builder: (context, snapshot) {
           final reviews = snapshot.data ?? const <CollabReview>[];
           CollabReview? mine;
           for (final r in reviews) {
-            if (r.reviewerUid == member.uid) mine = r;
+            if (r.reviewerUid == widget.member.uid) mine = r;
           }
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  Chip(
-                    label: Text((info['category'] ?? '').toString()),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
+              Text(title, style: EsType.heading(t).copyWith(fontSize: 17)),
+              const SizedBox(height: 2),
+              Text(
+                category.isEmpty ? members : '$category, $members',
+                style: EsType.small(t),
               ),
-              if ((info['description'] ?? '').toString().isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  info['description'].toString(),
-                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14.5),
-                ),
+              if (description.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(description, style: EsType.body(t).copyWith(fontSize: 14)),
               ],
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  const Icon(Icons.people_outline, size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Members ${info['existingMembers'] ?? 0}/'
-                    '${info['requiredMembers'] ?? 0}',
-                    style: const TextStyle(fontSize: 13.5),
-                  ),
-                ],
-              ),
               if (posts.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: posts
-                      .map(
-                        (p) => Chip(
-                          label: Text(p, style: const TextStyle(fontSize: 12)),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      )
-                      .toList(),
-                ),
+                const SizedBox(height: 10),
+                FactList([('Looking for', posts.join(', '))]),
               ],
               if (reviews.isNotEmpty) ...[
-                const Divider(height: 24),
+                Divider(height: 28, color: t.rule),
                 CollabReviewList(reviews: reviews),
               ],
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: 4,
+                runSpacing: 4,
                 children: [
                   if (phone.isNotEmpty)
-                    FilledButton.icon(
+                    TextButton(
                       onPressed: () => openWhatsApp(
                         phone,
-                        'Hi, this is ${member.name} from the LGU '
-                        'Entrepreneurship Society about your collaboration '
+                        'Hi, this is ${widget.member.name} from the LGU '
+                        'Entrepreneurship Society, about your project '
                         '"$title".',
                       ),
-                      icon: const Icon(Icons.chat_outlined, size: 18),
-                      label: const Text('Contact'),
+                      child: const Text('Message on WhatsApp'),
                     ),
-                  OutlinedButton.icon(
-                    onPressed: () => _review(context, mine),
-                    icon: const Icon(Icons.rate_review_outlined, size: 18),
-                    label: Text(mine == null ? 'Review' : 'Edit review'),
+                  TextButton(
+                    onPressed: () => _review(mine),
+                    child: Text(mine == null ? 'Write review' : 'Edit review'),
                   ),
                   if (mine != null)
-                    TextButton.icon(
+                    TextButton(
+                      style: TextButton.styleFrom(foregroundColor: t.clay),
                       onPressed: () => EsocietyService.instance
-                          .deleteCollabReview(doc.id, member),
-                      icon: const Icon(Icons.delete_outline, size: 18),
-                      label: const Text('Remove review'),
+                          .deleteCollabReview(widget.doc.id, widget.member),
+                      child: const Text('Remove review'),
                     ),
                 ],
               ),

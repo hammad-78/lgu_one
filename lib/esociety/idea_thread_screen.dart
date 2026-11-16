@@ -9,9 +9,80 @@ import 'package:lgu_one/utils/web_layout.dart';
 import 'package:lgu_one/utils/whatsApp_support.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+/// The student confirms a meeting, or asks for another time (with a note
+/// saying when suits them). Used on the idea page and the student page.
+Future<void> answerMeeting(
+  BuildContext context,
+  Idea idea, {
+  required bool confirm,
+}) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+  var note = '';
+  if (!confirm) {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (_) => const _NoteDialog(
+        title: 'Ask for another time',
+        hint: 'Which days and times work for you?',
+        action: 'Send request',
+        required: true,
+      ),
+    );
+    if (result == null) return;
+    note = result;
+  }
+  try {
+    await EsocietyService.instance.answerAppointment(
+      idea,
+      user,
+      confirm: confirm,
+      note: note,
+    );
+    if (context.mounted) {
+      showFlushbar(
+        context,
+        confirm ? 'Meeting confirmed' : 'Request sent to the society',
+        color: Colors.green.shade900,
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      showFlushbar(context, 'Not sent. Try again.', color: Colors.red.shade900);
+    }
+  }
+}
+
+/// The meeting buttons a student sees: confirm, or ask for another time.
+/// Empty once the meeting is past, cancelled or already answered both ways.
+List<Widget> studentMeetingActions(BuildContext context, Idea idea) {
+  final state = idea.appointmentState;
+  if (idea.appointmentAt == null ||
+      !idea.appointmentAt!.isAfter(DateTime.now()) ||
+      state == AppointmentState.cancelled ||
+      idea.status == IdeaStatus.withdrawn) {
+    return const [];
+  }
+  return [
+    if (state != AppointmentState.confirmed)
+      MeetingAction(
+        label: 'Confirm meeting',
+        icon: Icons.check,
+        primary: true,
+        onPressed: () => answerMeeting(context, idea, confirm: true),
+      ),
+    if (state != AppointmentState.reschedule)
+      MeetingAction(
+        label: 'Ask for another time',
+        icon: Icons.update,
+        onPressed: () => answerMeeting(context, idea, confirm: false),
+      ),
+  ];
+}
+
 /// One idea and its conversation. Opened by the student who shared it, or by
-/// a society member ([member] set), who also gets status, review,
-/// appointment and contact actions.
+/// a society member ([member] set), who also gets stage, review, meeting
+/// and contact actions.
 class IdeaThreadScreen extends StatefulWidget {
   final String ideaId;
   final EsocietyMember? member;
@@ -32,6 +103,7 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
   int _lastMessageCount = 0;
   bool _sending = false;
   bool _markingRead = false;
+  bool _showIdea = false;
 
   bool get _isSociety => widget.member != null;
 
@@ -64,6 +136,12 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
     });
   }
 
+  void _error(String message) =>
+      showFlushbar(context, message, color: Colors.red.shade900);
+
+  void _done(String message) =>
+      showFlushbar(context, message, color: Colors.green.shade900);
+
   Future<void> _send(Idea idea) async {
     final text = _composer.text.trim();
     if (text.isEmpty || _sending) return;
@@ -81,47 +159,53 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
       _composer.clear();
       _scrollToEndSoon();
     } catch (e) {
-      if (mounted) _error('Could not send: $e');
+      if (mounted) {
+        _error('Message not sent. Check your connection and try again.');
+      }
     } finally {
       if (mounted) setState(() => _sending = false);
     }
   }
 
-  void _error(String message) =>
-      showFlushbar(context, message, color: Colors.red.shade900);
-
-  void _ok(String message) =>
-      showFlushbar(context, message, color: Colors.green.shade900);
-
   // ─── Society actions ──────────────────────────────────────────────────────
 
-  Future<void> _changeStatus(Idea idea) async {
-    final result = await showDialog<(IdeaStatus, String)>(
-      context: context,
-      builder: (_) => _StatusDialog(current: idea.status),
-    );
-    if (result == null || !mounted) return;
+  Future<void> _moveTo(Idea idea, IdeaStatus status, {String note = ''}) async {
     try {
-      await _service.setStatus(
-        idea,
-        widget.member!,
-        result.$1,
-        note: result.$2,
-      );
-      _ok('Status updated');
+      await _service.setStatus(idea, widget.member!, status, note: note);
+      if (mounted) _done('Moved to ${status.label}');
     } catch (e) {
-      _error('Could not update status: $e');
+      if (mounted) _error('Stage not changed. Try again.');
     }
   }
 
-  Future<void> _writeReview(Idea idea) async {
-    final result = await showDialog<(int, String)>(
+  Future<void> _chooseStage(Idea idea) async {
+    final result = await showDialog<(IdeaStatus, String)>(
       context: context,
-      builder: (_) => _ReviewDialog(
-        title: 'Review this idea',
-        initialRating: idea.reviewRating ?? 0,
-        initialText: idea.reviewText,
+      builder: (_) => _StageDialog(current: idea.status),
+    );
+    if (result == null || !mounted) return;
+    await _moveTo(idea, result.$1, note: result.$2);
+  }
+
+  Future<void> _decline(Idea idea) async {
+    final note = await showDialog<String>(
+      context: context,
+      builder: (_) => const _NoteDialog(
+        title: 'Mark as not selected',
+        hint: 'Tell the student why, and what could make it stronger',
+        action: 'Mark not selected',
       ),
+    );
+    if (note == null || !mounted) return;
+    await _moveTo(idea, IdeaStatus.declined, note: note);
+  }
+
+  Future<void> _writeReview(Idea idea) async {
+    final result = await showReviewDialog(
+      context,
+      title: idea.hasReview ? 'Edit your review' : 'Review this idea',
+      initialRating: idea.reviewRating ?? 0,
+      initialText: idea.reviewText,
     );
     if (result == null || !mounted) return;
     try {
@@ -131,16 +215,16 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
         rating: result.$1,
         text: result.$2,
       );
-      _ok('Review shared with the student');
+      if (mounted) _done('Review sent to ${idea.studentName}');
     } catch (e) {
-      _error('Could not save review: $e');
+      if (mounted) _error('Review not saved. Try again.');
     }
   }
 
-  Future<void> _setAppointment(Idea idea) async {
+  Future<void> _scheduleMeeting(Idea idea) async {
     final result = await showDialog<(DateTime, String, String)>(
       context: context,
-      builder: (_) => _AppointmentDialog(idea: idea),
+      builder: (_) => _MeetingDialog(idea: idea),
     );
     if (result == null || !mounted) return;
     try {
@@ -151,30 +235,31 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
         place: result.$2,
         note: result.$3,
       );
-      _ok('Appointment sent to the student');
+      if (mounted) _done('Meeting invite sent to ${idea.studentName}');
     } catch (e) {
-      _error('Could not set appointment: $e');
+      if (mounted) _error('Invite not sent. Try again.');
     }
   }
 
-  Future<void> _cancelAppointment(Idea idea) async {
+  Future<void> _cancelMeeting(Idea idea) async {
     final yes = await _confirm(
-      'Cancel appointment?',
-      'The student will see that the appointment was cancelled.',
-      'Cancel appointment',
+      'Cancel this meeting?',
+      '${idea.studentName} will see that it was cancelled.',
+      'Cancel meeting',
+      keep: 'Keep meeting',
     );
     if (!yes || !mounted) return;
     try {
       await _service.cancelAppointment(idea, widget.member!);
     } catch (e) {
-      _error('Could not cancel: $e');
+      if (mounted) _error('Meeting not cancelled. Try again.');
     }
   }
 
   Future<void> _whatsApp(Idea idea) => openWhatsApp(
     idea.whatsapp!,
     'Hi ${idea.studentName}, this is ${widget.member?.name ?? ''} from the '
-    'LGU Entrepreneurship Society about your idea "${idea.title}".',
+    'LGU Entrepreneurship Society, about your idea "${idea.title}".',
   );
 
   Future<void> _email(Idea idea) async {
@@ -182,68 +267,45 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
       scheme: 'mailto',
       path: idea.studentEmail,
       queryParameters: {
-        'subject': 'Your idea "${idea.title}" · LGU Entrepreneurship Society',
+        'subject': 'Your idea "${idea.title}" (LGU Entrepreneurship Society)',
       },
     );
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
-      if (mounted) _error('Could not open your email app');
+      if (mounted) _error('No email app found on this device.');
     }
   }
 
   // ─── Student actions ──────────────────────────────────────────────────────
 
-  Future<void> _answerAppointment(Idea idea, {required bool confirm}) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    var note = '';
-    if (!confirm) {
-      final result = await showDialog<String>(
-        context: context,
-        builder: (_) => const _NoteDialog(
-          title: 'Ask for another time',
-          hint: 'Which days or times suit you?',
-          action: 'Send',
-          required: true,
-        ),
-      );
-      if (result == null) return;
-      note = result;
-    }
-    try {
-      await _service.answerAppointment(
-        idea,
-        user,
-        confirm: confirm,
-        note: note,
-      );
-      if (mounted) {
-        _ok(confirm ? 'Appointment confirmed' : 'Request sent to the society');
-      }
-    } catch (e) {
-      if (mounted) _error('Could not send: $e');
-    }
-  }
+  Future<void> _answerMeeting(Idea idea, {required bool confirm}) =>
+      answerMeeting(context, idea, confirm: confirm);
 
   Future<void> _withdraw(Idea idea) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     final yes = await _confirm(
       'Withdraw this idea?',
-      'The society will no longer consider it. The conversation stays here '
-          'for your records.',
-      'Withdraw',
+      'The society will stop considering it. You can still read the '
+          'conversation, but neither side can reply.',
+      'Withdraw idea',
+      keep: 'Keep idea',
     );
     if (!yes || !mounted) return;
     try {
       await _service.withdrawIdea(idea, user);
     } catch (e) {
-      if (mounted) _error('Could not withdraw: $e');
+      if (mounted) _error('Idea not withdrawn. Try again.');
     }
   }
 
-  Future<bool> _confirm(String title, String body, String action) async {
+  Future<bool> _confirm(
+    String title,
+    String body,
+    String action, {
+    required String keep,
+  }) async {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -252,10 +314,13 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep'),
+            child: Text(keep),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            style: FilledButton.styleFrom(
+              backgroundColor: EsTokens.of(context).clay,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(action),
           ),
@@ -279,14 +344,20 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
             body: Center(
               child: snapshot.connectionState == ConnectionState.waiting
                   ? const CircularProgressIndicator()
-                  : Text(
-                      snapshot.hasError
-                          ? 'Could not load this idea.'
-                          : 'This idea no longer exists.',
+                  : Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        snapshot.hasError
+                            ? 'This idea could not be loaded. Check your '
+                                  'connection and open it again.'
+                            : 'This idea has been removed.',
+                        textAlign: TextAlign.center,
+                      ),
                     ),
             ),
           );
         }
+
         final unread = _isSociety
             ? idea.unreadForSociety
             : idea.unreadForStudent;
@@ -296,24 +367,20 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
               .markRead(idea, asSociety: _isSociety)
               .whenComplete(() => _markingRead = false);
         }
-        final wide = isWideWeb(context);
 
+        final wide = isWideWeb(context);
         return Scaffold(
           appBar: AppBar(
-            title: Text(idea.title, overflow: TextOverflow.ellipsis),
+            title: Text(_isSociety ? 'Idea' : 'Your idea'),
             actions: [
               if (!_isSociety && idea.status != IdeaStatus.withdrawn)
                 PopupMenuButton<String>(
-                  tooltip: 'More',
+                  tooltip: 'More options',
                   onSelected: (_) => _withdraw(idea),
                   itemBuilder: (_) => const [
                     PopupMenuItem(
                       value: 'withdraw',
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.undo),
-                        title: Text('Withdraw idea'),
-                      ),
+                      child: Text('Withdraw idea'),
                     ),
                   ],
                 ),
@@ -332,9 +399,11 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
           child: _thread(
             idea,
             header: [
-              _detailsCard(idea, collapsible: true),
-              const SizedBox(height: 12),
-              ..._statusPanels(idea),
+              _header(idea, showTrack: _isSociety),
+              const SizedBox(height: 20),
+              ..._panels(idea, showMeeting: _isSociety),
+              _ideaToggle(idea),
+              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -344,30 +413,31 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
   }
 
   Widget _wideBody(Idea idea) {
-    final theme = Theme.of(context);
+    final t = EsTokens.of(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
-          width: 400,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 24, 20, 24),
-            children: [
-              _detailsCard(idea, collapsible: false),
-              const SizedBox(height: 14),
-              ..._statusPanels(idea),
-            ],
+          width: 440,
+          child: Scrollbar(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(32, 32, 28, 32),
+              children: [
+                _header(idea),
+                const SizedBox(height: 24),
+                ..._panels(idea),
+                const SizedBox(height: 8),
+                _ideaBody(idea),
+              ],
+            ),
           ),
         ),
-        VerticalDivider(
-          width: 1,
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-        ),
+        VerticalDivider(width: 1, color: t.rule),
         Expanded(
           child: Align(
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 820),
+              constraints: const BoxConstraints(maxWidth: 760),
               child: Column(
                 children: [
                   Expanded(child: _thread(idea, header: const [])),
@@ -381,81 +451,181 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
     );
   }
 
-  /// Status, society actions, review and appointment, in that order.
-  List<Widget> _statusPanels(Idea idea) {
-    return [
-      if (_isSociety) ...[_societyActions(idea), const SizedBox(height: 12)],
-      if (idea.appointmentAt != null) ...[
-        AppointmentCard(idea: idea, actions: _appointmentActions(idea)),
-        const SizedBox(height: 12),
+  /// Title, who shared it, the stage track and the society's next step.
+  Widget _header(Idea idea, {bool showTrack = true}) {
+    final t = EsTokens.of(context);
+    final shared = 'Shared ${relativeTime(idea.createdAt).toLowerCase()}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(idea.title, style: EsType.title(t)),
+        const SizedBox(height: 8),
+        if (_isSociety)
+          Row(
+            children: [
+              PersonAvatar(
+                name: idea.studentName,
+                photoUrl: idea.studentPhoto,
+                radius: 14,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  [
+                    idea.studentName,
+                    if (idea.studentLine.isNotEmpty) idea.studentLine,
+                  ].join(', '),
+                  style: EsType.small(t).copyWith(color: t.ink),
+                ),
+              ),
+              Text(shared, style: EsType.small(t)),
+            ],
+          )
+        else
+          Text(shared, style: EsType.small(t)),
+        if (showTrack) ...[
+          const SizedBox(height: 22),
+          StageTrack(status: idea.status, closedFrom: idea.closedFrom),
+        ],
+        if (_isSociety && idea.status != IdeaStatus.withdrawn) ...[
+          const SizedBox(height: 20),
+          _societyActions(idea),
+        ],
       ],
-      if (idea.hasReview) ...[_reviewPanel(idea), const SizedBox(height: 12)],
+    );
+  }
+
+  Widget _societyActions(Idea idea) {
+    final next = idea.status.next;
+    final hasPhone = idea.whatsapp != null && idea.whatsapp!.isNotEmpty;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (next != null)
+          FilledButton(
+            onPressed: () => _moveTo(idea, next),
+            child: Text(idea.status.nextAction),
+          ),
+        TextButton(
+          onPressed: () => _scheduleMeeting(idea),
+          child: Text(
+            idea.hasUpcomingAppointment
+                ? 'Reschedule meeting'
+                : 'Schedule meeting',
+          ),
+        ),
+        TextButton(
+          onPressed: () => _writeReview(idea),
+          child: Text(idea.hasReview ? 'Edit review' : 'Write review'),
+        ),
+        PopupMenuButton<String>(
+          tooltip: 'More actions',
+          onSelected: (action) => switch (action) {
+            'stage' => _chooseStage(idea),
+            'decline' => _decline(idea),
+            'whatsapp' => _whatsApp(idea),
+            'email' => _email(idea),
+            _ => null,
+          },
+          itemBuilder: (_) => [
+            const PopupMenuItem(
+              value: 'stage',
+              child: Text('Move to a stage…'),
+            ),
+            if (idea.status != IdeaStatus.declined)
+              const PopupMenuItem(
+                value: 'decline',
+                child: Text('Mark not selected'),
+              ),
+            const PopupMenuDivider(),
+            if (hasPhone)
+              const PopupMenuItem(
+                value: 'whatsapp',
+                child: Text('Message on WhatsApp'),
+              ),
+            if (idea.studentEmail.isNotEmpty)
+              const PopupMenuItem(value: 'email', child: Text('Send an email')),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Meeting and review, when there are any.
+  List<Widget> _panels(Idea idea, {bool showMeeting = true}) {
+    return [
+      if (showMeeting && idea.appointmentAt != null) ...[
+        MeetingBlock(
+          idea: idea,
+          forSociety: _isSociety,
+          actions: _meetingActions(idea),
+        ),
+        const SizedBox(height: 20),
+      ],
+      if (idea.hasReview) ...[_review(idea), const SizedBox(height: 16)],
     ];
   }
 
-  List<Widget> _appointmentActions(Idea idea) {
+  List<Widget> _meetingActions(Idea idea) {
     final state = idea.appointmentState;
     final upcoming = idea.appointmentAt!.isAfter(DateTime.now());
     if (!upcoming || state == AppointmentState.cancelled) return const [];
     if (_isSociety) {
       return [
-        OutlinedButton.icon(
-          onPressed: () => _setAppointment(idea),
-          icon: const Icon(Icons.edit_calendar, size: 18),
-          label: const Text('Change'),
-        ),
-        TextButton.icon(
-          onPressed: () => _cancelAppointment(idea),
-          icon: const Icon(Icons.event_busy, size: 18),
-          label: const Text('Cancel'),
+        MeetingAction(
+          label: 'Cancel meeting',
+          icon: Icons.close,
+          danger: true,
+          onPressed: () => _cancelMeeting(idea),
         ),
       ];
     }
     if (idea.status == IdeaStatus.withdrawn) return const [];
     return [
       if (state != AppointmentState.confirmed)
-        FilledButton.icon(
-          onPressed: () => _answerAppointment(idea, confirm: true),
-          icon: const Icon(Icons.check, size: 18),
-          label: const Text('Confirm'),
+        MeetingAction(
+          label: 'Confirm meeting',
+          icon: Icons.check,
+          primary: true,
+          onPressed: () => _answerMeeting(idea, confirm: true),
         ),
       if (state != AppointmentState.reschedule)
-        OutlinedButton.icon(
-          onPressed: () => _answerAppointment(idea, confirm: false),
-          icon: const Icon(Icons.schedule, size: 18),
-          label: const Text('Ask for another time'),
+        MeetingAction(
+          label: 'Ask for another time',
+          icon: Icons.update,
+          onPressed: () => _answerMeeting(idea, confirm: false),
         ),
     ];
   }
 
-  Widget _reviewPanel(Idea idea) {
-    final theme = Theme.of(context);
-    return EsocietyCard(
+  Widget _review(Idea idea) {
+    final t = EsTokens.of(context);
+    return Container(
+      padding: const EdgeInsets.only(left: 14),
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: t.moss, width: 2)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.rate_review_outlined,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Society review',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  _isSociety
+                      ? 'Your society\'s review'
+                      : 'The society\'s review',
+                  style: EsType.heading(t).copyWith(fontSize: 15),
                 ),
               ),
               if (idea.reviewRating != null) StarRow(idea.reviewRating!),
             ],
           ),
           if (idea.reviewText.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              idea.reviewText,
-              style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14.5),
-            ),
+            const SizedBox(height: 6),
+            Text(idea.reviewText, style: EsType.body(t)),
           ],
           const SizedBox(height: 6),
           Text(
@@ -463,228 +633,73 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
               if (idea.reviewedBy.isNotEmpty) idea.reviewedBy,
               if (idea.reviewedAt != null)
                 kShortDateFormat.format(idea.reviewedAt!),
-            ].join(' · '),
-            style: theme.textTheme.bodySmall,
+            ].join(', '),
+            style: EsType.small(t),
           ),
         ],
       ),
     );
   }
 
-  Widget _societyActions(Idea idea) {
-    final hasPhone = idea.whatsapp != null && idea.whatsapp!.isNotEmpty;
-    return EsocietyCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Society actions',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _actionChip(
-                Icons.flag_outlined,
-                'Status',
-                () => _changeStatus(idea),
-              ),
-              _actionChip(
-                Icons.rate_review_outlined,
-                idea.hasReview ? 'Edit review' : 'Review',
-                () => _writeReview(idea),
-              ),
-              _actionChip(
-                Icons.event_available,
-                idea.hasUpcomingAppointment ? 'Reschedule' : 'Appointment',
-                () => _setAppointment(idea),
-              ),
-              if (hasPhone)
-                _actionChip(
-                  Icons.chat_outlined,
-                  'WhatsApp',
-                  () => _whatsApp(idea),
-                ),
-              if (idea.studentEmail.isNotEmpty)
-                _actionChip(Icons.email_outlined, 'Email', () => _email(idea)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _actionChip(IconData icon, String label, VoidCallback onTap) {
-    return ActionChip(
-      avatar: Icon(icon, size: 18),
-      label: Text(label),
-      onPressed: onTap,
-    );
-  }
-
-  Widget _detailsCard(Idea idea, {required bool collapsible}) {
-    final theme = Theme.of(context);
-    final header = Row(
+  /// On phones the idea itself folds away so the conversation stays close.
+  Widget _ideaToggle(Idea idea) {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        PersonAvatar(name: idea.studentName, photoUrl: idea.studentPhoto),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                idea.studentName,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              Text(
-                [
-                  if (idea.studentLine.isNotEmpty) idea.studentLine,
-                  'Shared ${relativeTime(idea.createdAt)}',
-                ].join(' · '),
-                style: theme.textTheme.bodySmall,
-              ),
-            ],
-          ),
+        TextButton.icon(
+          style: TextButton.styleFrom(padding: EdgeInsets.zero),
+          onPressed: () => setState(() => _showIdea = !_showIdea),
+          icon: Icon(_showIdea ? Icons.expand_less : Icons.expand_more),
+          label: Text(_showIdea ? 'Hide the idea' : 'Show the idea'),
         ),
-        IdeaStatusChip(idea.status, dense: true),
-      ],
-    );
-
-    final details = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
-            _tag(Icons.category_outlined, idea.category),
-            _tag(Icons.timeline, idea.stage),
-            _tag(
-              Icons.group_outlined,
-              '${idea.teamSize} ${idea.teamSize == 1 ? 'person' : 'people'}',
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        IdeaField('Problem', idea.problem),
-        IdeaField('Solution', idea.solution),
-        IdeaField('Target customers', idea.targetCustomers),
-        if (idea.helpNeeded.isNotEmpty) ...[
-          Text(
-            'LOOKING FOR',
-            style: TextStyle(
-              fontSize: 11,
-              letterSpacing: 0.8,
-              fontWeight: FontWeight.w700,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: idea.helpNeeded
-                .map(
-                  (h) => Chip(
-                    label: Text(h),
-                    visualDensity: VisualDensity.compact,
-                  ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          alignment: Alignment.topCenter,
+          child: _showIdea
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 8),
+                  child: _ideaBody(idea),
                 )
-                .toList(),
-          ),
-          const SizedBox(height: 8),
-        ],
-        if (_isSociety) ...[
-          const Divider(height: 20),
-          _contactLine(Icons.email_outlined, idea.studentEmail),
-          if (idea.whatsapp != null)
-            _contactLine(
-              Icons.phone_outlined,
-              displayPakistaniPhone(idea.whatsapp!),
-            ),
-        ],
+              : const SizedBox(width: double.infinity),
+        ),
       ],
     );
-
-    if (!collapsible) {
-      return EsocietyCard(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            header,
-            const SizedBox(height: 14),
-            Text(
-              idea.title,
-              style: theme.textTheme.headlineMedium?.copyWith(fontSize: 20),
-            ),
-            const SizedBox(height: 10),
-            details,
-          ],
-        ),
-      );
-    }
-
-    return EsocietyCard(
-      padding: EdgeInsets.zero,
-      child: Theme(
-        data: theme.copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.fromLTRB(14, 6, 10, 6),
-          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-          expandedCrossAxisAlignment: CrossAxisAlignment.start,
-          title: header,
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'Tap to see the idea',
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
-          children: [details],
-        ),
-      ),
-    );
   }
 
-  Widget _contactLine(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: SelectableText(text, style: const TextStyle(fontSize: 13.5)),
+  Widget _ideaBody(Idea idea) {
+    final t = EsTokens.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        EsSection(
+          title: 'The problem',
+          child: Text(idea.problem, style: EsType.body(t)),
+        ),
+        const SizedBox(height: 20),
+        EsSection(
+          title: 'The solution',
+          child: Text(idea.solution, style: EsType.body(t)),
+        ),
+        const SizedBox(height: 20),
+        FactList([
+          ('For', idea.targetCustomers),
+          ('Category', idea.category),
+          ('Stage', idea.stage),
+          (
+            'Team',
+            idea.teamSize == 1 ? 'Working alone' : '${idea.teamSize} people',
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _tag(IconData icon, String text) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: theme.colorScheme.primary),
-          const SizedBox(width: 4),
-          Text(text, style: const TextStyle(fontSize: 12.5)),
-        ],
-      ),
+          ('Looking for', idea.helpNeeded.join(', ')),
+          if (_isSociety) ('Email', idea.studentEmail),
+          if (_isSociety && idea.whatsapp != null)
+            ('WhatsApp', displayPakistaniPhone(idea.whatsapp!)),
+        ]),
+      ],
     );
   }
 
   Widget _thread(Idea idea, {required List<Widget> header}) {
+    final t = EsTokens.of(context);
     return StreamBuilder<List<IdeaMessage>>(
       stream: _messageStream,
       builder: (context, snapshot) {
@@ -692,30 +707,52 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
         if (messages.length != _lastMessageCount) {
           final first = _lastMessageCount == 0;
           _lastMessageCount = messages.length;
-          // Narrow screens open on the idea itself; only follow new messages.
+          // Phones open on the idea itself; only follow new messages.
           if (header.isEmpty || !first) _scrollToEndSoon(animate: !first);
         }
         return ListView(
           controller: _scroll,
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+          padding: EdgeInsets.fromLTRB(
+            header.isEmpty ? 24 : 16,
+            header.isEmpty ? 24 : 20,
+            header.isEmpty ? 24 : 16,
+            12,
+          ),
           children: [
-            ...header,
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                children: [
-                  const Expanded(child: Divider()),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Text(
-                      'Conversation',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                  const Expanded(child: Divider()),
-                ],
+            // On phones the idea, its stage and the meeting sit in their own
+            // tinted block, so the conversation clearly starts below it.
+            if (header.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+                decoration: BoxDecoration(
+                  color: t.surface,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: header,
+                ),
               ),
+              const SizedBox(height: 28),
+            ],
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text('Conversation', style: EsType.heading(t)),
+                const SizedBox(width: 8),
+                if (messages.isNotEmpty)
+                  Text(
+                    messages.length == 1
+                        ? '1 entry'
+                        : '${messages.length} entries',
+                    style: EsType.small(t),
+                  ),
+              ],
             ),
+            const SizedBox(height: 8),
+            Divider(height: 1, color: t.rule),
+            const SizedBox(height: 12),
             if (snapshot.connectionState == ConnectionState.waiting &&
                 messages.isEmpty)
               const Padding(
@@ -726,15 +763,14 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
             if (messages.length <= 1 &&
                 snapshot.connectionState != ConnectionState.waiting)
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   _isSociety
-                      ? 'Reply to the student, review the idea or set an '
-                            'appointment.'
-                      : 'The society will reply here. You can add details '
-                            'or ask questions any time.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall,
+                      ? 'No replies yet. Ask a question, write a review or '
+                            'schedule a meeting.'
+                      : 'No replies yet. You can add details or ask the '
+                            'society a question below.',
+                  style: EsType.small(t),
                 ),
               ),
           ],
@@ -744,51 +780,118 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
   }
 
   Widget _messageTile(IdeaMessage m) {
-    final theme = Theme.of(context);
+    final t = EsTokens.of(context);
     final time = m.createdAt == null ? '' : _stamp(m.createdAt!);
     final mine = m.fromSociety == _isSociety;
+    final actor = mine ? 'You' : m.senderName;
 
     switch (m.kind) {
       case MessageKind.text:
         return _Bubble(message: m, mine: mine, time: time);
       case MessageKind.review:
-        return _EventCard(
-          icon: Icons.rate_review_outlined,
-          title: 'Review from ${m.senderName}',
+        return _Event(
           time: time,
-          trailing: m.rating == null ? null : StarRow(m.rating!, size: 16),
-          body: m.text,
+          child: SizedBox(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '$actor reviewed the idea',
+                        style: EsType.small(
+                          t,
+                        ).copyWith(color: t.ink, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    if (m.rating != null) StarRow(m.rating!, size: 15),
+                  ],
+                ),
+                if (m.text.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  SelectableText(
+                    m.text,
+                    style: EsType.body(t).copyWith(fontSize: 14),
+                  ),
+                ],
+              ],
+            ),
+          ),
         );
       case MessageKind.appointment:
-        return _EventCard(
-          icon: Icons.event_available,
-          title: 'Appointment set by ${m.senderName}',
+        return _Event(
           time: time,
-          highlight: m.appointmentAt == null
-              ? null
-              : kAppointmentFormat.format(m.appointmentAt!),
-          subtitle: m.appointmentPlace,
-          body: m.text,
+          child: SizedBox(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('$actor proposed a meeting', style: EsType.small(t)),
+                      if (m.appointmentAt != null)
+                        Text(
+                          kAppointmentFormat.format(m.appointmentAt!),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: t.ink,
+                          ),
+                        ),
+                      if (m.appointmentPlace.isNotEmpty)
+                        Text(m.appointmentPlace, style: EsType.small(t)),
+                      if (m.text.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          m.text,
+                          style: EsType.body(t).copyWith(fontSize: 14),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       case MessageKind.appointmentReply:
         final state = AppointmentState.parse(m.appointmentReply);
-        return _EventPill(
-          icon: switch (state) {
-            AppointmentState.confirmed => Icons.event_available,
-            AppointmentState.cancelled => Icons.event_busy,
-            _ => Icons.schedule,
-          },
-          color: state?.color ?? theme.colorScheme.primary,
-          text: '${m.senderName}: ${m.text}',
+        final what = switch (state) {
+          AppointmentState.confirmed => '$actor confirmed the meeting',
+          AppointmentState.reschedule => '$actor asked for another time',
+          AppointmentState.cancelled => '$actor cancelled the meeting',
+          _ => '$actor replied about the meeting',
+        };
+        // The stored text starts with the same sentence; keep only the note.
+        final note = m.text.contains('\n')
+            ? m.text.substring(m.text.indexOf('\n') + 1)
+            : '';
+        return _Note(
+          text: what,
+          note: note,
           time: time,
+          color: state == null ? t.muted : t.appointmentColor(state),
         );
       case MessageKind.status:
         final status = IdeaStatus.parse(m.status);
-        return _EventPill(
-          icon: status.icon,
-          color: status.color,
-          text: m.fromSociety ? '${m.text} · ${m.senderName}' : m.text,
+        final what = switch (status) {
+          IdeaStatus.submitted =>
+            mine && !_isSociety
+                ? 'You shared this idea'
+                : '${m.senderName} shared this idea',
+          IdeaStatus.withdrawn => '$actor withdrew this idea',
+          _ => '$actor moved this to ${status.label}',
+        };
+        final note = m.text.contains('\n')
+            ? m.text.substring(m.text.indexOf('\n') + 1)
+            : '';
+        return _Note(
+          text: what,
+          note: note,
           time: time,
+          color: t.statusColor(status),
         );
     }
   }
@@ -803,29 +906,28 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
   }
 
   Widget _composerBar(Idea idea) {
+    final t = EsTokens.of(context);
     final theme = Theme.of(context);
     if (idea.status == IdeaStatus.withdrawn) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+        padding: const EdgeInsets.all(16),
+        color: t.surface,
         child: Text(
-          'This idea was withdrawn, so the conversation is closed.',
+          _isSociety
+              ? 'The student withdrew this idea, so replies are closed.'
+              : 'You withdrew this idea, so replies are closed.',
           textAlign: TextAlign.center,
-          style: theme.textTheme.bodySmall,
+          style: EsType.small(t),
         ),
       );
     }
     final canSend = _composer.text.trim().isNotEmpty && !_sending;
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
       decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        border: Border(
-          top: BorderSide(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-          ),
-        ),
+        color: theme.scaffoldBackgroundColor,
+        border: Border(top: BorderSide(color: t.rule)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -839,14 +941,14 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
               textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 hintText: _isSociety
-                    ? 'Reply to ${idea.studentName}…'
-                    : 'Write to the society…',
+                    ? 'Reply to ${idea.studentName.split(' ').first}'
+                    : 'Write to the society',
                 counterText: '',
                 isDense: true,
                 filled: true,
-                fillColor: theme.colorScheme.primary.withValues(alpha: 0.06),
+                fillColor: t.surface,
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
+                  horizontal: 16,
                   vertical: 12,
                 ),
                 border: OutlineInputBorder(
@@ -888,38 +990,28 @@ class _Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final primary = theme.colorScheme.primary;
+    final t = EsTokens.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = mine
-        ? (isDark ? const Color(0xFF1C5A4D) : const Color(0xFFDCF3DD))
-        : (isDark ? const Color(0xFF0B3D2E) : const Color(0xFFF2F4F3));
-    final who = message.fromSociety
-        ? '${message.senderName} · E-Society'
-        : message.senderName;
+        ? (isDark ? const Color(0xFF14483A) : const Color(0xFFE9F3EB))
+        : t.surface;
+    final width = MediaQuery.sizeOf(context).width;
 
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.sizeOf(context).width * 0.78 > 560
-              ? 560
-              : MediaQuery.sizeOf(context).width * 0.78,
-        ),
+        constraints: BoxConstraints(maxWidth: (width * 0.8).clamp(0, 520)),
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+          padding: const EdgeInsets.fromLTRB(14, 9, 14, 7),
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(14),
-              topRight: const Radius.circular(14),
-              bottomLeft: Radius.circular(mine ? 14 : 4),
-              bottomRight: Radius.circular(mine ? 4 : 14),
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: Radius.circular(mine ? 16 : 4),
+              bottomRight: Radius.circular(mine ? 4 : 16),
             ),
-            border: isDark
-                ? Border.all(color: primary.withValues(alpha: 0.2))
-                : null,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -928,28 +1020,28 @@ class _Bubble extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2),
                   child: Text(
-                    who,
+                    // Accounts named after the society itself would read
+                    // "E-Society, E-Society".
+                    message.fromSociety &&
+                            !message.senderName.toLowerCase().contains(
+                              'society',
+                            )
+                        ? '${message.senderName}, E-Society'
+                        : message.senderName,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 12.5,
                       fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white70 : const Color(0xFF2E7D32),
+                      color: t.moss,
                     ),
                   ),
                 ),
-              SelectableText(
-                message.text,
-                style: TextStyle(
-                  fontSize: 15,
-                  height: 1.35,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
+              SelectableText(message.text, style: EsType.body(t)),
               const SizedBox(height: 2),
               Align(
                 alignment: Alignment.bottomRight,
                 child: Text(
                   time,
-                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 10.5),
+                  style: EsType.small(t).copyWith(fontSize: 11),
                 ),
               ),
             ],
@@ -960,139 +1052,110 @@ class _Bubble extends StatelessWidget {
   }
 }
 
-class _EventCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
+/// A non-chat entry (review, meeting) with its time underneath.
+class _Event extends StatelessWidget {
+  final Widget child;
   final String time;
-  final String? highlight;
-  final String? subtitle;
-  final String body;
-  final Widget? trailing;
-  const _EventCard({
-    required this.icon,
-    required this.title,
-    required this.time,
-    required this.body,
-    this.highlight,
-    this.subtitle,
-    this.trailing,
-  });
+  const _Event({required this.child, required this.time});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
-        child: Container(
-          width: double.infinity,
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: primary.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: primary.withValues(alpha: 0.35)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, size: 18, color: primary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13.5,
-                      ),
-                    ),
-                  ),
-                  ?trailing,
-                ],
-              ),
-              if (highlight != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  highlight!,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-              if (subtitle != null && subtitle!.isNotEmpty)
-                Text(subtitle!, style: theme.textTheme.bodySmall),
-              if (body.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                SelectableText(
-                  body,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
-                ),
-              ],
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Text(
-                  time,
-                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 10.5),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EventPill extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String text;
-  final String time;
-  const _EventPill({
-    required this.icon,
-    required this.color,
-    required this.text,
-    required this.time,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final c = isDark ? Color.lerp(color, Colors.white, 0.35)! : color;
+    final t = EsTokens.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
+          constraints: const BoxConstraints(maxWidth: 420),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
             decoration: BoxDecoration(
-              color: c.withValues(alpha: isDark ? 0.15 : 0.08),
+              color: t.surface,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, size: 16, color: c),
-                const SizedBox(width: 8),
-                Flexible(
+                child,
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
                   child: Text(
-                    '$text  ·  $time',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: theme.colorScheme.onSurface,
-                    ),
+                    time,
+                    style: EsType.small(t).copyWith(fontSize: 11),
                   ),
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A one-line record of something that happened (stage change, meeting
+/// reply), centered in the conversation, with an optional note from the
+/// person who did it.
+class _Note extends StatelessWidget {
+  final String text;
+  final String note;
+  final String time;
+  final Color color;
+  const _Note({
+    required this.text,
+    required this.note,
+    required this.time,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EsTokens.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Column(
+            children: [
+              Text.rich(
+                TextSpan(
+                  children: [
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                    TextSpan(
+                      text: text,
+                      style: TextStyle(
+                        color: t.ink,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    TextSpan(text: '   $time'),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+                style: EsType.small(t),
+              ),
+              if (note.trim().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  note.trim(),
+                  textAlign: TextAlign.center,
+                  style: EsType.body(t).copyWith(fontSize: 14, color: t.muted),
+                ),
+              ],
+            ],
           ),
         ),
       ),
@@ -1102,15 +1165,15 @@ class _EventPill extends StatelessWidget {
 
 // ─── Dialogs ────────────────────────────────────────────────────────────────
 
-class _StatusDialog extends StatefulWidget {
+class _StageDialog extends StatefulWidget {
   final IdeaStatus current;
-  const _StatusDialog({required this.current});
+  const _StageDialog({required this.current});
 
   @override
-  State<_StatusDialog> createState() => _StatusDialogState();
+  State<_StageDialog> createState() => _StageDialogState();
 }
 
-class _StatusDialogState extends State<_StatusDialog> {
+class _StageDialogState extends State<_StageDialog> {
   late IdeaStatus _status = widget.current == IdeaStatus.withdrawn
       ? IdeaStatus.underReview
       : widget.current;
@@ -1125,7 +1188,7 @@ class _StatusDialogState extends State<_StatusDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Change status'),
+      title: const Text('Move to a stage'),
       scrollable: true,
       content: SizedBox(
         width: 380,
@@ -1141,7 +1204,7 @@ class _StatusDialogState extends State<_StatusDialog> {
                     RadioListTile<IdeaStatus>(
                       value: s,
                       contentPadding: EdgeInsets.zero,
-                      title: Row(children: [IdeaStatusChip(s, dense: true)]),
+                      title: Text(s.label),
                     ),
                 ],
               ),
@@ -1164,8 +1227,10 @@ class _StatusDialogState extends State<_StatusDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: () => Navigator.pop(context, (_status, _note.text.trim())),
-          child: const Text('Update'),
+          onPressed: _status == widget.current
+              ? null
+              : () => Navigator.pop(context, (_status, _note.text.trim())),
+          child: Text('Move to ${_status.label}'),
         ),
       ],
     );
@@ -1200,11 +1265,11 @@ class _ReviewDialogState extends State<_ReviewDialog> {
 
   void _save() {
     if (_rating == 0) {
-      setState(() => _error = 'Pick a rating');
+      setState(() => _error = 'Choose a rating from 1 to 5.');
       return;
     }
     if (_text.text.trim().isEmpty) {
-      setState(() => _error = 'Write a few words of feedback');
+      setState(() => _error = 'Add a few lines of feedback.');
       return;
     }
     Navigator.pop(context, (_rating, _text.text.trim()));
@@ -1225,20 +1290,20 @@ class _ReviewDialogState extends State<_ReviewDialog> {
               value: _rating,
               onChanged: (v) => setState(() => _rating = v),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             TextField(
               controller: _text,
               maxLines: 5,
               maxLength: 1000,
               decoration: const InputDecoration(
                 labelText: 'Feedback',
-                hintText: 'Strengths, risks and what to do next',
+                hintText: 'What works, what is risky, and what to do next',
                 alignLabelWithHint: true,
                 border: OutlineInputBorder(),
               ),
             ),
             if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+              Text(_error!, style: TextStyle(color: EsTokens.of(context).clay)),
           ],
         ),
       ),
@@ -1247,13 +1312,13 @@ class _ReviewDialogState extends State<_ReviewDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        FilledButton(onPressed: _save, child: const Text('Share review')),
+        FilledButton(onPressed: _save, child: const Text('Send review')),
       ],
     );
   }
 }
 
-/// Exposed for the collaborations tab of the portal.
+/// Star rating and feedback dialog, also used for collaborations.
 Future<(int, String)?> showReviewDialog(
   BuildContext context, {
   required String title,
@@ -1271,15 +1336,15 @@ Future<(int, String)?> showReviewDialog(
 }
 
 /// Date, time, place and a note. Returns (dateTime, place, note).
-class _AppointmentDialog extends StatefulWidget {
+class _MeetingDialog extends StatefulWidget {
   final Idea idea;
-  const _AppointmentDialog({required this.idea});
+  const _MeetingDialog({required this.idea});
 
   @override
-  State<_AppointmentDialog> createState() => _AppointmentDialogState();
+  State<_MeetingDialog> createState() => _MeetingDialogState();
 }
 
-class _AppointmentDialogState extends State<_AppointmentDialog> {
+class _MeetingDialogState extends State<_MeetingDialog> {
   DateTime? _date;
   TimeOfDay? _time;
   late final _place = TextEditingController(text: widget.idea.appointmentPlace);
@@ -1324,7 +1389,7 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
 
   void _save() {
     if (_date == null || _time == null) {
-      setState(() => _error = 'Pick a date and a time');
+      setState(() => _error = 'Choose a date and a time.');
       return;
     }
     final at = DateTime(
@@ -1335,11 +1400,11 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
       _time!.minute,
     );
     if (at.isBefore(DateTime.now())) {
-      setState(() => _error = 'That time has already passed');
+      setState(() => _error = 'That time has passed. Choose a later one.');
       return;
     }
     if (_place.text.trim().isEmpty) {
-      setState(() => _error = 'Say where the meeting is (room or online link)');
+      setState(() => _error = 'Add a room or a meeting link.');
       return;
     }
     Navigator.pop(context, (at, _place.text.trim(), _note.text.trim()));
@@ -1347,8 +1412,13 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final t = EsTokens.of(context);
     return AlertDialog(
-      title: const Text('Set appointment'),
+      title: Text(
+        widget.idea.hasUpcomingAppointment
+            ? 'Reschedule meeting'
+            : 'Schedule a meeting',
+      ),
       scrollable: true,
       content: SizedBox(
         width: 420,
@@ -1356,8 +1426,11 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('With ${widget.idea.studentName}'),
-            const SizedBox(height: 12),
+            Text(
+              '${widget.idea.studentName} will be asked to confirm.',
+              style: EsType.small(t),
+            ),
+            const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
@@ -1386,7 +1459,7 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
               controller: _place,
               decoration: const InputDecoration(
                 labelText: 'Where',
-                hintText: 'E-Society office, or a meeting link',
+                hintText: 'Room, or a Google Meet link',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -1395,15 +1468,15 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
               controller: _note,
               maxLines: 3,
               decoration: const InputDecoration(
-                labelText: 'Note (optional)',
-                hintText: 'What to bring or prepare',
+                labelText: 'What to prepare (optional)',
+                hintText: 'e.g. A 5-minute pitch and rough costs',
                 alignLabelWithHint: true,
                 border: OutlineInputBorder(),
               ),
             ),
             if (_error != null) ...[
               const SizedBox(height: 8),
-              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+              Text(_error!, style: TextStyle(color: t.clay)),
             ],
           ],
         ),
@@ -1413,7 +1486,7 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        FilledButton(onPressed: _save, child: const Text('Send')),
+        FilledButton(onPressed: _save, child: const Text('Send invite')),
       ],
     );
   }

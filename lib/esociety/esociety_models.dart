@@ -2,24 +2,30 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-/// Where an idea stands with the Entrepreneurship Society.
+/// Where an idea stands with the Entrepreneurship Society. The first four
+/// form the path an idea moves along; the last two close it.
 enum IdeaStatus {
-  submitted('submitted', 'Submitted', Icons.send_outlined, Color(0xFF1E88E5)),
+  submitted('submitted', 'Submitted', Icons.outbox_outlined, Color(0xFF5B6B62)),
   underReview(
     'under_review',
     'In review',
     Icons.manage_search,
-    Color(0xFFF9A825),
+    Color(0xFF2E7D4F),
   ),
   shortlisted(
     'shortlisted',
     'Shortlisted',
-    Icons.star_outline,
-    Color(0xFF8E24AA),
+    Icons.bookmark_added_outlined,
+    Color(0xFF2E7D4F),
   ),
-  accepted('accepted', 'Accepted', Icons.verified_outlined, Color(0xFF2E7D32)),
-  declined('declined', 'Not selected', Icons.block, Color(0xFFC62828)),
-  withdrawn('withdrawn', 'Withdrawn', Icons.undo, Color(0xFF757575));
+  accepted('accepted', 'Accepted', Icons.verified_outlined, Color(0xFF1B5E20)),
+  declined(
+    'declined',
+    'Not selected',
+    Icons.do_not_disturb_on_outlined,
+    Color(0xFFA3412F),
+  ),
+  withdrawn('withdrawn', 'Withdrawn', Icons.undo, Color(0xFF7A847E));
 
   final String value;
   final String label;
@@ -32,6 +38,14 @@ enum IdeaStatus {
     orElse: () => IdeaStatus.submitted,
   );
 
+  /// The path an idea moves along, in order.
+  static const List<IdeaStatus> track = [
+    submitted,
+    underReview,
+    shortlisted,
+    accepted,
+  ];
+
   /// Statuses the society can move an idea to.
   static const List<IdeaStatus> societyChoices = [
     submitted,
@@ -42,19 +56,51 @@ enum IdeaStatus {
   ];
 
   bool get isClosed => this == declined || this == withdrawn;
+
+  /// Position on [track], or -1 when the idea is closed.
+  int get trackIndex => track.indexOf(this);
+
+  /// The stage a society member would normally move the idea to next.
+  IdeaStatus? get next => switch (this) {
+    submitted => underReview,
+    underReview => shortlisted,
+    shortlisted => accepted,
+    declined => underReview,
+    _ => null,
+  };
+
+  /// Button text for moving to [next].
+  String get nextAction => switch (this) {
+    submitted => 'Start review',
+    underReview => 'Shortlist',
+    shortlisted => 'Accept',
+    declined => 'Reopen',
+    _ => '',
+  };
 }
 
 /// The student's answer to the latest appointment.
 enum AppointmentState {
-  proposed('proposed', 'Awaiting your reply', Color(0xFF1E88E5)),
-  confirmed('confirmed', 'Confirmed', Color(0xFF2E7D32)),
-  reschedule('reschedule', 'Student asked for another time', Color(0xFFEF6C00)),
-  cancelled('cancelled', 'Cancelled', Color(0xFF757575));
+  proposed('proposed', Color(0xFFA86B12)),
+  confirmed('confirmed', Color(0xFF2E7D4F)),
+  reschedule('reschedule', Color(0xFFA3412F)),
+  cancelled('cancelled', Color(0xFF7A847E));
 
   final String value;
-  final String label;
   final Color color;
-  const AppointmentState(this.value, this.label, this.color);
+  const AppointmentState(this.value, this.color);
+
+  /// What the state means, worded for whoever is looking.
+  String label({required bool forSociety}) => switch (this) {
+    proposed =>
+      forSociety ? 'Waiting for the student to confirm' : 'Please confirm',
+    confirmed => 'Confirmed',
+    reschedule =>
+      forSociety
+          ? 'Student asked for another time'
+          : 'You asked for another time',
+    cancelled => 'Cancelled',
+  };
 
   static AppointmentState? parse(Object? value) {
     for (final s in AppointmentState.values) {
@@ -94,8 +140,9 @@ const List<String> kIdeaHelpOptions = [
 
 DateTime? _toDate(Object? value) => value is Timestamp ? value.toDate() : null;
 
-final DateFormat kAppointmentFormat = DateFormat('EEE, d MMM yyyy · h:mm a');
+final DateFormat kAppointmentFormat = DateFormat("EEE d MMM 'at' h:mm a");
 final DateFormat kShortDateFormat = DateFormat('d MMM yyyy');
+final DateFormat kDayFormat = DateFormat('EEEE d MMMM');
 final DateFormat kTimeFormat = DateFormat('h:mm a');
 
 /// "Just now", "5m", "3h", "Yesterday", or a date.
@@ -131,6 +178,9 @@ class Idea {
   final List<String> helpNeeded;
 
   final IdeaStatus status;
+
+  /// For a declined idea, the stage it had reached.
+  final IdeaStatus? closedFrom;
   final int? reviewRating;
   final String reviewText;
   final String reviewedBy;
@@ -166,6 +216,7 @@ class Idea {
     required this.teamSize,
     required this.helpNeeded,
     required this.status,
+    required this.closedFrom,
     required this.reviewRating,
     required this.reviewText,
     required this.reviewedBy,
@@ -207,6 +258,9 @@ class Idea {
           .map((e) => e.toString())
           .toList(),
       status: IdeaStatus.parse(d['status']),
+      closedFrom: d['closedFromStatus'] == null
+          ? null
+          : IdeaStatus.parse(d['closedFromStatus']),
       reviewRating: (d['reviewRating'] as num?)?.toInt(),
       reviewText: s('reviewText'),
       reviewedBy: s('reviewedBy'),
@@ -235,9 +289,9 @@ class Idea {
   String get studentLine {
     final parts = <String>[
       if (degree.isNotEmpty) degree,
-      if (semester != null) 'Semester $semester',
+      if (semester != null) 'semester $semester',
     ];
-    return parts.join(' · ');
+    return parts.join(', ');
   }
 }
 

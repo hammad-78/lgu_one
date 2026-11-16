@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/esociety/esociety_models.dart';
 import 'package:lgu_one/esociety/esociety_service.dart';
+import 'package:lgu_one/esociety/esociety_widgets.dart';
 import 'package:lgu_one/utils/flushbar.dart';
 import 'package:lgu_one/utils/pakistani_phone_formatter.dart';
 import 'package:lgu_one/utils/web_layout.dart';
@@ -82,7 +83,7 @@ class _ShareIdeaScreenState extends State<ShareIdeaScreen> {
   );
 
   String? _required(String? v, String what) =>
-      (v == null || v.trim().isEmpty) ? '$what is required' : null;
+      (v == null || v.trim().isEmpty) ? what : null;
 
   @override
   Widget build(BuildContext context) {
@@ -95,10 +96,10 @@ class _ShareIdeaScreenState extends State<ShareIdeaScreen> {
         maxLength: 80,
         textCapitalization: TextCapitalization.sentences,
         decoration: _decoration(
-          'Idea name',
+          'Name of your idea',
           hint: 'e.g. Campus Bites: late-night food delivery',
         ),
-        validator: (v) => _required(v, 'A name'),
+        validator: (v) => _required(v, 'Give your idea a name.'),
       ),
       const SizedBox(height: 8),
       TextFormField(
@@ -111,7 +112,7 @@ class _ShareIdeaScreenState extends State<ShareIdeaScreen> {
           'What problem does it solve?',
           hint: 'Who has this problem and why it matters',
         ),
-        validator: (v) => _required(v, 'The problem'),
+        validator: (v) => _required(v, 'Describe the problem it solves.'),
       ),
       const SizedBox(height: 8),
       TextFormField(
@@ -124,7 +125,7 @@ class _ShareIdeaScreenState extends State<ShareIdeaScreen> {
           'Your solution',
           hint: 'How it works and what makes it different',
         ),
-        validator: (v) => _required(v, 'The solution'),
+        validator: (v) => _required(v, 'Describe your solution.'),
       ),
       const SizedBox(height: 8),
       TextFormField(
@@ -213,7 +214,7 @@ class _ShareIdeaScreenState extends State<ShareIdeaScreen> {
           if (digits.isEmpty) return null;
           return digits.length == 11 && digits.startsWith('03')
               ? null
-              : 'Enter an 11-digit number starting with 03';
+              : 'Use an 11-digit number starting with 03.';
         },
       ),
       const SizedBox(height: 6),
@@ -235,9 +236,9 @@ class _ShareIdeaScreenState extends State<ShareIdeaScreen> {
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2.5),
               )
-            : const Icon(Icons.rocket_launch_outlined),
+            : const Icon(Icons.send_rounded),
         label: Text(
-          _submitting ? 'Sharing…' : 'Share with E-Society',
+          _submitting ? 'Sharing…' : 'Share idea',
           style: const TextStyle(fontSize: 16),
         ),
       ),
@@ -246,10 +247,7 @@ class _ShareIdeaScreenState extends State<ShareIdeaScreen> {
     Widget section(String title, List<Widget> children) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          title,
-          style: theme.textTheme.headlineMedium?.copyWith(fontSize: 17),
-        ),
+        Text(title, style: EsType.heading(EsTokens.of(context))),
         const SizedBox(height: 14),
         ...children,
       ],
@@ -262,12 +260,24 @@ class _ShareIdeaScreenState extends State<ShareIdeaScreen> {
           key: _formKey,
           child: wide
               ? WebScrollPage(
-                  header: const WebPageHeader(
-                    icon: Icon(Icons.lightbulb_outline, size: 30),
-                    title: 'Share an idea',
-                    subtitle:
+                  header: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Share an idea',
+                        style: EsType.title(
+                          EsTokens.of(context),
+                        ).copyWith(fontSize: 30),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
                         'Tell the Entrepreneurship Society what you want to '
-                        'build. You can follow every reply here.',
+                        'build. Their replies will show up under Your ideas.',
+                        style: EsType.body(
+                          EsTokens.of(context),
+                        ).copyWith(color: EsTokens.of(context).muted),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [

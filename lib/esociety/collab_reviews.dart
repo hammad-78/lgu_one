@@ -3,68 +3,58 @@ import 'package:lgu_one/esociety/esociety_models.dart';
 import 'package:lgu_one/esociety/esociety_service.dart';
 import 'package:lgu_one/esociety/esociety_widgets.dart';
 
-/// List of E-Society reviews on a collaboration.
+/// E-Society reviews on a collaboration: the average, then each review.
 class CollabReviewList extends StatelessWidget {
   final List<CollabReview> reviews;
   const CollabReviewList({super.key, required this.reviews});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final t = EsTokens.of(context);
     final avg =
         reviews.fold<int>(0, (sum, r) => sum + r.rating) / reviews.length;
+    final count = reviews.length == 1
+        ? '1 review'
+        : '${reviews.length} reviews';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Text(
+          'Feedback from the Entrepreneurship Society',
+          style: EsType.heading(t).copyWith(fontSize: 14.5),
+        ),
+        const SizedBox(height: 4),
         Row(
           children: [
-            Icon(
-              Icons.verified_outlined,
-              size: 18,
-              color: theme.colorScheme.primary,
-            ),
+            StarRow(avg.round(), size: 16),
             const SizedBox(width: 6),
             Text(
-              'E-Society feedback',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            const Spacer(),
-            StarRow(avg.round(), size: 15),
-            const SizedBox(width: 4),
-            Text(
-              '${avg.toStringAsFixed(1)} (${reviews.length})',
-              style: theme.textTheme.bodySmall,
+              '${avg.toStringAsFixed(1)} from $count',
+              style: EsType.small(t),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         for (final r in reviews)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(left: 12),
+            decoration: BoxDecoration(
+              border: Border(left: BorderSide(color: t.rule, width: 3)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (r.comment.isNotEmpty)
+                  Text(r.comment, style: EsType.body(t).copyWith(fontSize: 14)),
+                const SizedBox(height: 2),
                 Row(
                   children: [
-                    Text(
-                      r.reviewerName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
+                    Text(r.reviewerName, style: EsType.small(t)),
                     const SizedBox(width: 6),
-                    StarRow(r.rating, size: 13),
+                    StarRow(r.rating, size: 12),
                   ],
                 ),
-                if (r.comment.isNotEmpty)
-                  Text(
-                    r.comment,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13.5),
-                  ),
               ],
             ),
           ),
@@ -94,14 +84,8 @@ class _CollabSocietyReviewsState extends State<CollabSocietyReviews> {
       builder: (context, snapshot) {
         final reviews = snapshot.data ?? const <CollabReview>[];
         if (reviews.isEmpty) return const SizedBox.shrink();
-        final theme = Theme.of(context);
-        return Container(
-          margin: const EdgeInsets.only(top: 14),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(12),
-          ),
+        return Padding(
+          padding: const EdgeInsets.only(top: 16),
           child: CollabReviewList(reviews: reviews),
         );
       },

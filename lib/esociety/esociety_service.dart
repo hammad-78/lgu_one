@@ -252,11 +252,14 @@ class EsocietyService {
     IdeaStatus status, {
     String note = '',
   }) async {
-    final text =
-        'Status changed to ${status.label}.${note.isEmpty ? '' : '\n$note'}';
+    final text = 'Moved to ${status.label}.${note.isEmpty ? '' : '\n$note'}';
     final batch = _db.batch();
     batch.update(_ideas.doc(idea.id), {
       'status': status.value,
+      // Remember how far a declined idea got, so its track can show it.
+      'closedFromStatus': status == IdeaStatus.declined
+          ? (idea.status.isClosed ? idea.closedFrom?.value : idea.status.value)
+          : null,
       'lastMessagePreview': _preview(text),
       'lastMessageBy': 'society',
       'lastActivityAt': FieldValue.serverTimestamp(),
