@@ -239,6 +239,111 @@ exports.onCollaborationUpdated = onDocumentUpdated(
     }
 );
 
+/**
+ * Builds the push text for a society message on a student's idea.
+ */
+function esocietyNotificationText(message, ideaTitle) {
+    const sender = String(message.senderName || 'E-Society').trim();
+    const text = String(message.text || '').replace(/\s+/g, ' ').trim();
+    const idea = `"${ideaTitle}"`;
+    const clip = (value, max) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
+
+    switch (message.kind) {
+        case 'appointment': {
+            let when = '';
+            if (message.appointmentAt && typeof message.appointmentAt.toDate === 'function') {
+                when = message.appointmentAt.toDate().toLocaleString('en-GB', {
+                    timeZone: 'Asia/Karachi',
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                });
+            }
+            const place = String(message.appointmentPlace || '').trim();
+            return {
+                title: 'New appointment from E-Society',
+                body: clip([when, place].filter(Boolean).join(' · ') + ` for ${idea}. Tap to confirm.`, 200),
+            };
+        }
+        case 'appointment_reply':
+            return { title: 'Appointment update', body: clip(`${idea}: ${text}`, 200) };
+        case 'review': {
+            const stars = Number(message.rating) > 0 ? `${message.rating}/5 · ` : '';
+            return {
+                title: `E-Society reviewed ${idea}`,
+                body: clip(`${stars}${text}`, 200),
+            };
+        }
+        case 'status':
+            return { title: `Update on ${idea}`, body: clip(text, 200) };
+        default:
+            return { title: `${sender} replied to ${idea}`, body: clip(text, 200) };
+    }
+}
+
+/**
+ * Notifies the student on their own devices when the Entrepreneurship
+ * Society replies, reviews, changes status or sets an appointment.
+ * Personal: not saved to the public notifications collection.
+ */
+exports.onEsocietyMessageCreated = onDocumentCreated(
+    'esociety_ideas/{ideaId}/messages/{messageId}',
+    async (event) => {
+        const message = event.data ? event.data.data() : null;
+        if (!message || message.senderRole !== 'society') return null;
+
+        const ideaId = event.params.ideaId;
+        const ideaSnap = await db.collection('esociety_ideas').doc(ideaId).get();
+        const idea = ideaSnap.data();
+        if (!idea || !idea.studentUid) return null;
+
+        const tokensSnapshot = await db.collection('device_tokens')
+            .where('userId', '==', idea.studentUid)
+            .get();
+        const tokens = [...new Set(tokensSnapshot.docs
+            .map(doc => doc.data().token)
+            .filter(token => typeof token === 'string' && token.length > 0))];
+        if (tokens.length === 0) {
+            console.log(`E-Society message on ${ideaId}: student has no registered devices.`);
+            return null;
+        }
+
+        const { title, body } = esocietyNotificationText(message, idea.title || 'your idea');
+        const response = await messaging.sendEachForMulticast({
+            tokens,
+            notification: { title, body },
+            data: {
+                type: 'esociety_idea',
+                id: String(ideaId),
+                click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            },
+            android: {
+                notification: { channelId: 'high_importance_channel' },
+            },
+        });
+
+        // Drop tokens FCM says are gone, so they are not retried forever.
+        const stale = [];
+        response.responses.forEach((result, index) => {
+            const code = result.error && result.error.code;
+            if (code === 'messaging/registration-token-not-registered'
+                || code === 'messaging/invalid-registration-token') {
+                stale.push(tokens[index]);
+            }
+        });
+        if (stale.length > 0) {
+            const batch = db.batch();
+            stale.forEach(token => batch.delete(db.collection('device_tokens').doc(token)));
+            await batch.commit();
+        }
+        console.log(`E-Society message on ${ideaId}: sent to ${response.successCount} device(s).`);
+        return null;
+    },
+);
+
 // Event creation does not send a notification. Event reminders are sent by
 // sendDailyEventReminders below.
 // exports.onEventCreated = onDocumentCreated(

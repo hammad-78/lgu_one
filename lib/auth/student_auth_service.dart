@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:lgu_one/auth/lgu_email_gate.dart';
+import 'package:lgu_one/notification/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Thrown with a message that is safe to show to the user.
@@ -94,6 +97,8 @@ class StudentAuthService {
       // Lets Lost & Found and Collaboration open without asking again.
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(LguEmailGate.prefsKey, email);
+      // So E-Society replies reach this phone.
+      unawaited(NotificationService.linkTokenToUser(user.uid));
       return user;
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled ||
@@ -207,6 +212,10 @@ class StudentAuthService {
   }
 
   Future<void> signOut() async {
+    // Stop personal notifications on this device before the session ends.
+    if (_auth.currentUser != null) {
+      await NotificationService.linkTokenToUser(null);
+    }
     try {
       if (!kIsWeb && isSupported) {
         await _ensureGoogleInit();

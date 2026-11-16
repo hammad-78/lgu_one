@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -9,6 +10,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tzlib;
 import 'package:lgu_one/auth/lgu_email_gate.dart';
+import 'package:lgu_one/auth/student_auth_service.dart';
+import 'package:lgu_one/esociety/esociety_screen.dart';
+import 'package:lgu_one/esociety/idea_thread_screen.dart';
 import 'package:lgu_one/collaboration/join_collaboration.dart';
 import 'package:lgu_one/Lost_Found/listing_screen.dart';
 
@@ -16,6 +20,7 @@ import 'package:lgu_one/Lost_Found/listing_screen.dart';
 void notificationTapBackground(NotificationResponse notificationResponse) {}
 
 class NotificationService {
+  static const _esocietyIdeaType = 'esociety_idea';
   static const _androidChannelId = 'high_importance_channel';
   static const _androidChannelName = 'High Importance Notifications';
   static const _androidChannelDescription =
@@ -139,7 +144,10 @@ class NotificationService {
       title: message.notification?.title,
       body: message.notification?.body,
       notificationDetails: notificationDetails,
-      payload: message.data['type'],
+      // Personal notifications carry the item id so a tap can open it.
+      payload: message.data['type'] == _esocietyIdeaType
+          ? '$_esocietyIdeaType:${message.data['id'] ?? ''}'
+          : message.data['type'],
     );
   }
 
@@ -170,6 +178,27 @@ class NotificationService {
         ); // merge so createdAt isn't overwritten on refresh
   }
 
+  /// Points this device's token at [uid] (or at nobody when null), so
+  /// personal notifications such as E-Society replies reach the signed-in
+  /// student and stop after they sign out. Never prompts for permission.
+  static Future<void> linkTokenToUser(String? uid) async {
+    if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) return;
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null) return;
+      await FirebaseFirestore.instance
+          .collection('device_tokens')
+          .doc(token)
+          .set({
+            'token': token,
+            'platform': Platform.operatingSystem,
+            'userId': uid,
+          }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Could not link device token: $e');
+    }
+  }
+
   void isTokenRefreshed() {
     messaging.onTokenRefresh.listen((newToken) {
       debugPrint("Token Refresh: $newToken");
@@ -177,10 +206,31 @@ class NotificationService {
     });
   }
 
+  /// Opens the idea a society notification is about. Signed-out (or
+  /// different) users land on the Entrepreneurship Society page instead.
+  static void _openEsocietyIdea(BuildContext context, String? ideaId) {
+    final signedIn = StudentAuthService.instance.currentStudent != null;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => signedIn && ideaId != null && ideaId.isNotEmpty
+            ? IdeaThreadScreen(ideaId: ideaId)
+            : const EsocietyScreen(),
+      ),
+    );
+  }
+
   Future<void> handleMessageByPayload(
     BuildContext context,
     String? payload,
   ) async {
+    if (payload != null && payload.startsWith('$_esocietyIdeaType:')) {
+      _openEsocietyIdea(
+        context,
+        payload.substring(_esocietyIdeaType.length + 1),
+      );
+      return;
+    }
     if (payload == 'collaboration') {
       if (!await LguEmailGate.ensureVerified(context)) return;
       if (!context.mounted) return;
@@ -205,6 +255,10 @@ class NotificationService {
     RemoteMessage message,
   ) async {
     final type = message.data['type'];
+    if (type == _esocietyIdeaType) {
+      _openEsocietyIdea(context, message.data['id']?.toString());
+      return;
+    }
     if (type == 'collaboration') {
       if (!await LguEmailGate.ensureVerified(context)) return;
       if (!context.mounted) return;
