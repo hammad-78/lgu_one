@@ -3,12 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:lgu_one/about.dart';
 import 'package:lgu_one/auth/drawer_profile_header.dart';
 import 'package:lgu_one/admin/admin_signin.dart';
-import 'package:lgu_one/auth/lgu_email_gate.dart';
-import 'package:lgu_one/collaboration/collaboration_screen.dart';
 import 'package:lgu_one/events/upcoming_events_screen.dart';
 import 'package:lgu_one/dashboard_grid.dart';
 import 'package:lgu_one/esociety/esociety_portal_signin.dart';
-import 'package:lgu_one/esociety/esociety_screen.dart';
+import 'package:lgu_one/ventures/ventures_screen.dart';
 import 'package:lgu_one/jobs/jobs_swiper.dart';
 import 'package:lgu_one/news_section/news_carousel.dart';
 import 'package:lgu_one/notification/notification_service.dart';
@@ -368,26 +366,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       _buildQuickActionCard(
         context,
-        title: "Student Collaboration",
-        icon: Icons.diversity_3,
-        imageAsset: "assets/images/group_icon.png",
-        onTap: () async {
-          if (!await LguEmailGate.ensureVerified(context)) return;
-          if (!context.mounted) return;
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CollaborationScreen()),
-          );
-        },
-      ),
-      _buildQuickActionCard(
-        context,
-        title: "Entrepreneurship Society",
+        title: "Ventures: Ideas & Teams",
         icon: Icons.lightbulb_outline,
         imageAsset: "assets/images/idea_icon.png",
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const EsocietyScreen()),
+          MaterialPageRoute(builder: (_) => const VenturesScreen()),
         ),
       ),
     ];

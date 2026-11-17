@@ -196,6 +196,8 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
         : [];
     final String whatsappNumber = info['whatsappNumber'] ?? '';
     final String reportedDate = _reportedDate(info['createdAt']);
+    final bool linkedToIdea = (info['ideaId'] ?? '').toString().isNotEmpty;
+    final String ownerName = (info['ownerName'] ?? '').toString();
 
     Color statusColor;
     switch (status.toLowerCase()) {
@@ -273,6 +275,20 @@ class _AdminCollaborationState extends State<AdminCollaboration> {
                 ),
               ],
             ),
+            if (linkedToIdea || ownerName.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                [
+                  if (ownerName.isNotEmpty) 'Posted by $ownerName',
+                  if (linkedToIdea) 'Linked to an E-Society idea',
+                ].join(' · '),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
             const SizedBox(height: 6),
             if (description.isNotEmpty)
               Text(

@@ -45,8 +45,8 @@ class EsTokens {
       Theme.of(context).brightness == Brightness.dark ? _dark : _light;
 
   Color statusColor(IdeaStatus s) => switch (s) {
-    IdeaStatus.declined => clay,
-    IdeaStatus.withdrawn || IdeaStatus.submitted => muted,
+    IdeaStatus.declined || IdeaStatus.withdrawn => clay,
+    IdeaStatus.submitted => muted,
     _ => moss,
   };
 

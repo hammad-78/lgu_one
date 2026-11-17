@@ -1,3 +1,5 @@
+import 'package:lgu_one/auth/student_auth_service.dart';
+import 'package:lgu_one/ventures/idea_team_panel.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/esociety/esociety_models.dart';
@@ -565,7 +567,14 @@ class _IdeaThreadScreenState extends State<IdeaThreadScreen> {
         const SizedBox(height: 20),
       ],
       if (idea.hasReview) ...[_review(idea), const SizedBox(height: 16)],
+      IdeaTeamPanel(idea: idea, owner: _isSociety ? null : _owner(idea)),
     ];
+  }
+
+  /// The signed-in student, when they own [idea].
+  User? _owner(Idea idea) {
+    final me = StudentAuthService.instance.currentStudent;
+    return me != null && me.uid == idea.studentUid ? me : null;
   }
 
   List<Widget> _meetingActions(Idea idea) {

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lgu_one/esociety/esociety_models.dart';
+import 'package:lgu_one/ventures/ventures_service.dart';
 
 /// Firestore access for the Entrepreneurship Society.
 ///
@@ -86,6 +87,10 @@ class EsocietyService {
     required int teamSize,
     required List<String> helpNeeded,
     required String? whatsapp,
+
+    /// A team post's `info` (see VenturesService.postInfo) to put on the
+    /// collaboration board too, linked to this idea.
+    Map<String, dynamic>? teamPost,
   }) async {
     final name = (profile['name'] ?? '').toString().trim();
     final studentName = name.isNotEmpty
@@ -96,7 +101,15 @@ class EsocietyService {
         : student.photoURL;
 
     final ref = _ideas.doc();
+    final teamRef = teamPost == null
+        ? null
+        : _db.collection('collaborations').doc();
     final batch = _db.batch();
+    if (teamRef != null) {
+      batch.set(teamRef, {
+        'info': {...teamPost!, 'ideaId': ref.id},
+      });
+    }
     batch.set(ref, {
       'studentUid': student.uid,
       'studentName': studentName,
@@ -120,6 +133,7 @@ class EsocietyService {
       'unreadForStudent': false,
       'unreadForSociety': true,
       'createdAt': FieldValue.serverTimestamp(),
+      'collabId': ?teamRef?.id,
     });
     batch.set(ref.collection('messages').doc(), {
       'kind': MessageKind.status.value,
@@ -275,6 +289,7 @@ class EsocietyService {
       'createdAt': FieldValue.serverTimestamp(),
     });
     await batch.commit();
+    await VenturesService.syncSocietyStage(idea, status);
   }
 
   Future<void> saveReview(
@@ -365,7 +380,8 @@ class EsocietyService {
 
   // ─── Collaborations ───────────────────────────────────────────────────────
 
-  /// Approved / open student collaborations, newest first.
+  /// Approved / open student collaborations that are not tied to an idea,
+  /// newest first.
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> collaborations() {
     return _db
         .collection('collaborations')
@@ -377,7 +393,10 @@ class EsocietyService {
             final status = info is Map
                 ? (info['status'] ?? '').toString().toLowerCase()
                 : '';
-            return status == 'open' || status == 'approved';
+            // Teams for an idea are followed inside that idea instead.
+            final linked =
+                info is Map && (info['ideaId'] ?? '').toString().isNotEmpty;
+            return !linked && (status == 'open' || status == 'approved');
           }).toList(),
         );
   }

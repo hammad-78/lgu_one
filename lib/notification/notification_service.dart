@@ -11,9 +11,8 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tzlib;
 import 'package:lgu_one/auth/lgu_email_gate.dart';
 import 'package:lgu_one/auth/student_auth_service.dart';
-import 'package:lgu_one/esociety/esociety_screen.dart';
+import 'package:lgu_one/ventures/ventures_screen.dart';
 import 'package:lgu_one/esociety/idea_thread_screen.dart';
-import 'package:lgu_one/collaboration/join_collaboration.dart';
 import 'package:lgu_one/Lost_Found/listing_screen.dart';
 
 @pragma('vm:entry-point')
@@ -215,7 +214,7 @@ class NotificationService {
       MaterialPageRoute(
         builder: (_) => signedIn && ideaId != null && ideaId.isNotEmpty
             ? IdeaThreadScreen(ideaId: ideaId)
-            : const EsocietyScreen(),
+            : const VenturesScreen(initialTab: VenturesTab.mine),
       ),
     );
   }
@@ -232,13 +231,9 @@ class NotificationService {
       return;
     }
     if (payload == 'collaboration') {
-      if (!await LguEmailGate.ensureVerified(context)) return;
-      if (!context.mounted) return;
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const JoinCollaborationScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const VenturesScreen()),
       );
     } else if (payload == 'lost_found') {
       if (!await LguEmailGate.ensureVerified(context)) return;
@@ -260,13 +255,9 @@ class NotificationService {
       return;
     }
     if (type == 'collaboration') {
-      if (!await LguEmailGate.ensureVerified(context)) return;
-      if (!context.mounted) return;
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const JoinCollaborationScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const VenturesScreen()),
       );
     } else if (type == 'lost_found') {
       if (!await LguEmailGate.ensureVerified(context)) return;

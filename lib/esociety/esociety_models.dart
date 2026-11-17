@@ -198,6 +198,10 @@ class Idea {
   final bool unreadForSociety;
   final DateTime? createdAt;
 
+  /// The team post on the collaboration board, when the student is also
+  /// looking for teammates.
+  final String? collabId;
+
   const Idea({
     required this.id,
     required this.studentUid,
@@ -231,6 +235,7 @@ class Idea {
     required this.unreadForStudent,
     required this.unreadForSociety,
     required this.createdAt,
+    this.collabId,
   });
 
   factory Idea.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -275,14 +280,17 @@ class Idea {
       unreadForStudent: d['unreadForStudent'] == true,
       unreadForSociety: d['unreadForSociety'] == true,
       createdAt: _toDate(d['createdAt']),
+      collabId: s('collabId').isEmpty ? null : s('collabId'),
     );
   }
 
   bool get hasReview => reviewRating != null || reviewText.isNotEmpty;
 
-  /// An appointment that has not happened yet and was not cancelled.
+  /// An appointment that has not happened yet and was not cancelled, on an
+  /// idea the student has not withdrawn.
   bool get hasUpcomingAppointment =>
       appointmentAt != null &&
+      status != IdeaStatus.withdrawn &&
       appointmentState != AppointmentState.cancelled &&
       appointmentAt!.isAfter(DateTime.now().subtract(const Duration(hours: 2)));
 

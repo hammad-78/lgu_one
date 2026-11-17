@@ -10,6 +10,7 @@ import 'package:lgu_one/esociety/idea_thread_screen.dart';
 import 'package:lgu_one/utils/flushbar.dart';
 import 'package:lgu_one/utils/web_layout.dart';
 import 'package:lgu_one/utils/whatsApp_support.dart';
+import 'package:lgu_one/ventures/collab_post.dart';
 
 /// Home of the Entrepreneurship Society portal: ideas by stage, the meeting
 /// agenda, and student collaborations to contact and review.
@@ -23,6 +24,7 @@ class EsocietyPortalScreen extends StatefulWidget {
 
 class _EsocietyPortalScreenState extends State<EsocietyPortalScreen> {
   late final Stream<List<Idea>> _ideas = EsocietyService.instance.allIdeas();
+  late final Stream<Map<String, CollabPost>> _teams = CollabBoard.byIdea();
 
   Future<void> _signOut() async {
     final navigator = Navigator.of(context);
@@ -78,10 +80,15 @@ class _EsocietyPortalScreenState extends State<EsocietyPortalScreen> {
                   )
                 : TabBarView(
                     children: [
-                      _IdeasTab(
-                        ideas: ideas,
-                        loading: !snapshot.hasData,
-                        member: widget.member,
+                      // Team posts are extra detail; ideas show without them.
+                      StreamBuilder<Map<String, CollabPost>>(
+                        stream: _teams,
+                        builder: (context, teams) => _IdeasTab(
+                          ideas: ideas,
+                          teams: teams.data ?? const {},
+                          loading: !snapshot.hasData,
+                          member: widget.member,
+                        ),
                       ),
                       _MeetingsTab(ideas: ideas, member: widget.member),
                       _CollaborationsTab(member: widget.member),
@@ -118,10 +125,14 @@ enum _Filter {
 
 class _IdeasTab extends StatefulWidget {
   final List<Idea> ideas;
+
+  /// Linked team posts by idea id.
+  final Map<String, CollabPost> teams;
   final bool loading;
   final EsocietyMember member;
   const _IdeasTab({
     required this.ideas,
+    required this.teams,
     required this.loading,
     required this.member,
   });
@@ -275,6 +286,7 @@ class _IdeasTabState extends State<_IdeasTab>
                     child: _BoardColumn(
                       title: columns[i].$1,
                       ideas: columns[i].$2,
+                      teams: widget.teams,
                       member: widget.member,
                     ),
                   ),
@@ -341,6 +353,7 @@ class _IdeasTabState extends State<_IdeasTab>
               idea: idea,
               unread: idea.unreadForSociety,
               showStudent: true,
+              teamLine: widget.teams[idea.id]?.teamSummary,
               onTap: () => _openIdea(context, idea, widget.member),
             ),
       ],
@@ -351,10 +364,12 @@ class _IdeasTabState extends State<_IdeasTab>
 class _BoardColumn extends StatelessWidget {
   final String title;
   final List<Idea> ideas;
+  final Map<String, CollabPost> teams;
   final EsocietyMember member;
   const _BoardColumn({
     required this.title,
     required this.ideas,
+    required this.teams,
     required this.member,
   });
 
@@ -382,8 +397,11 @@ class _BoardColumn extends StatelessWidget {
               : ListView.builder(
                   padding: const EdgeInsets.only(top: 10, bottom: 24),
                   itemCount: ideas.length,
-                  itemBuilder: (context, i) =>
-                      _BoardCard(idea: ideas[i], member: member),
+                  itemBuilder: (context, i) => _BoardCard(
+                    idea: ideas[i],
+                    team: teams[ideas[i].id],
+                    member: member,
+                  ),
                 ),
         ),
       ],
@@ -393,8 +411,9 @@ class _BoardColumn extends StatelessWidget {
 
 class _BoardCard extends StatelessWidget {
   final Idea idea;
+  final CollabPost? team;
   final EsocietyMember member;
-  const _BoardCard({required this.idea, required this.member});
+  const _BoardCard({required this.idea, this.team, required this.member});
 
   @override
   Widget build(BuildContext context) {
@@ -445,6 +464,15 @@ class _BoardCard extends StatelessWidget {
                         : t.muted,
                   ),
                 ),
+                if (team != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    team!.teamSummary,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: EsType.small(t).copyWith(fontSize: 12),
+                  ),
+                ],
               ],
             ),
           ),
@@ -480,13 +508,19 @@ class _MeetingsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = EsTokens.of(context);
-    final withDate = ideas.where((i) => i.appointmentAt != null).toList();
+    final scheduled = ideas.where((i) => i.appointmentAt != null);
+    final withdrawn =
+        scheduled.where((i) => i.status == IdeaStatus.withdrawn).toList()
+          ..sort((a, b) => b.appointmentAt!.compareTo(a.appointmentAt!));
+    final withDate = scheduled
+        .where((i) => i.status != IdeaStatus.withdrawn)
+        .toList();
     final upcoming = withDate.where((i) => i.hasUpcomingAppointment).toList()
       ..sort((a, b) => a.appointmentAt!.compareTo(b.appointmentAt!));
     final earlier = withDate.where((i) => !i.hasUpcomingAppointment).toList()
       ..sort((a, b) => b.appointmentAt!.compareTo(a.appointmentAt!));
 
-    if (withDate.isEmpty) {
+    if (withDate.isEmpty && withdrawn.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -543,6 +577,16 @@ class _MeetingsTab extends StatelessWidget {
       ListView(
         padding: EdgeInsets.all(isWideWeb(context) ? 32 : 16),
         children: [
+          if (withdrawn.isNotEmpty)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => _showWithdrawn(context, withdrawn),
+                icon: const Icon(Icons.undo, size: 18),
+                label: Text('Withdrawn (${withdrawn.length})'),
+                style: TextButton.styleFrom(foregroundColor: t.muted),
+              ),
+            ),
           if (upcoming.isEmpty)
             Text(
               'Nothing coming up.',
@@ -557,6 +601,39 @@ class _MeetingsTab extends StatelessWidget {
             const SizedBox(height: 8),
             ...agenda(earlier, faded: true),
           ],
+        ],
+      ),
+    );
+  }
+
+  /// Meetings whose ideas the student withdrew, kept out of the agenda.
+  void _showWithdrawn(BuildContext context, List<Idea> withdrawn) {
+    final t = EsTokens.of(context);
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Withdrawn ideas'),
+        content: SizedBox(
+          width: 480,
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Text(
+                'Meetings for ideas the student withdrew. They are no '
+                'longer on the agenda.',
+                style: EsType.small(t),
+              ),
+              const SizedBox(height: 12),
+              for (final idea in withdrawn)
+                _AgendaRow(idea: idea, member: member, faded: true),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );
@@ -577,6 +654,17 @@ class _AgendaRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = EsTokens.of(context);
     final state = idea.appointmentState ?? AppointmentState.proposed;
+    final withdrawn = idea.status == IdeaStatus.withdrawn;
+    final label = withdrawn
+        ? 'Withdrawn'
+        : faded && state != AppointmentState.cancelled
+        ? 'Took place'
+        : state.label(forSociety: true);
+    final labelColor = withdrawn
+        ? t.statusColor(IdeaStatus.withdrawn)
+        : faded && state != AppointmentState.cancelled
+        ? t.muted
+        : t.appointmentColor(state);
     return InkWell(
       borderRadius: BorderRadius.circular(10),
       onTap: () => _openIdea(context, idea, member),
@@ -621,16 +709,12 @@ class _AgendaRow extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Text(
-              faded && state != AppointmentState.cancelled
-                  ? 'Took place'
-                  : state.label(forSociety: true),
+              label,
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: faded && state != AppointmentState.cancelled
-                    ? t.muted
-                    : t.appointmentColor(state),
+                color: labelColor,
               ),
             ),
           ],
