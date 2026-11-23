@@ -168,7 +168,10 @@ class NotificationService {
             'token': token,
             'createdAt': FieldValue.serverTimestamp(),
             'platform': Platform.operatingSystem, // 'android' or 'ios'
-            'userId': user?.uid,
+            // Only set when someone is signed in: at launch the session may
+            // not be restored yet, and writing null here would unlink the
+            // student. Sign-out clears it through linkTokenToUser(null).
+            if (user != null) 'userId': user.uid,
           },
           SetOptions(merge: true),
         ); // merge so createdAt isn't overwritten on refresh
@@ -196,6 +199,12 @@ class NotificationService {
   }
 
   void isTokenRefreshed() {
+    // Keeps this device linked to whoever is signed in, including a session
+    // restored at launch, so personal notifications (E-Society meeting
+    // times) reach students who signed in before or on another app run.
+    FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) linkTokenToUser(user.uid);
+    });
     messaging.onTokenRefresh.listen((newToken) {
       debugPrint("Token Refresh: $newToken");
       _saveTokenToFirestore(newToken);

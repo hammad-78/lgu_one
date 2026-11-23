@@ -8,6 +8,7 @@ import 'package:lgu_one/esociety/meeting_time_dialog.dart';
 import 'package:lgu_one/notification/notification_service.dart';
 import 'package:lgu_one/utils/flushbar.dart';
 import 'package:lgu_one/utils/whatsApp_support.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Width from which ideas are laid out as a grid instead of a swiper.
@@ -53,7 +54,7 @@ class _EsocietyPortalScreenState extends State<EsocietyPortalScreen> {
           final past = ideas.where((i) => i.isPast).toList();
 
           Widget tab(List<Idea> list, String empty) => !snapshot.hasData
-              ? const Center(child: CircularProgressIndicator())
+              ? const _IdeaSkeleton()
               : _IdeaDeck(ideas: list, all: ideas, emptyText: empty);
 
           return Scaffold(
@@ -91,6 +92,9 @@ class _EsocietyPortalScreenState extends State<EsocietyPortalScreen> {
                     ),
                   )
                 : TabBarView(
+                    // Tabs change only from the tab labels, so swiping a
+                    // card never jumps to the other tab.
+                    physics: const NeverScrollableScrollPhysics(),
                     children: [
                       tab(active, 'No active ideas. New ones show up here.'),
                       tab(
@@ -127,10 +131,17 @@ class _IdeaDeck extends StatefulWidget {
 
 class _IdeaDeckState extends State<_IdeaDeck>
     with AutomaticKeepAliveClientMixin {
+  final CardSwiperController _swiper = CardSwiperController();
   int _index = 0;
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void dispose() {
+    _swiper.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -170,16 +181,21 @@ class _IdeaDeckState extends State<_IdeaDeck>
           child: CardSwiper(
             // A new deck when ideas come or go, so the index stays valid.
             key: ValueKey(ideas.map((i) => i.id).join(',')),
+            controller: _swiper,
             cardsCount: ideas.length,
             initialIndex: index,
-            numberOfCardsDisplayed: ideas.length < 3 ? ideas.length : 3,
-            backCardOffset: const Offset(0, 28),
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+            numberOfCardsDisplayed: ideas.length < 2 ? ideas.length : 2,
+            isDisabled: ideas.length <= 1,
+            // The card behind sits a little lower and narrower, so a strip
+            // of it shows under the front card.
+            scale: 0.92,
+            backCardOffset: const Offset(0, 54),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
             allowedSwipeDirection: const AllowedSwipeDirection.symmetric(
               horizontal: true,
             ),
             onSwipe: (_, current, _) {
-              setState(() => _index = current ?? 0);
+              if (current != null) setState(() => _index = current);
               return true;
             },
             cardBuilder: (context, i, _, _) =>
@@ -189,11 +205,102 @@ class _IdeaDeckState extends State<_IdeaDeck>
         Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: Text(
-            '${index + 1} of ${ideas.length} · swipe for the next idea',
+            ideas.length == 1
+                ? '1 idea'
+                : '${index + 1} of ${ideas.length} · swipe for the next idea',
             style: EsType.small(t),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A shimmering placeholder card shown while ideas load.
+class _IdeaSkeleton extends StatelessWidget {
+  const _IdeaSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EsTokens.of(context);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final base = dark ? const Color(0xFF0F382A) : Colors.grey.shade300;
+    final highlight = dark ? const Color(0xFF1E5240) : Colors.grey.shade100;
+    final wide = MediaQuery.sizeOf(context).width >= _kGridBreakpoint;
+
+    final card = Material(
+      color: dark ? t.surface : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: t.rule),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Bone.text(words: 3, fontSize: 12),
+            const SizedBox(height: 14),
+            Bone.text(words: 4, fontSize: 20),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                const Bone.circle(size: 32),
+                const SizedBox(width: 10),
+                Expanded(child: Bone.text(words: 3, fontSize: 14)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Bone.multiText(lines: 3, fontSize: 14),
+            const SizedBox(height: 16),
+            Bone.text(words: 3, fontSize: 14),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Bone.button(width: 90, height: 26),
+                const SizedBox(width: 6),
+                Bone.button(width: 110, height: 26),
+              ],
+            ),
+            const Spacer(),
+            Bone(
+              width: double.infinity,
+              height: 48,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Bone.button(width: 110, height: 36),
+                const SizedBox(width: 8),
+                Bone.button(width: 90, height: 36),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return Skeletonizer(
+      enabled: true,
+      containersColor: base,
+      effect: ShimmerEffect(
+        baseColor: base,
+        highlightColor: highlight,
+        duration: const Duration(milliseconds: 1200),
+      ),
+      child: wide
+          ? Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: SizedBox(width: 420, height: 470, child: card),
+              ),
+            )
+          : Padding(
+              padding: const EdgeInsets.fromLTRB(20, 25, 20, 49),
+              child: card,
+            ),
     );
   }
 }
@@ -258,19 +365,28 @@ class _IdeaCard extends StatelessWidget {
                       style: EsType.title(t).copyWith(fontSize: 20),
                     ),
                     const SizedBox(height: 10),
-                    _StudentRow(idea: idea),
+                    _StudentRow(idea: idea, showContacts: true),
+                    if (idea.description.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        idea.description,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: EsType.body(t).copyWith(color: t.muted),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    Divider(height: 1, color: t.rule),
                     const SizedBox(height: 12),
-                    Text(
-                      idea.description,
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                      style: EsType.body(t).copyWith(color: t.muted),
-                    ),
-                    const SizedBox(height: 16),
-                    _MeetingPanel(idea: idea, all: all),
+                    _TeamFacts(idea: idea),
                   ],
                 ),
               ),
+            ),
+            // Kept at the bottom so every card lines up its actions.
+            Padding(
+              padding: const EdgeInsets.only(right: 10, top: 12),
+              child: _MeetingPanel(idea: idea, all: all),
             ),
           ],
         ),
@@ -279,9 +395,81 @@ class _IdeaCard extends StatelessWidget {
   }
 }
 
+void _whatsAppStudent(Idea idea) => openWhatsApp(
+  idea.whatsapp,
+  'Hi ${idea.studentName.split(' ').first}, this is the LGU '
+  'Entrepreneurship Society about "${idea.title}".',
+);
+
+void _emailStudent(Idea idea) => launchUrl(
+  Uri(
+    scheme: 'mailto',
+    path: idea.studentEmail,
+    queryParameters: {'subject': idea.title},
+  ),
+);
+
+/// Team size and the roles the student is looking for.
+class _TeamFacts extends StatelessWidget {
+  final Idea idea;
+  const _TeamFacts({required this.idea});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EsTokens.of(context);
+    final label = EsType.small(t).copyWith(fontSize: 12);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.groups_outlined, size: 18, color: t.muted),
+            const SizedBox(width: 8),
+            Text(
+              idea.teamLine,
+              style: EsType.body(
+                t,
+              ).copyWith(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        if (idea.roles.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text('Looking for', style: label),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final role in idea.roles)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: t.rule),
+                  ),
+                  child: Text(
+                    role,
+                    style: EsType.small(t).copyWith(color: t.ink),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _StudentRow extends StatelessWidget {
   final Idea idea;
-  const _StudentRow({required this.idea});
+
+  /// Shows WhatsApp and email shortcuts at the end of the row.
+  final bool showContacts;
+  const _StudentRow({required this.idea, this.showContacts = false});
 
   @override
   Widget build(BuildContext context) {
@@ -316,6 +504,20 @@ class _StudentRow extends StatelessWidget {
             ],
           ),
         ),
+        if (showContacts && idea.whatsapp.isNotEmpty)
+          IconButton(
+            tooltip: 'WhatsApp ${idea.whatsapp}',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.chat_outlined, size: 20, color: t.moss),
+            onPressed: () => _whatsAppStudent(idea),
+          ),
+        if (showContacts && idea.studentEmail.isNotEmpty)
+          IconButton(
+            tooltip: 'Email ${idea.studentEmail}',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.mail_outline, size: 20, color: t.moss),
+            onPressed: () => _emailStudent(idea),
+          ),
       ],
     );
   }
@@ -593,23 +795,13 @@ class _IdeaDetailScreenState extends State<_IdeaDetailScreen> {
           children: [
             if (idea.whatsapp.isNotEmpty)
               OutlinedButton.icon(
-                onPressed: () => openWhatsApp(
-                  idea.whatsapp,
-                  'Hi ${idea.studentName.split(' ').first}, this is the LGU '
-                  'Entrepreneurship Society about "${idea.title}".',
-                ),
+                onPressed: () => _whatsAppStudent(idea),
                 icon: const Icon(Icons.chat_outlined, size: 18),
                 label: const Text('WhatsApp'),
               ),
             if (idea.studentEmail.isNotEmpty)
               OutlinedButton.icon(
-                onPressed: () => launchUrl(
-                  Uri(
-                    scheme: 'mailto',
-                    path: idea.studentEmail,
-                    queryParameters: {'subject': idea.title},
-                  ),
-                ),
+                onPressed: () => _emailStudent(idea),
                 icon: const Icon(Icons.mail_outline, size: 18),
                 label: const Text('Email'),
               ),

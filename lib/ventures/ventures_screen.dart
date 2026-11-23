@@ -22,6 +22,9 @@ class VenturesScreen extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Ventures'),
           bottom: const TabBar(
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            indicatorColor: Colors.white,
             tabs: [
               Tab(text: 'Explore'),
               Tab(text: 'My ventures'),
@@ -34,6 +37,8 @@ class VenturesScreen extends StatelessWidget {
             builder: (context, _) {
               final student = StudentAuthService.instance.currentStudent;
               return TabBarView(
+                // Tabs change only from the tab labels.
+                physics: const NeverScrollableScrollPhysics(),
                 children: [
                   const ExploreTab(),
                   MyVenturesTab(student: student),

@@ -338,10 +338,21 @@ exports.onEsocietyIdeaUpdated = onDocumentUpdated(
 
         if (after.meetingAt && !sameTime(before.meetingAt, after.meetingAt)) {
             const place = String(after.meetingPlace || '').trim();
+            const when = `${meetingTime(after.meetingAt)}${place ? ` · ${place}` : ''}`;
+            // The society approved the time the student asked for.
+            const approved = before.requestedAt && !after.requestedAt
+                && sameTime(before.requestedAt, after.meetingAt);
+            const moved = !!before.meetingAt;
             await sendToUsers(
                 [after.studentUid],
-                'Meeting time from E-Society',
-                `${meetingTime(after.meetingAt)}${place ? ` · ${place}` : ''} for ${title}`,
+                approved
+                    ? 'Your meeting time was approved'
+                    : moved
+                        ? 'E-Society changed your meeting time'
+                        : 'Meeting time from E-Society',
+                approved
+                    ? `${when} for ${title}. See you there.`
+                    : `${when} for ${title}`,
                 'esociety_idea',
             );
         }
