@@ -233,11 +233,11 @@ class _StudentIdeaCard extends StatelessWidget {
           icon: Icons.check_circle_outline,
         );
       }
-    } catch (_) {
+    } catch (e) {
       if (context.mounted) {
         await showFlushbar(
           context,
-          'Could not send the request. Try again.',
+          writeErrorText(e, action: 'Sending the request'),
           color: Colors.red.shade900,
         );
       }

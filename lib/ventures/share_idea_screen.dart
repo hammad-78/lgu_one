@@ -80,11 +80,11 @@ class _ShareIdeaScreenState extends State<ShareIdeaScreen> {
               : 'Posted. It goes on the board once an admin approves it.',
         );
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         showFlushbar(
           context,
-          'Could not send it. Check your connection and try again.',
+          writeErrorText(e, action: 'Sending'),
           color: Colors.red.shade900,
         );
       }

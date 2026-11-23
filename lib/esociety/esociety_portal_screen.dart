@@ -343,11 +343,11 @@ class _MeetingPanel extends StatelessWidget {
   ) async {
     try {
       await action();
-    } catch (_) {
+    } catch (e) {
       if (context.mounted) {
         await showFlushbar(
           context,
-          'Could not save. Check your connection and try again.',
+          writeErrorText(e, action: 'Saving'),
           color: Colors.red.shade900,
         );
       }

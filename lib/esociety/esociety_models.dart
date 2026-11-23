@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
 const List<String> kIdeaCategories = [
@@ -32,6 +33,21 @@ String relativeTime(DateTime? time) {
   if (diff.inDays == 1) return 'Yesterday';
   if (diff.inDays < 7) return '${diff.inDays}d ago';
   return kShortDateFormat.format(time);
+}
+
+/// What to tell the user when a Firestore write fails. Logs the error, and
+/// only blames the connection when that is the actual cause.
+String writeErrorText(Object error, {required String action}) {
+  debugPrint('$action failed: $error');
+  final code = error is FirebaseException ? error.code : null;
+  return switch (code) {
+    'permission-denied' =>
+      '$action was blocked by the database rules (permission denied).',
+    'unavailable' || 'deadline-exceeded' =>
+      '$action failed: no connection to the server. Try again.',
+    null => '$action failed. Try again.',
+    _ => '$action failed ($code). Try again.',
+  };
 }
 
 /// An idea a student sent to the Entrepreneurship Society
