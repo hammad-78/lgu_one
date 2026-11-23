@@ -31,7 +31,7 @@ class TeamDraft {
   void dispose() => pitch.dispose();
 }
 
-/// The team half of a form: a public pitch, the roles needed and the team
+/// The team half of the form: a description, the roles needed and the team
 /// size now and wanted. Must sit inside a [Form] so the pitch validates.
 class TeamFields extends StatefulWidget {
   final TeamDraft draft;
@@ -79,11 +79,11 @@ class _TeamFieldsState extends State<TeamFields> {
             maxLength: 400,
             textCapitalization: TextCapitalization.sentences,
             decoration: widget.decoration(
-              'Pitch for the board',
+              'Describe your idea',
               hint: 'What you are building and who you want to join',
             ),
             validator: (v) => (v == null || v.trim().isEmpty)
-                ? 'Write a short pitch so students know what it is.'
+                ? 'Describe your idea in a few lines.'
                 : null,
           ),
           Text(

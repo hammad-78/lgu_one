@@ -1,19 +1,21 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:lgu_one/esociety/collab_reviews.dart';
+import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:lgu_one/esociety/esociety_models.dart';
-import 'package:lgu_one/esociety/esociety_screen.dart';
 import 'package:lgu_one/esociety/esociety_service.dart';
 import 'package:lgu_one/esociety/esociety_widgets.dart';
-import 'package:lgu_one/esociety/idea_thread_screen.dart';
+import 'package:lgu_one/esociety/meeting_time_dialog.dart';
+import 'package:lgu_one/notification/notification_service.dart';
 import 'package:lgu_one/utils/flushbar.dart';
-import 'package:lgu_one/utils/web_layout.dart';
 import 'package:lgu_one/utils/whatsApp_support.dart';
-import 'package:lgu_one/ventures/collab_post.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-/// Home of the Entrepreneurship Society portal: ideas by stage, the meeting
-/// agenda, and student collaborations to contact and review.
+/// Width from which ideas are laid out as a grid instead of a swiper.
+const double _kGridBreakpoint = 720;
+
+/// The Entrepreneurship Society portal: ideas students sent, as Active and
+/// Past. The society sends meeting times, approves a student's request for
+/// another time, and deactivates ideas.
 class EsocietyPortalScreen extends StatefulWidget {
   final EsocietyMember member;
   const EsocietyPortalScreen({super.key, required this.member});
@@ -24,10 +26,17 @@ class EsocietyPortalScreen extends StatefulWidget {
 
 class _EsocietyPortalScreenState extends State<EsocietyPortalScreen> {
   late final Stream<List<Idea>> _ideas = EsocietyService.instance.allIdeas();
-  late final Stream<Map<String, CollabPost>> _teams = CollabBoard.byIdea();
+
+  @override
+  void initState() {
+    super.initState();
+    // So new ideas and time requests reach this member's phone.
+    NotificationService.linkTokenToUser(widget.member.uid);
+  }
 
   Future<void> _signOut() async {
     final navigator = Navigator.of(context);
+    await NotificationService.linkTokenToUser(null);
     await FirebaseAuth.instance.signOut();
     if (navigator.canPop()) navigator.pop();
   }
@@ -35,13 +44,17 @@ class _EsocietyPortalScreenState extends State<EsocietyPortalScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: StreamBuilder<List<Idea>>(
         stream: _ideas,
         builder: (context, snapshot) {
           final ideas = snapshot.data ?? const <Idea>[];
-          final unread = ideas.where((i) => i.unreadForSociety).length;
-          final upcoming = ideas.where((i) => i.hasUpcomingAppointment).length;
+          final active = ideas.where((i) => !i.isPast).toList();
+          final past = ideas.where((i) => i.isPast).toList();
+
+          Widget tab(List<Idea> list, String empty) => !snapshot.hasData
+              ? const Center(child: CircularProgressIndicator())
+              : _IdeaDeck(ideas: list, all: ideas, emptyText: empty);
 
           return Scaffold(
             appBar: AppBar(
@@ -61,9 +74,8 @@ class _EsocietyPortalScreenState extends State<EsocietyPortalScreen> {
                 unselectedLabelColor: Colors.white70,
                 indicatorColor: Colors.white,
                 tabs: [
-                  Tab(text: unread > 0 ? 'Ideas ($unread new)' : 'Ideas'),
-                  Tab(text: upcoming > 0 ? 'Meetings ($upcoming)' : 'Meetings'),
-                  const Tab(text: 'Collaborations'),
+                  Tab(text: 'Active (${active.length})'),
+                  Tab(text: 'Past (${past.length})'),
                 ],
               ),
             ),
@@ -80,18 +92,12 @@ class _EsocietyPortalScreenState extends State<EsocietyPortalScreen> {
                   )
                 : TabBarView(
                     children: [
-                      // Team posts are extra detail; ideas show without them.
-                      StreamBuilder<Map<String, CollabPost>>(
-                        stream: _teams,
-                        builder: (context, teams) => _IdeasTab(
-                          ideas: ideas,
-                          teams: teams.data ?? const {},
-                          loading: !snapshot.hasData,
-                          member: widget.member,
-                        ),
+                      tab(active, 'No active ideas. New ones show up here.'),
+                      tab(
+                        past,
+                        'Ideas move here once their meeting has happened or '
+                        'you deactivate them.',
                       ),
-                      _MeetingsTab(ideas: ideas, member: widget.member),
-                      _CollaborationsTab(member: widget.member),
                     ],
                   ),
           );
@@ -101,620 +107,169 @@ class _EsocietyPortalScreenState extends State<EsocietyPortalScreen> {
   }
 }
 
-void _openIdea(BuildContext context, Idea idea, EsocietyMember member) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => IdeaThreadScreen(ideaId: idea.id, member: member),
-    ),
-  );
-}
+// ─── Layout ─────────────────────────────────────────────────────────────────
 
-// ─── Ideas ──────────────────────────────────────────────────────────────────
-
-/// Filters for the phone list. `open` hides closed ideas.
-enum _Filter {
-  open,
-  unread,
-  submitted,
-  underReview,
-  shortlisted,
-  accepted,
-  closed,
-}
-
-class _IdeasTab extends StatefulWidget {
+/// [ideas] as a swiper on phones and a grid on wide screens. [all] is every
+/// idea, used to keep meeting times from clashing.
+class _IdeaDeck extends StatefulWidget {
   final List<Idea> ideas;
-
-  /// Linked team posts by idea id.
-  final Map<String, CollabPost> teams;
-  final bool loading;
-  final EsocietyMember member;
-  const _IdeasTab({
+  final List<Idea> all;
+  final String emptyText;
+  const _IdeaDeck({
     required this.ideas,
-    required this.teams,
-    required this.loading,
-    required this.member,
+    required this.all,
+    required this.emptyText,
   });
 
   @override
-  State<_IdeasTab> createState() => _IdeasTabState();
+  State<_IdeaDeck> createState() => _IdeaDeckState();
 }
 
-class _IdeasTabState extends State<_IdeasTab>
+class _IdeaDeckState extends State<_IdeaDeck>
     with AutomaticKeepAliveClientMixin {
-  final _search = TextEditingController();
-  _Filter _filter = _Filter.open;
-  bool _onlyUnread = false;
-  bool _showClosed = false;
+  int _index = 0;
 
   @override
   bool get wantKeepAlive => true;
 
   @override
-  void initState() {
-    super.initState();
-    _search.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
-  }
-
-  bool _matchesSearch(Idea i) {
-    final q = _search.text.trim().toLowerCase();
-    if (q.isEmpty) return true;
-    return '${i.title} ${i.studentName} ${i.category} ${i.studentEmail}'
-        .toLowerCase()
-        .contains(q);
-  }
-
-  bool _matchesFilter(Idea i, _Filter f) => switch (f) {
-    _Filter.open => !i.status.isClosed,
-    _Filter.unread => i.unreadForSociety,
-    _Filter.submitted => i.status == IdeaStatus.submitted,
-    _Filter.underReview => i.status == IdeaStatus.underReview,
-    _Filter.shortlisted => i.status == IdeaStatus.shortlisted,
-    _Filter.accepted => i.status == IdeaStatus.accepted,
-    _Filter.closed => i.status.isClosed,
-  };
-
-  @override
   Widget build(BuildContext context) {
     super.build(context);
     final t = EsTokens.of(context);
-    if (widget.loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    final searched = widget.ideas.where(_matchesSearch).toList();
-
-    final search = TextField(
-      controller: _search,
-      decoration: InputDecoration(
-        hintText: 'Search ideas, students or categories',
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: _search.text.isEmpty
-            ? null
-            : IconButton(
-                tooltip: 'Clear search',
-                icon: const Icon(Icons.close),
-                onPressed: _search.clear,
-              ),
-        isDense: true,
-        filled: true,
-        fillColor: t.surface,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-
-    if (widget.ideas.isEmpty) {
+    final ideas = widget.ideas;
+    if (ideas.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('No ideas yet', style: EsType.title(t)),
-                const SizedBox(height: 8),
-                Text(
-                  'When students share an idea from the app it lands here, '
-                  'in the Submitted column.',
-                  style: EsType.body(t).copyWith(color: t.muted),
-                ),
-              ],
-            ),
+          child: Text(
+            widget.emptyText,
+            textAlign: TextAlign.center,
+            style: EsType.body(t).copyWith(color: t.muted),
           ),
         ),
       );
     }
 
-    if (isWideWeb(context)) return _board(searched, search);
-    return _list(searched, search);
-  }
-
-  /// Wide screens: one column per stage, like a pipeline board.
-  Widget _board(List<Idea> ideas, Widget search) {
-    final shown = _onlyUnread
-        ? ideas.where((i) => i.unreadForSociety).toList()
-        : ideas;
-    final columns = <(String, List<Idea>)>[
-      for (final s in IdeaStatus.track)
-        (s.label, shown.where((i) => i.status == s).toList()),
-      if (_showClosed)
-        ('Closed', shown.where((i) => i.status.isClosed).toList()),
-    ];
-    final unread = ideas.where((i) => i.unreadForSociety).length;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    if (MediaQuery.sizeOf(context).width >= _kGridBreakpoint) {
+      return GridView.extent(
+        maxCrossAxisExtent: 420,
+        mainAxisExtent: 470,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        padding: const EdgeInsets.all(24),
         children: [
-          Row(
-            children: [
-              SizedBox(width: 380, child: search),
-              const SizedBox(width: 12),
-              FilterChip(
-                label: Text('Needs a reply ($unread)'),
-                selected: _onlyUnread,
-                onSelected: (v) => setState(() => _onlyUnread = v),
-              ),
-              const SizedBox(width: 8),
-              FilterChip(
-                label: const Text('Show closed'),
-                selected: _showClosed,
-                onSelected: (v) => setState(() => _showClosed = v),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var i = 0; i < columns.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 28),
-                  Expanded(
-                    child: _BoardColumn(
-                      title: columns[i].$1,
-                      ideas: columns[i].$2,
-                      teams: widget.teams,
-                      member: widget.member,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+          for (final idea in ideas) _IdeaCard(idea: idea, all: widget.all),
         ],
-      ),
-    );
-  }
+      );
+    }
 
-  /// Phones: one list, with stage filters that show their counts.
-  Widget _list(List<Idea> ideas, Widget search) {
-    final t = EsTokens.of(context);
-    int count(_Filter f) => ideas.where((i) => _matchesFilter(i, f)).length;
-    final filters = <(_Filter, String)>[
-      (_Filter.open, 'All open'),
-      (_Filter.unread, 'Needs a reply'),
-      (_Filter.submitted, 'Submitted'),
-      (_Filter.underReview, 'In review'),
-      (_Filter.shortlisted, 'Shortlisted'),
-      (_Filter.accepted, 'Accepted'),
-      (_Filter.closed, 'Closed'),
-    ];
-    final shown = ideas.where((i) => _matchesFilter(i, _filter)).toList();
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: [
-        search,
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (final f in filters)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text('${f.$2} (${count(f.$1)})'),
-                    selected: _filter == f.$1,
-                    onSelected: (_) => setState(() => _filter = f.$1),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (shown.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 32),
-            child: Text(
-              _filter == _Filter.unread
-                  ? 'You are up to date. No idea is waiting for a reply.'
-                  : 'No ideas here. Try another filter or clear the search.',
-              textAlign: TextAlign.center,
-              style: EsType.body(t).copyWith(color: t.muted),
-            ),
-          )
-        else
-          for (final idea in shown)
-            IdeaTile(
-              idea: idea,
-              unread: idea.unreadForSociety,
-              showStudent: true,
-              teamLine: widget.teams[idea.id]?.teamSummary,
-              onTap: () => _openIdea(context, idea, widget.member),
-            ),
-      ],
-    );
-  }
-}
-
-class _BoardColumn extends StatelessWidget {
-  final String title;
-  final List<Idea> ideas;
-  final Map<String, CollabPost> teams;
-  final EsocietyMember member;
-  const _BoardColumn({
-    required this.title,
-    required this.ideas,
-    required this.teams,
-    required this.member,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = EsTokens.of(context);
+    final index = _index.clamp(0, ideas.length - 1);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(title, style: EsType.heading(t)),
-            const SizedBox(width: 8),
-            Text('${ideas.length}', style: EsType.small(t)),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Divider(height: 1, color: t.ink.withValues(alpha: 0.5)),
         Expanded(
-          child: ideas.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.only(top: 14),
-                  child: Text('Nothing here', style: EsType.small(t)),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.only(top: 10, bottom: 24),
-                  itemCount: ideas.length,
-                  itemBuilder: (context, i) => _BoardCard(
-                    idea: ideas[i],
-                    team: teams[ideas[i].id],
-                    member: member,
-                  ),
-                ),
+          child: CardSwiper(
+            // A new deck when ideas come or go, so the index stays valid.
+            key: ValueKey(ideas.map((i) => i.id).join(',')),
+            cardsCount: ideas.length,
+            initialIndex: index,
+            numberOfCardsDisplayed: ideas.length < 3 ? ideas.length : 3,
+            backCardOffset: const Offset(0, 28),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+            allowedSwipeDirection: const AllowedSwipeDirection.symmetric(
+              horizontal: true,
+            ),
+            onSwipe: (_, current, _) {
+              setState(() => _index = current ?? 0);
+              return true;
+            },
+            cardBuilder: (context, i, _, _) =>
+                _IdeaCard(idea: ideas[i], all: widget.all),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Text(
+            '${index + 1} of ${ideas.length} · swipe for the next idea',
+            style: EsType.small(t),
+          ),
         ),
       ],
     );
   }
 }
 
-class _BoardCard extends StatelessWidget {
+// ─── Card ───────────────────────────────────────────────────────────────────
+
+/// One idea: who sent it, a short look at it, its meeting and the
+/// society's actions. The info button opens it in full.
+class _IdeaCard extends StatelessWidget {
   final Idea idea;
-  final CollabPost? team;
-  final EsocietyMember member;
-  const _BoardCard({required this.idea, this.team, required this.member});
+  final List<Idea> all;
+  const _IdeaCard({required this.idea, required this.all});
 
   @override
   Widget build(BuildContext context) {
     final t = EsTokens.of(context);
-    final unread = idea.unreadForSociety;
-    final line = idea.status.isClosed
-        ? idea.status.label
-        : idea.hasUpcomingAppointment
-        ? 'Meeting ${kShortDateFormat.format(idea.appointmentAt!)}'
-        : unread
-        ? 'Student wrote ${relativeTime(idea.lastActivityAt).toLowerCase()}'
-        : 'Updated ${relativeTime(idea.lastActivityAt).toLowerCase()}';
-    return EsPanel(
-      padding: const EdgeInsets.all(12),
-      onTap: () => _openIdea(context, idea, member),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  idea.title,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: EsType.heading(t).copyWith(
-                    fontSize: 14.5,
-                    fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  idea.studentName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: EsType.small(t).copyWith(fontSize: 12.5),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  line,
-                  style: EsType.small(t).copyWith(
-                    fontSize: 12,
-                    color: idea.status.isClosed
-                        ? t.statusColor(idea.status)
-                        : unread
-                        ? t.moss
-                        : t.muted,
-                  ),
-                ),
-                if (team != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    team!.teamSummary,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: EsType.small(t).copyWith(fontSize: 12),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (unread) ...[
-            const SizedBox(width: 8),
-            const Padding(padding: EdgeInsets.only(top: 6), child: UnreadDot()),
-          ],
-        ],
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: dark ? t.surface : Colors.white,
+      elevation: dark ? 0 : 3,
+      shadowColor: Colors.black.withValues(alpha: 0.25),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: t.rule),
       ),
-    );
-  }
-}
-
-// ─── Meetings ───────────────────────────────────────────────────────────────
-
-/// Meetings as an agenda: grouped by day, time on the left.
-class _MeetingsTab extends StatelessWidget {
-  final List<Idea> ideas;
-  final EsocietyMember member;
-  const _MeetingsTab({required this.ideas, required this.member});
-
-  String _dayLabel(DateTime d) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final day = DateTime(d.year, d.month, d.day);
-    final diff = day.difference(today).inDays;
-    if (diff == 0) return 'Today';
-    if (diff == 1) return 'Tomorrow';
-    if (diff == -1) return 'Yesterday';
-    return kDayFormat.format(d);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = EsTokens.of(context);
-    final scheduled = ideas.where((i) => i.appointmentAt != null);
-    final withdrawn =
-        scheduled.where((i) => i.status == IdeaStatus.withdrawn).toList()
-          ..sort((a, b) => b.appointmentAt!.compareTo(a.appointmentAt!));
-    final withDate = scheduled
-        .where((i) => i.status != IdeaStatus.withdrawn)
-        .toList();
-    final upcoming = withDate.where((i) => i.hasUpcomingAppointment).toList()
-      ..sort((a, b) => a.appointmentAt!.compareTo(b.appointmentAt!));
-    final earlier = withDate.where((i) => !i.hasUpcomingAppointment).toList()
-      ..sort((a, b) => b.appointmentAt!.compareTo(a.appointmentAt!));
-
-    if (withDate.isEmpty && withdrawn.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('No meetings scheduled', style: EsType.title(t)),
-                const SizedBox(height: 8),
-                Text(
-                  'Open an idea and choose Schedule meeting. The student is '
-                  'asked to confirm, and the meeting shows up here.',
-                  style: EsType.body(t).copyWith(color: t.muted),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    List<Widget> agenda(List<Idea> list, {required bool faded}) {
-      final out = <Widget>[];
-      String? lastDay;
-      for (final idea in list) {
-        final day = _dayLabel(idea.appointmentAt!);
-        if (day != lastDay) {
-          out.add(
-            Padding(
-              padding: EdgeInsets.only(
-                top: lastDay == null ? 0 : 20,
-                bottom: 8,
-              ),
-              child: Text(
-                day,
-                style: EsType.heading(
-                  t,
-                ).copyWith(color: faded ? t.muted : t.ink),
-              ),
-            ),
-          );
-          lastDay = day;
-        }
-        out.add(_AgendaRow(idea: idea, member: member, faded: faded));
-      }
-      return out;
-    }
-
-    return adminCentered(
-      context,
-      maxWidth: 720,
-      ListView(
-        padding: EdgeInsets.all(isWideWeb(context) ? 32 : 16),
-        children: [
-          if (withdrawn.isNotEmpty)
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => _showWithdrawn(context, withdrawn),
-                icon: const Icon(Icons.undo, size: 18),
-                label: Text('Withdrawn (${withdrawn.length})'),
-                style: TextButton.styleFrom(foregroundColor: t.muted),
-              ),
-            ),
-          if (upcoming.isEmpty)
-            Text(
-              'Nothing coming up.',
-              style: EsType.body(t).copyWith(color: t.muted),
-            )
-          else
-            ...agenda(upcoming, faded: false),
-          if (earlier.isNotEmpty) ...[
-            const SizedBox(height: 36),
-            Text('Earlier and cancelled', style: EsType.small(t)),
-            Divider(color: t.rule),
-            const SizedBox(height: 8),
-            ...agenda(earlier, faded: true),
-          ],
-        ],
-      ),
-    );
-  }
-
-  /// Meetings whose ideas the student withdrew, kept out of the agenda.
-  void _showWithdrawn(BuildContext context, List<Idea> withdrawn) {
-    final t = EsTokens.of(context);
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Withdrawn ideas'),
-        content: SizedBox(
-          width: 480,
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              Text(
-                'Meetings for ideas the student withdrew. They are no '
-                'longer on the agenda.',
-                style: EsType.small(t),
-              ),
-              const SizedBox(height: 12),
-              for (final idea in withdrawn)
-                _AgendaRow(idea: idea, member: member, faded: true),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AgendaRow extends StatelessWidget {
-  final Idea idea;
-  final EsocietyMember member;
-  final bool faded;
-  const _AgendaRow({
-    required this.idea,
-    required this.member,
-    required this.faded,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = EsTokens.of(context);
-    final state = idea.appointmentState ?? AppointmentState.proposed;
-    final withdrawn = idea.status == IdeaStatus.withdrawn;
-    final label = withdrawn
-        ? 'Withdrawn'
-        : faded && state != AppointmentState.cancelled
-        ? 'Took place'
-        : state.label(forSociety: true);
-    final labelColor = withdrawn
-        ? t.statusColor(IdeaStatus.withdrawn)
-        : faded && state != AppointmentState.cancelled
-        ? t.muted
-        : t.appointmentColor(state);
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
-      onTap: () => _openIdea(context, idea, member),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-        child: Row(
+        padding: const EdgeInsets.fromLTRB(18, 12, 8, 16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: 76,
-              child: Text(
-                kTimeFormat.format(idea.appointmentAt!),
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: faded ? t.muted : t.ink,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    idea.studentName,
-                    style: EsType.body(t).copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: faded ? t.muted : t.ink,
-                    ),
-                  ),
-                  Text(
-                    idea.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    [
+                      idea.category,
+                      relativeTime(idea.createdAt),
+                    ].where((s) => s.isNotEmpty).join(' · '),
                     style: EsType.small(t),
                   ),
-                  if (idea.appointmentPlace.isNotEmpty)
-                    Text(idea.appointmentPlace, style: EsType.small(t)),
-                ],
-              ),
+                ),
+                IconButton(
+                  tooltip: 'View full idea',
+                  icon: Icon(Icons.info_outline, color: t.moss),
+                  onPressed: () => _openDetail(context, idea, all),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: labelColor,
+            // Scrolls on short screens instead of overflowing; swiping
+            // stays horizontal so the two don't fight.
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(right: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      idea.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: EsType.title(t).copyWith(fontSize: 20),
+                    ),
+                    const SizedBox(height: 10),
+                    _StudentRow(idea: idea),
+                    const SizedBox(height: 12),
+                    Text(
+                      idea.description,
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                      style: EsType.body(t).copyWith(color: t.muted),
+                    ),
+                    const SizedBox(height: 16),
+                    _MeetingPanel(idea: idea, all: all),
+                  ],
+                ),
               ),
             ),
           ],
@@ -724,189 +279,347 @@ class _AgendaRow extends StatelessWidget {
   }
 }
 
-// ─── Collaborations ─────────────────────────────────────────────────────────
-
-class _CollaborationsTab extends StatefulWidget {
-  final EsocietyMember member;
-  const _CollaborationsTab({required this.member});
-
-  @override
-  State<_CollaborationsTab> createState() => _CollaborationsTabState();
-}
-
-class _CollaborationsTabState extends State<_CollaborationsTab>
-    with AutomaticKeepAliveClientMixin {
-  late final Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _stream =
-      EsocietyService.instance.collaborations();
-
-  @override
-  bool get wantKeepAlive => true;
+class _StudentRow extends StatelessWidget {
+  final Idea idea;
+  const _StudentRow({required this.idea});
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
     final t = EsTokens.of(context);
-    return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
-      stream: _stream,
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const Center(
-            child: Text('Collaborations could not be loaded. Try again.'),
-          );
-        }
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final docs = snapshot.data!;
-        return adminCentered(
-          context,
-          maxWidth: 760,
-          ListView(
-            padding: EdgeInsets.all(isWideWeb(context) ? 32 : 16),
+    return Row(
+      children: [
+        PersonAvatar(
+          name: idea.studentName,
+          photoUrl: idea.studentPhoto,
+          radius: 16,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Student projects that are open for members. Contact the team '
-                'or leave feedback; students see your review on the project.',
-                style: EsType.body(t).copyWith(color: t.muted),
+                idea.studentName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: EsType.body(
+                  t,
+                ).copyWith(fontSize: 14, fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 20),
-              if (docs.isEmpty)
-                Text('No approved collaborations yet.', style: EsType.body(t)),
-              for (final doc in docs)
-                _CollabCard(
-                  key: ValueKey(doc.id),
-                  doc: doc,
-                  member: widget.member,
+              if (idea.studentLine.isNotEmpty)
+                Text(
+                  idea.studentLine,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: EsType.small(t).copyWith(fontSize: 12),
                 ),
             ],
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 }
 
-class _CollabCard extends StatefulWidget {
-  final QueryDocumentSnapshot<Map<String, dynamic>> doc;
-  final EsocietyMember member;
-  const _CollabCard({super.key, required this.doc, required this.member});
+// ─── Meeting ────────────────────────────────────────────────────────────────
 
-  @override
-  State<_CollabCard> createState() => _CollabCardState();
-}
+/// The meeting time, the student's request if any, and the actions.
+class _MeetingPanel extends StatelessWidget {
+  final Idea idea;
+  final List<Idea> all;
+  const _MeetingPanel({required this.idea, required this.all});
 
-class _CollabCardState extends State<_CollabCard> {
-  late final Stream<List<CollabReview>> _reviews = EsocietyService.instance
-      .collabReviews(widget.doc.id);
+  String? _clash(DateTime at) {
+    final other = meetingClash(all, at, except: idea.id);
+    return other == null
+        ? null
+        : 'Clashes with "${other.title}" at '
+              '${kTimeFormat.format(other.meetingAt!)}. Pick another time.';
+  }
 
-  Future<void> _review(CollabReview? mine) async {
-    final result = await showReviewDialog(
-      context,
-      title: mine == null ? 'Review this project' : 'Edit your review',
-      initialRating: mine?.rating ?? 0,
-      initialText: mine?.comment ?? '',
-    );
-    if (result == null || !mounted) return;
+  Future<void> _run(
+    BuildContext context,
+    Future<void> Function() action,
+  ) async {
     try {
-      await EsocietyService.instance.saveCollabReview(
-        widget.doc.id,
-        widget.member,
-        rating: result.$1,
-        comment: result.$2,
-      );
-      if (mounted) {
-        showFlushbar(context, 'Review saved', color: Colors.green.shade900);
-      }
-    } catch (e) {
-      if (mounted) {
-        showFlushbar(
+      await action();
+    } catch (_) {
+      if (context.mounted) {
+        await showFlushbar(
           context,
-          'Review not saved. Try again.',
+          'Could not save. Check your connection and try again.',
           color: Colors.red.shade900,
         );
       }
     }
   }
 
+  Future<void> _sendTime(BuildContext context) async {
+    final picked = await showMeetingTimeDialog(
+      context,
+      title: idea.meetingAt == null ? 'Send a meeting time' : 'Change the time',
+      textLabel: 'Place (optional)',
+      confirmLabel: 'Send',
+      initial: idea.meetingAt,
+      initialText: idea.meetingPlace,
+      clash: _clash,
+    );
+    if (picked == null || !context.mounted) return;
+    await _run(
+      context,
+      () => EsocietyService.instance.setMeeting(idea, picked.$1, picked.$2),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = EsTokens.of(context);
-    final info =
-        (widget.doc.data()['info'] as Map?)?.cast<String, dynamic>() ?? {};
-    final posts = ((info['requiredPosts'] as List?) ?? const [])
-        .map((e) => e.toString())
-        .toList();
-    final phone = (info['whatsappNumber'] ?? '').toString();
-    final title = (info['title'] ?? '').toString();
-    final category = (info['category'] ?? '').toString();
-    final description = (info['description'] ?? '').toString();
-    final members =
-        '${info['existingMembers'] ?? 0} of ${info['requiredMembers'] ?? 0} '
-        'members';
+    final meeting = idea.meetingAt;
+    final requested = idea.requestedAt;
+    final requestProblem = requested == null
+        ? null
+        : requested.isBefore(DateTime.now())
+        ? 'This time has passed.'
+        : _clash(requested);
 
-    return EsPanel(
-      padding: const EdgeInsets.all(16),
-      child: StreamBuilder<List<CollabReview>>(
-        stream: _reviews,
-        builder: (context, snapshot) {
-          final reviews = snapshot.data ?? const <CollabReview>[];
-          CollabReview? mine;
-          for (final r in reviews) {
-            if (r.reviewerUid == widget.member.uid) mine = r;
-          }
-          return Column(
+    final sendLabel = meeting == null || idea.meetingPassed
+        ? 'Send time'
+        : requested != null
+        ? 'Other time'
+        : 'Change time';
+    final small = ButtonStyle(
+      visualDensity: VisualDensity.compact,
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: 14),
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: t.moss.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: EsType.heading(t).copyWith(fontSize: 17)),
-              const SizedBox(height: 2),
-              Text(
-                category.isEmpty ? members : '$category, $members',
-                style: EsType.small(t),
-              ),
-              if (description.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Text(description, style: EsType.body(t).copyWith(fontSize: 14)),
-              ],
-              if (posts.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                FactList([('Looking for', posts.join(', '))]),
-              ],
-              if (reviews.isNotEmpty) ...[
-                Divider(height: 28, color: t.rule),
-                CollabReviewList(reviews: reviews),
-              ],
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 4,
-                runSpacing: 4,
+              Row(
                 children: [
-                  if (phone.isNotEmpty)
-                    TextButton(
-                      onPressed: () => openWhatsApp(
-                        phone,
-                        'Hi, this is ${widget.member.name} from the LGU '
-                        'Entrepreneurship Society, about your project '
-                        '"$title".',
+                  Icon(Icons.event_outlined, size: 18, color: t.moss),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      meeting == null
+                          ? 'No meeting time sent yet'
+                          : [
+                              kMeetingFormat.format(meeting),
+                              if (idea.meetingPlace.isNotEmpty)
+                                idea.meetingPlace,
+                            ].join(' · '),
+                      style: EsType.body(t).copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: meeting == null ? t.muted : t.ink,
                       ),
-                      child: const Text('Message on WhatsApp'),
                     ),
-                  TextButton(
-                    onPressed: () => _review(mine),
-                    child: Text(mine == null ? 'Write review' : 'Edit review'),
                   ),
-                  if (mine != null)
-                    TextButton(
-                      style: TextButton.styleFrom(foregroundColor: t.clay),
-                      onPressed: () => EsocietyService.instance
-                          .deleteCollabReview(widget.doc.id, widget.member),
-                      child: const Text('Remove review'),
-                    ),
                 ],
               ),
+              if (requested != null && !idea.deactivated) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Student asked for ${kMeetingFormat.format(requested)}'
+                  '${idea.requestNote.isEmpty ? '' : '\n"${idea.requestNote}"'}',
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: EsType.small(t).copyWith(color: t.ink),
+                ),
+                if (requestProblem != null)
+                  Text(
+                    requestProblem,
+                    style: EsType.small(t).copyWith(color: t.clay),
+                  ),
+              ],
             ],
-          );
-        },
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: idea.deactivated
+              ? [
+                  OutlinedButton(
+                    style: small,
+                    onPressed: () => _run(
+                      context,
+                      () =>
+                          EsocietyService.instance.setDeactivated(idea, false),
+                    ),
+                    child: const Text('Reactivate'),
+                  ),
+                ]
+              : [
+                  if (requested != null)
+                    FilledButton(
+                      style: small,
+                      onPressed: requestProblem != null
+                          ? null
+                          : () => _run(
+                              context,
+                              () =>
+                                  EsocietyService.instance.approveRequest(idea),
+                            ),
+                      child: const Text('Approve time'),
+                    ),
+                  if (requested == null)
+                    FilledButton(
+                      style: small,
+                      onPressed: () => _sendTime(context),
+                      child: Text(sendLabel),
+                    )
+                  else
+                    OutlinedButton(
+                      style: small,
+                      onPressed: () => _sendTime(context),
+                      child: Text(sendLabel),
+                    ),
+                  TextButton(
+                    style: small.copyWith(
+                      foregroundColor: WidgetStatePropertyAll(t.clay),
+                    ),
+                    onPressed: () => _run(
+                      context,
+                      () => EsocietyService.instance.setDeactivated(idea, true),
+                    ),
+                    child: const Text('Deactivate'),
+                  ),
+                ],
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Detail ─────────────────────────────────────────────────────────────────
+
+void _openDetail(BuildContext context, Idea idea, List<Idea> all) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => _IdeaDetailScreen(ideaId: idea.id, all: all),
+    ),
+  );
+}
+
+/// The whole idea on one screen, kept live so actions taken here show.
+class _IdeaDetailScreen extends StatefulWidget {
+  final String ideaId;
+  final List<Idea> all;
+  const _IdeaDetailScreen({required this.ideaId, required this.all});
+
+  @override
+  State<_IdeaDetailScreen> createState() => _IdeaDetailScreenState();
+}
+
+class _IdeaDetailScreenState extends State<_IdeaDetailScreen> {
+  late final Stream<List<Idea>> _ideas = EsocietyService.instance.allIdeas();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EsTokens.of(context);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Idea')),
+      body: SafeArea(
+        child: StreamBuilder<List<Idea>>(
+          stream: _ideas,
+          initialData: widget.all,
+          builder: (context, snapshot) {
+            final ideas = snapshot.data ?? widget.all;
+            final idea = ideas.where((i) => i.id == widget.ideaId).firstOrNull;
+            if (idea == null) {
+              return Center(
+                child: Text('This idea was removed.', style: EsType.body(t)),
+              );
+            }
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              children: [
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 680),
+                    child: _detail(idea, ideas, t),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
+    );
+  }
+
+  Widget _detail(Idea idea, List<Idea> ideas, EsTokens t) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(idea.title, style: EsType.title(t).copyWith(fontSize: 26)),
+        const SizedBox(height: 4),
+        Text(
+          'Sent ${relativeTime(idea.createdAt)}'
+          '${idea.deactivated ? ' · Deactivated' : ''}',
+          style: EsType.small(t),
+        ),
+        const SizedBox(height: 16),
+        _StudentRow(idea: idea),
+        const SizedBox(height: 20),
+        Text(idea.description, style: EsType.body(t)),
+        const SizedBox(height: 20),
+        FactList([
+          ('Category', idea.category),
+          ('Team', idea.teamLine),
+          ('Looking for', idea.roles.join(', ')),
+          ('Email', idea.studentEmail),
+          ('WhatsApp', idea.whatsapp),
+        ]),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (idea.whatsapp.isNotEmpty)
+              OutlinedButton.icon(
+                onPressed: () => openWhatsApp(
+                  idea.whatsapp,
+                  'Hi ${idea.studentName.split(' ').first}, this is the LGU '
+                  'Entrepreneurship Society about "${idea.title}".',
+                ),
+                icon: const Icon(Icons.chat_outlined, size: 18),
+                label: const Text('WhatsApp'),
+              ),
+            if (idea.studentEmail.isNotEmpty)
+              OutlinedButton.icon(
+                onPressed: () => launchUrl(
+                  Uri(
+                    scheme: 'mailto',
+                    path: idea.studentEmail,
+                    queryParameters: {'subject': idea.title},
+                  ),
+                ),
+                icon: const Icon(Icons.mail_outline, size: 18),
+                label: const Text('Email'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 28),
+        Text('Meeting', style: EsType.heading(t)),
+        const SizedBox(height: 10),
+        _MeetingPanel(idea: idea, all: ideas),
+      ],
     );
   }
 }

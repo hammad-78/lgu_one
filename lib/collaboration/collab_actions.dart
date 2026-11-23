@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/auth/lgu_email_gate.dart';
 import 'package:lgu_one/collaboration/collab_owner.dart';
-import 'package:lgu_one/esociety/esociety_screen.dart';
+import 'package:lgu_one/ventures/share_idea_screen.dart';
 import 'package:lgu_one/ventures/ventures_service.dart';
 import 'package:lgu_one/utils/flushbar.dart';
 import 'package:lgu_one/utils/pakistani_phone_formatter.dart';
@@ -19,12 +19,11 @@ class CollabActions {
     await _openWhatsApp(number);
   }
 
-  /// "Post a team": signs the student in if needed, then opens the
-  /// venture form with Teammates chosen.
+  /// "Share an idea": signs the student in if needed, then opens the form.
   static Future<void> startCreate(BuildContext context) async {
     final student = await CollabOwner.requireStudent(context);
     if (student == null || !context.mounted) return;
-    await shareIdea(context, student, forSociety: false, findTeam: true);
+    await shareIdea(context, student);
   }
 
   static void _verifySecretKey(
@@ -87,23 +86,13 @@ class CollabActions {
     }
   }
 
-  /// Asks, then deletes. [ideaId] unlinks the post from the student's idea;
-  /// the idea itself stays with the society.
-  static Future<void> confirmDelete(
-    BuildContext context,
-    String docId, {
-    String? ideaId,
-  }) async {
+  /// Asks, then deletes.
+  static Future<void> confirmDelete(BuildContext context, String docId) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete this team post?'),
-        content: Text(
-          ideaId == null
-              ? 'It is removed from the board for everyone.'
-              : 'It is removed from the board for everyone. Your idea stays '
-                    'with the society.',
-        ),
+        title: const Text('Delete this post?'),
+        content: const Text('It is removed from the board for everyone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -119,7 +108,7 @@ class CollabActions {
     );
     if (ok != true) return;
     try {
-      await VenturesService.deletePost(docId, ideaId: ideaId);
+      await VenturesService.deletePost(docId);
     } catch (_) {
       if (context.mounted) {
         await showFlushbar(

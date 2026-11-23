@@ -334,7 +334,7 @@ class _AdminHomeState extends State<AdminHome> {
                             label: "E-Society Portal",
                             pendingStream: FirebaseFirestore.instance
                                 .collection('esociety_ideas')
-                                .where('unreadForSociety', isEqualTo: true)
+                                .where('requestedAt', isNull: false)
                                 .snapshots(),
                             onTap: () => _navigate(const EsocietyPortalEntry()),
                           ),

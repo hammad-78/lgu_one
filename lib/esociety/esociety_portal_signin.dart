@@ -146,8 +146,8 @@ class _PortalSignInState extends State<_PortalSignIn> {
                   Text('Sign in to the portal', style: EsType.title(t)),
                   const SizedBox(height: 6),
                   Text(
-                    'For Entrepreneurship Society members. Review ideas, '
-                    'reply to students and schedule meetings.',
+                    'For Entrepreneurship Society members. See the ideas '
+                    'students send and give them meeting times.',
                     style: EsType.body(t).copyWith(color: t.muted),
                   ),
                   if (widget.signedInAs != null) ...[

@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:lgu_one/collaboration/collab_actions.dart';
 import 'package:lgu_one/collaboration/collab_owner.dart';
-import 'package:lgu_one/esociety/collab_reviews.dart';
 import 'package:lgu_one/esociety/esociety_models.dart';
 import 'package:lgu_one/esociety/esociety_widgets.dart';
 import 'package:lgu_one/utils/flushbar.dart';
 import 'package:lgu_one/utils/web_layout.dart';
 import 'package:lgu_one/ventures/collab_post.dart';
-import 'package:lgu_one/ventures/explore_tab.dart';
 import 'package:lgu_one/ventures/ventures_service.dart';
 
-/// One team post: what it is, who it needs, society feedback, and a way to
-/// get in touch. The owner can edit or delete it here.
+/// One post: what it is, who it needs, and a way to get in touch. The owner can edit or delete it here.
 class CollabPostScreen extends StatefulWidget {
   final String postId;
   const CollabPostScreen({super.key, required this.postId});
@@ -95,11 +92,7 @@ class _CollabPostScreenState extends State<CollabPostScreen> {
       CollabActions.asOwner(
         context,
         post.info,
-        () => CollabActions.confirmDelete(
-          context,
-          post.id,
-          ideaId: CollabOwner.isMine(post.info) ? post.ideaId : null,
-        ),
+        () => CollabActions.confirmDelete(context, post.id),
       );
     }
   }
@@ -135,10 +128,6 @@ class _CollabPostScreenState extends State<CollabPostScreen> {
                   const SizedBox(height: 4),
                   Text(posted, style: EsType.small(t)),
                 ],
-                if (post.societyStage != null) ...[
-                  const SizedBox(height: 8),
-                  SocietyBadge(stage: post.societyStage!),
-                ],
                 if (mine && !post.isOpen) ...[
                   const SizedBox(height: 16),
                   EsPanel(
@@ -169,7 +158,6 @@ class _CollabPostScreenState extends State<CollabPostScreen> {
                   ('Team', post.membersLine),
                   ('Looking for', post.roles.join(', ')),
                 ]),
-                CollabSocietyReviews(collabId: post.id),
                 const SizedBox(height: 28),
                 if (!mine && post.whatsapp.trim().isNotEmpty)
                   SizedBox(

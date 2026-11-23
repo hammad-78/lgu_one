@@ -90,7 +90,7 @@ class _ExploreTabState extends State<ExploreTab>
             ),
             FilledButton(
               onPressed: () => CollabActions.startCreate(context),
-              child: const Text('Post a team'),
+              child: const Text('Share an idea'),
             ),
           ],
         );
@@ -150,8 +150,8 @@ class _ExploreTabState extends State<ExploreTab>
         final Widget results;
         if (all.isEmpty) {
           results = Text(
-            'When a student posts a team and an admin approves it, it shows '
-            'up here. Post yours to find teammates.',
+            'When a student shares an idea and an admin approves it, it '
+            'shows up here. Share yours to find teammates.',
             style: EsType.body(t).copyWith(color: t.muted),
           );
         } else if (posts.isEmpty) {
@@ -228,7 +228,7 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-/// One team in a list: title, society badge, size and the roles it needs.
+/// One post in a list: title, size and the roles it needs.
 /// [showStatus] puts the owner's view of approval in the meta line.
 class CollabPostTile extends StatelessWidget {
   final CollabPost post;
@@ -286,10 +286,6 @@ class CollabPostTile extends StatelessWidget {
               ),
             ],
           ),
-          if (post.societyStage != null) ...[
-            const SizedBox(height: 4),
-            SocietyBadge(stage: post.societyStage!),
-          ],
           const SizedBox(height: 4),
           Text.rich(
             TextSpan(children: meta),
@@ -308,35 +304,6 @@ class CollabPostTile extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-}
-
-/// "Shortlisted by E-Society" / "Backed by E-Society", in the accent.
-class SocietyBadge extends StatelessWidget {
-  final IdeaStatus stage;
-  const SocietyBadge({super.key, required this.stage});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = EsTokens.of(context);
-    final label = stage == IdeaStatus.accepted
-        ? 'Backed by E-Society'
-        : 'Shortlisted by E-Society';
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.verified_outlined, size: 15, color: t.moss),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: t.moss,
-          ),
-        ),
-      ],
     );
   }
 }

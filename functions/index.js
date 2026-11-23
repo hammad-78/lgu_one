@@ -240,106 +240,120 @@ exports.onCollaborationUpdated = onDocumentUpdated(
 );
 
 /**
- * Builds the push text for a society message on a student's idea.
+ * "Tue, 25 Nov, 3:00 pm" in Pakistan time.
  */
-function esocietyNotificationText(message, ideaTitle) {
-    const sender = String(message.senderName || 'E-Society').trim();
-    const text = String(message.text || '').replace(/\s+/g, ' ').trim();
-    const idea = `"${ideaTitle}"`;
-    const clip = (value, max) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
+function meetingTime(timestamp) {
+    if (!timestamp || typeof timestamp.toDate !== 'function') return '';
+    return timestamp.toDate().toLocaleString('en-GB', {
+        timeZone: 'Asia/Karachi',
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+    });
+}
 
-    switch (message.kind) {
-        case 'appointment': {
-            let when = '';
-            if (message.appointmentAt && typeof message.appointmentAt.toDate === 'function') {
-                when = message.appointmentAt.toDate().toLocaleString('en-GB', {
-                    timeZone: 'Asia/Karachi',
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true,
-                });
-            }
-            const place = String(message.appointmentPlace || '').trim();
-            return {
-                title: 'New appointment from E-Society',
-                body: clip([when, place].filter(Boolean).join(' · ') + ` for ${idea}. Tap to confirm.`, 200),
-            };
-        }
-        case 'appointment_reply':
-            return { title: 'Appointment update', body: clip(`${idea}: ${text}`, 200) };
-        case 'review': {
-            const stars = Number(message.rating) > 0 ? `${message.rating}/5 · ` : '';
-            return {
-                title: `E-Society reviewed ${idea}`,
-                body: clip(`${stars}${text}`, 200),
-            };
-        }
-        case 'status':
-            return { title: `Update on ${idea}`, body: clip(text, 200) };
-        default:
-            return { title: `${sender} replied to ${idea}`, body: clip(text, 200) };
-    }
+function sameTime(a, b) {
+    const ms = (t) => (t && typeof t.toMillis === 'function' ? t.toMillis() : null);
+    return ms(a) === ms(b);
 }
 
 /**
- * Notifies the student on their own devices when the Entrepreneurship
- * Society replies, reviews, changes status or sets an appointment.
- * Personal: not saved to the public notifications collection.
+ * Sends a personal push to every device signed in as one of [uids]. Not
+ * saved to the public notifications collection. Dead tokens are removed.
  */
-exports.onEsocietyMessageCreated = onDocumentCreated(
-    'esociety_ideas/{ideaId}/messages/{messageId}',
-    async (event) => {
-        const message = event.data ? event.data.data() : null;
-        if (!message || message.senderRole !== 'society') return null;
+async function sendToUsers(uids, title, body, type) {
+    const ids = [...new Set(uids.filter(Boolean))];
+    if (ids.length === 0) return;
 
-        const ideaId = event.params.ideaId;
-        const ideaSnap = await db.collection('esociety_ideas').doc(ideaId).get();
-        const idea = ideaSnap.data();
-        if (!idea || !idea.studentUid) return null;
-
-        const tokensSnapshot = await db.collection('device_tokens')
-            .where('userId', '==', idea.studentUid)
-            .get();
-        const tokens = [...new Set(tokensSnapshot.docs
-            .map(doc => doc.data().token)
-            .filter(token => typeof token === 'string' && token.length > 0))];
-        if (tokens.length === 0) {
-            console.log(`E-Society message on ${ideaId}: student has no registered devices.`);
-            return null;
-        }
-
-        const { title, body } = esocietyNotificationText(message, idea.title || 'your idea');
-        const response = await messaging.sendEachForMulticast({
-            tokens,
-            notification: { title, body },
-            data: {
-                type: 'esociety_idea',
-                id: String(ideaId),
-                click_action: 'FLUTTER_NOTIFICATION_CLICK',
-            },
-            android: {
-                notification: { channelId: 'high_importance_channel' },
-            },
+    const tokens = [];
+    for (const group of chunk(ids, 30)) {
+        const snap = await db.collection('device_tokens').where('userId', 'in', group).get();
+        snap.docs.forEach(doc => {
+            const token = doc.data().token;
+            if (typeof token === 'string' && token.length > 0) tokens.push(token);
         });
+    }
+    const unique = [...new Set(tokens)];
+    if (unique.length === 0) return;
 
-        // Drop tokens FCM says are gone, so they are not retried forever.
-        const stale = [];
+    const stale = [];
+    for (const batchTokens of chunk(unique, 500)) {
+        const response = await messaging.sendEachForMulticast({
+            tokens: batchTokens,
+            notification: { title, body: body.length > 200 ? `${body.slice(0, 199)}…` : body },
+            data: { type, click_action: 'FLUTTER_NOTIFICATION_CLICK' },
+            android: { notification: { channelId: 'high_importance_channel' } },
+        });
         response.responses.forEach((result, index) => {
             const code = result.error && result.error.code;
             if (code === 'messaging/registration-token-not-registered'
                 || code === 'messaging/invalid-registration-token') {
-                stale.push(tokens[index]);
+                stale.push(batchTokens[index]);
             }
         });
-        if (stale.length > 0) {
-            const batch = db.batch();
-            stale.forEach(token => batch.delete(db.collection('device_tokens').doc(token)));
-            await batch.commit();
+    }
+    if (stale.length > 0) {
+        const batch = db.batch();
+        stale.forEach(token => batch.delete(db.collection('device_tokens').doc(token)));
+        await batch.commit();
+    }
+}
+
+async function societyMemberUids() {
+    const snap = await db.collection('esociety_members').get();
+    return snap.docs.filter(doc => doc.data().active !== false).map(doc => doc.id);
+}
+
+/**
+ * A student sent an idea to the Entrepreneurship Society: tell the society.
+ */
+exports.onEsocietyIdeaCreated = onDocumentCreated(
+    'esociety_ideas/{ideaId}',
+    async (event) => {
+        const idea = event.data ? event.data.data() : null;
+        if (!idea) return null;
+        await sendToUsers(
+            await societyMemberUids(),
+            'New idea for the E-Society',
+            `"${idea.title || 'An idea'}" from ${idea.studentName || 'a student'}`,
+            'esociety_portal',
+        );
+        return null;
+    },
+);
+
+/**
+ * The society sent or moved a meeting time: tell the student. The student
+ * asked for another time: tell the society.
+ */
+exports.onEsocietyIdeaUpdated = onDocumentUpdated(
+    'esociety_ideas/{ideaId}',
+    async (event) => {
+        const before = event.data.before.data() || {};
+        const after = event.data.after.data() || {};
+        const title = `"${after.title || 'your idea'}"`;
+
+        if (after.meetingAt && !sameTime(before.meetingAt, after.meetingAt)) {
+            const place = String(after.meetingPlace || '').trim();
+            await sendToUsers(
+                [after.studentUid],
+                'Meeting time from E-Society',
+                `${meetingTime(after.meetingAt)}${place ? ` · ${place}` : ''} for ${title}`,
+                'esociety_idea',
+            );
         }
-        console.log(`E-Society message on ${ideaId}: sent to ${response.successCount} device(s).`);
+
+        if (after.requestedAt && !sameTime(before.requestedAt, after.requestedAt)) {
+            await sendToUsers(
+                await societyMemberUids(),
+                'Student asked for another time',
+                `${after.studentName || 'A student'} asked for ${meetingTime(after.requestedAt)} for ${title}`,
+                'esociety_portal',
+            );
+        }
         return null;
     },
 );

@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:lgu_one/esociety/esociety_models.dart';
 
 /// A team post on the collaboration board (`collaborations/{id}`).
 ///
@@ -20,13 +19,6 @@ class CollabPost {
   final String ownerName;
   final DateTime? createdAt;
 
-  /// The E-Society idea this team belongs to, when there is one.
-  final String? ideaId;
-
-  /// Public copy of how far the society has taken the linked idea. Only
-  /// set for stages worth showing off (shortlisted, accepted).
-  final IdeaStatus? societyStage;
-
   const CollabPost({
     required this.id,
     required this.info,
@@ -41,8 +33,6 @@ class CollabPost {
     required this.ownerUid,
     required this.ownerName,
     required this.createdAt,
-    required this.ideaId,
-    required this.societyStage,
   });
 
   factory CollabPost.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -54,8 +44,6 @@ class CollabPost {
     int toInt(dynamic v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
     String? optional(dynamic v) =>
         v is String && v.trim().isNotEmpty ? v.trim() : null;
-    final stageValue = optional(info['societyStage']);
-    final stage = stageValue == null ? null : IdeaStatus.parse(stageValue);
     final created = info['createdAt'];
     return CollabPost(
       id: doc.id,
@@ -76,11 +64,6 @@ class CollabPost {
       ownerUid: optional(info['ownerUid']),
       ownerName: (info['ownerName'] ?? '').toString(),
       createdAt: created is Timestamp ? created.toDate() : null,
-      ideaId: optional(info['ideaId']),
-      societyStage:
-          stage == IdeaStatus.shortlisted || stage == IdeaStatus.accepted
-          ? stage
-          : null,
     );
   }
 
@@ -106,15 +89,6 @@ class CollabPost {
   String get membersLine => requiredMembers > 0
       ? '$existingMembers/$requiredMembers members'
       : '$existingMembers ${existingMembers == 1 ? 'member' : 'members'}';
-
-  /// One line on how an idea's team stands, for the society.
-  String get teamSummary {
-    if (status == 'closed') return 'Team not recruiting';
-    if (isPending) return 'Team post waiting for approval';
-    if (isRejected) return 'Team post not approved';
-    final needs = roles.isEmpty ? '' : ' · needs ${roles.join(', ')}';
-    return 'Recruiting · $membersLine$needs';
-  }
 
   /// Words a search box matches against.
   String get searchText =>
@@ -142,17 +116,6 @@ class CollabBoard {
       .doc(id)
       .snapshots()
       .map((doc) => doc.exists ? CollabPost.fromDoc(doc) : null);
-
-  /// Team posts linked to an E-Society idea, keyed by the idea's id.
-  static Stream<Map<String, CollabPost>> byIdea() => _posts
-      .where('info.ideaId', isNotEqualTo: null)
-      .snapshots()
-      .map(
-        (snap) => {
-          for (final p in snap.docs.map(CollabPost.fromDoc))
-            if (p.ideaId != null) p.ideaId!: p,
-        },
-      );
 
   /// Posts the student owns, in any state, newest first.
   static Stream<List<CollabPost>> postsBy(String uid) =>
