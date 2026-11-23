@@ -167,6 +167,7 @@ class _SignedInState extends State<_SignedIn>
                           'up here.',
                         )
                       : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             for (final i in active) _StudentIdeaCard(idea: i),
                           ],
@@ -177,6 +178,7 @@ class _SignedInState extends State<_SignedIn>
                   EsSection(
                     title: 'Past',
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         for (final i in past) _StudentIdeaCard(idea: i),
                       ],
