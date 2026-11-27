@@ -7,8 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tzlib;
 import 'package:lgu_one/auth/lgu_email_gate.dart';
 import 'package:lgu_one/ventures/ventures_screen.dart';
 import 'package:lgu_one/esociety/esociety_portal_signin.dart';
@@ -72,10 +70,6 @@ class NotificationService {
   }
 
   Future<void> initLocalNotification(BuildContext context) async {
-    // Initialize timezone data for scheduled notifications
-    tz.initializeTimeZones();
-    tzlib.setLocalLocation(tzlib.getLocation('Asia/Karachi'));
-
     const AndroidInitializationSettings androidInitializationSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 

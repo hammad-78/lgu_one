@@ -5,12 +5,19 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lgu_one/jobs/model.dart';
+import 'package:lgu_one/admin/share_import/ai_draft_banner.dart';
+import 'package:lgu_one/admin/share_import/ai_fill_panel.dart';
+import 'package:lgu_one/admin/share_import/post_draft.dart';
+import 'package:lgu_one/admin/admin_news_screen.dart';
 import '../utils/app_cached_image.dart';
 import '../utils/expiry_tag.dart';
 import '../utils/web_layout.dart';
 
 class AdminJobsScreen extends StatefulWidget {
-  const AdminJobsScreen({super.key});
+  /// Set when opened from a WhatsApp share: fills the form for review.
+  final PostDraft? draft;
+
+  const AdminJobsScreen({super.key, this.draft});
 
   @override
   State<AdminJobsScreen> createState() => _AdminJobsScreenState();
@@ -31,6 +38,53 @@ class _AdminJobsScreenState extends State<AdminJobsScreen> {
   File? _pickedImageFile;
   bool _isPublishing = false;
   String _listingFilter = 'Active';
+
+  @override
+  void initState() {
+    super.initState();
+    final draft = widget.draft;
+    if (draft != null) _applyDraft(draft);
+  }
+
+  void _applyDraft(PostDraft d) {
+    _titleController.text = d.title;
+    _descriptionController.text = d.description;
+    _linkController.text = d.link;
+    _selectedExpiryDate = d.expiryDate;
+    _pickedImageFile = d.image;
+  }
+
+  /// Fills the form from the "Fill with AI" panel. Keeps the image the
+  /// admin already picked; only fields AI found are overwritten.
+  void _fillFromAi(PostDraft d) {
+    setState(() {
+      if (d.title.isNotEmpty) _titleController.text = d.title;
+      if (d.description.isNotEmpty) {
+        _descriptionController.text = d.description;
+      }
+      if (d.link.isNotEmpty) _linkController.text = d.link;
+      if (d.expiryDate != null) _selectedExpiryDate = d.expiryDate;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Filled in by AI. Check it before publishing.'),
+      ),
+    );
+  }
+
+  void _switchSection() {
+    final d = widget.draft!;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdminNewsScreen(
+          draft: d.copyWith(
+            kind: d.kind == PostKind.news ? PostKind.job : PostKind.news,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -205,6 +259,15 @@ class _AdminJobsScreenState extends State<AdminJobsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (widget.draft != null)
+                AiDraftBanner(
+                  switchLabel: 'Move to News',
+                  onSwitch: _switchSection,
+                ),
+              AiFillPanel(
+                onFilled: _fillFromAi,
+                currentImage: () => _pickedImageFile,
+              ),
               Row(
                 children: [
                   Icon(Icons.work_outline, color: theme.colorScheme.primary),

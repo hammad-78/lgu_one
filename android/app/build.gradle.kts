@@ -17,7 +17,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.lgu.app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37 // receive_sharing_intent needs 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

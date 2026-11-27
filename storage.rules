@@ -20,6 +20,39 @@ service firebase.storage {
                     && fileName == request.auth.uid + '.jpg';
     }
 
+    // ─── Admin content: news, jobs and event images ──────────────────────────
+    // Anyone can view; only accounts in the Firestore `admins` collection can
+    // upload or delete (images up to 10 MB).
+    function isAdmin() {
+      return request.auth != null && isAdminUid(request.auth.uid);
+    }
+
+    function isAdminUid(uid) {
+      let path = /databases/(default)/documents/admins/$(uid);
+      return firestore.exists(path)
+          && (firestore.get(path).data.get('isAdmin', false) == true
+              || firestore.get(path).data.get('isAdmin', '') == 'true'
+              || firestore.get(path).data.get('role', '') == 'admin');
+    }
+
+    match /news_images/{fileName} {
+      allow read: if true;
+      allow create, update: if isAdmin() && request.resource.size < 10 * 1024 * 1024;
+      allow delete: if isAdmin();
+    }
+
+    match /job_images/{fileName} {
+      allow read: if true;
+      allow create, update: if isAdmin() && request.resource.size < 10 * 1024 * 1024;
+      allow delete: if isAdmin();
+    }
+
+    match /events/{fileName} {
+      allow read: if true;
+      allow create, update: if isAdmin() && request.resource.size < 10 * 1024 * 1024;
+      allow delete: if isAdmin();
+    }
+
     // ─── Everything else ──────────────────────────────────────────────────────
     match /{allPaths=**} {
       allow read, write: if false;

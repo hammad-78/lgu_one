@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/admin/admin_home.dart';
 import 'package:lgu_one/admin/admin_session.dart';
+import 'package:lgu_one/admin/share_import/share_intake.dart';
 import 'package:lgu_one/home_screen.dart';
 import 'package:lgu_one/utils/app_cached_image.dart';
 
@@ -25,6 +26,8 @@ class SplashService {
           ),
         );
       }
+      // A post shared into the app while it was closed opens now.
+      ShareIntake.markReady();
     });
   }
 
