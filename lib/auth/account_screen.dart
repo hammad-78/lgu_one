@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/auth/student_profile_view.dart';
 import 'package:lgu_one/auth/student_auth_service.dart';
@@ -166,17 +167,28 @@ class _CampusBackground extends StatelessWidget {
         ),
       ),
     );
-    return const Stack(
+    return Stack(
       fit: StackFit.expand,
       children: [
-        AppCachedImage(
-          imageUrl: _photoUrl,
-          memCacheWidth: 1200,
-          memCacheHeight: 1600,
-          placeholder: fallback,
-          errorWidget: fallback,
-        ),
-        DecoratedBox(
+        const Positioned.fill(child: fallback),
+        if (kIsWeb)
+          // The LGU server sends no CORS headers, so Flutter web can't draw
+          // the image itself; let the browser show it as a plain <img>.
+          Image.network(
+            _photoUrl,
+            fit: BoxFit.cover,
+            webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+            errorBuilder: (_, _, _) => fallback,
+          )
+        else
+          const AppCachedImage(
+            imageUrl: _photoUrl,
+            memCacheWidth: 1200,
+            memCacheHeight: 1600,
+            placeholder: fallback,
+            errorWidget: fallback,
+          ),
+        const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
