@@ -37,6 +37,19 @@ class _AdminHomeState extends State<AdminHome> {
     super.dispose();
   }
 
+  /// Leaves the dashboard without logging out: back to the previous screen,
+  /// or to the home screen when the app opened straight onto the dashboard.
+  void _goBack() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      navigator.pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    }
+  }
+
   Future<void> _fetchAdminData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -184,14 +197,18 @@ class _AdminHomeState extends State<AdminHome> {
     }
 
     return PopScope(
+      // Opened at launch there is nothing underneath, so back goes home.
       canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _goBack();
+      },
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
             "Admin Dashboard",
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          automaticallyImplyLeading: false,
+          leading: BackButton(onPressed: _goBack),
           actions: [
             IconButton(
               icon: const Icon(Icons.logout),

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lgu_one/admin/admin_home.dart';
+import 'package:lgu_one/admin/admin_session.dart';
 import '../utils/utils.dart';
 import '../utils/web_layout.dart';
 
@@ -23,6 +24,21 @@ class _AdminSigninState extends State<AdminSignin> {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _skipIfAlreadySignedIn();
+  }
+
+  /// An admin who never logged out goes straight to the dashboard.
+  Future<void> _skipIfAlreadySignedIn() async {
+    if (!await AdminSession.isAdminSignedIn() || !mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const AdminHome()),
+    );
+  }
 
   @override
   void dispose() {
@@ -62,11 +78,7 @@ class _AdminSigninState extends State<AdminSignin> {
 
       final data = adminDoc.data() as Map<String, dynamic>?;
 
-      // Robust admin check (handles bool, string, and role fields)
-      final bool isAdmin =
-          data?['isAdmin'] == true ||
-          data?['isAdmin']?.toString().toLowerCase() == 'true' ||
-          data?['role']?.toString().toLowerCase() == 'admin';
+      final bool isAdmin = AdminSession.isAdminData(data);
 
       if (!isAdmin) {
         await _auth.signOut();
